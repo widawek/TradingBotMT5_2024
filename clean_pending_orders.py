@@ -47,10 +47,10 @@ def close_pendings(symbol, positions=True):
 
     print(f"Usunięto łącznie {counter} zleceń na symbolu {symbol}")
 
-if not mt.initialize():
-    print("Nie można połączyć się z MetaTrader 5!")
-    mt.shutdown()
-    quit()
+# if not mt.initialize():
+#     print("Nie można połączyć się z MetaTrader 5!")
+#     mt.shutdown()
+#     quit()
 
 symbol = "ALL"
 close_pendings(symbol, positions=True)

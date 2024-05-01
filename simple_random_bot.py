@@ -10,10 +10,12 @@ import threading
 from datetime import datetime as dt
 import math
 import traceback
+from symbols_rank import symbol_stats
 
 
 def class_errors(func):
     def just_log(*args, **kwargs):
+        symbol = args[0].symbol
         try:
             result = func(*args, **kwargs)
             return result
@@ -22,8 +24,8 @@ def class_errors(func):
             class_name = args[0].__class__.__name__
             function_name = func.__name__
             with open("class_errors.txt", "a") as log_file:
-                log_file.write("Time: {} Error in class {}, function {}:\n\n"
-                            .format(time, class_name, function_name))
+                log_file.write("Symbol {}, Time: {} Error in class {}, function {}:\n\n"
+                            .format(symbol, time, class_name, function_name))
                 traceback.print_exc(file=log_file)
             raise e
     return just_log
@@ -88,14 +90,15 @@ pendings = {
 class Bot:
 
     sl_mdv_multiplier = 2
+    position_size = 1
 
     def __init__(self, symbol, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
         self.symbol = symbol
         self.symmetrical_positions = symmetrical_positions
         self.daily_volatility_reduce = daily_volatility_reduce
-        self.mdv = (self.MDV_() / symmetrical_positions) / daily_volatility_reduce
-        self.volume = mt.symbol_info(self.symbol).volume_min
+        self.mdv = self.MDV_() / daily_volatility_reduce
+        self.volume = self.volume_calc(Bot.position_size, False)
         self.comment = f'srb_{self.symbol}_{symmetrical_positions}_{daily_volatility_reduce}'
         self.magic = magic_(self.symbol, self.comment)
         self.round_number = round_number_(self.symbol)
@@ -103,8 +106,11 @@ class Bot:
         self.avg_daily_vol_()
         self.positions_()
         self.limits = None
+        self.pos_type = None
         self.sl = 0.0
         self.tp = 0.0
+        _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume)
+        print("Killer == ", -self.kill_position_profit, " USD")
 
     def MDV_(self):
         """Returns mean daily volatility"""
@@ -160,12 +166,12 @@ class Bot:
             df = df[df['time'] > last_position_open_time]
             if self.pos_type == 0:
                 highest_price = df.high.max()
-                if act_price < (highest_price - self.mdv * Bot.sl_mdv_multiplier):
+                if act_price < (highest_price - self.mdv * Bot.sl_mdv_multiplier/2):
                     new_tp = round(highest_price + self.mdv * Bot.sl_mdv_multiplier, self.round_number)
                     self.tp = new_tp if new_tp > self.barrier_price else self.tp
-            else:
+            elif self.pos_type == 1:
                 lowest_price = df.low.min()
-                if act_price > (lowest_price + self.mdv * Bot.sl_mdv_multiplier):
+                if act_price > (lowest_price + self.mdv * Bot.sl_mdv_multiplier/2):
                     new_tp = round(lowest_price - self.mdv * Bot.sl_mdv_multiplier, self.round_number)
                     self.tp = new_tp if new_tp < self.barrier_price else self.tp
             print("Actual TP == {}".format(self.tp))
@@ -178,7 +184,7 @@ class Bot:
                 if act_price > self.barrier_price:
                     self.sl = round(
                         self.zero_point + (0.1*self.mdv), self.round_number)
-            else:
+            elif self.pos_type == 1:
                 if act_price < self.barrier_price:
                     self.sl = round(
                         self.zero_point - (0.1*self.mdv), self.round_number)
@@ -189,13 +195,22 @@ class Bot:
                 if (act_price > self.barrier_price) and (self.sl < self.zero_point):
                     self.sl = round(
                         self.zero_point + (0.1*self.mdv), self.round_number)
-            else:
+            elif self.pos_type == 1:
                 new_sl = round(act_price - self.mdv * Bot.sl_mdv_multiplier, self.round_number)
                 self.sl = new_sl if new_sl < self.sl else self.sl
                 if (act_price < self.barrier_price) and (self.sl > self.barrier_price):
                     self.sl = round(
                         self.zero_point - (0.1*self.mdv), self.round_number)
         print("Actual sl == {}".format(self.sl))
+
+    @class_errors
+    def positions_test(self):
+        positions = mt.positions_get(symbol=self.symbol)
+        positions = [i for i in positions if
+                        (i.comment == self.comment)]
+        if self.positions is not None:
+            if len(positions) < len(self.positions) and len(positions) > 0:
+                self.clean_orders()
 
     @class_errors
     def positions_(self):
@@ -216,7 +231,7 @@ class Bot:
                     _, self.limits = self.prices_list(posType, price_open=price_open)
                     print(self.limits)
                 orders = mt.orders_get(symbol=self.symbol)
-
+                self.positions_test()
                 def scan_orders(orders, price):
                     rel_tol = 1e-10 * 10**(8 - self.round_number)
                     math_true_false_list = [math.isclose(i.price_open, price, rel_tol=rel_tol, abs_tol=rel_tol) for i in orders]
@@ -325,7 +340,7 @@ class Bot:
         self.number_of_positions = len(self.positions)
         try:
             self.pos_type = self.positions[0].type
-        except IndexError:
+        except Exception:
             print("Pozycje zamknięte")
             self.clean_orders()
             exit()
@@ -365,6 +380,10 @@ class Bot:
             print(f"Barrier price:                                    {self.barrier_price}")
             print()
 
+        if profit < -self.kill_position_profit:
+            print('Loss is to high. We have to kill it!')
+            self.clean_orders()
+
     @class_errors
     def active_session(self):
         df = get_data(self.symbol, 'D1', 0, 1)
@@ -372,13 +391,38 @@ class Bot:
         formatted_date = time.strftime("%Y-%m-%d", today_date_tuple)
         return str(df.time[0].date()) == formatted_date
 
+    def close_request(self):
+        positions_ = mt.positions_get(symbol=self.symbol)
+        for i in positions_ :
+            request = {"action": mt.TRADE_ACTION_DEAL,
+                        "symbol": i.symbol,
+                        "volume": float(i.volume),
+                        "type": 1 if (i.type == 0) else 0,
+                        "position": i.ticket,
+                        "magic": i.magic,
+                        'deviation': 20,
+                        "type_time": mt.ORDER_TIME_GTC,
+                        "type_filling": mt.ORDER_FILLING_IOC
+                        }
+            order_result = mt.order_send(request)
+
+    @class_errors
+    def reset_bot(self):
+        self.tp = 0.0
+        self.sl = 0.0
+        self.limits = None
+        self.pos_type = None
+        self.positions = None
+
     @class_errors
     def clean_orders(self):
+        self.close_request()
         orders = mt.orders_get(symbol=self.symbol)
         print(orders)
         counter = 0
         if orders == ():
             print("Brak zleceń oczekujących dla symbolu", self.symbol)
+            self.reset_bot()
             self.report()
         else:
             for order in orders:
@@ -398,6 +442,7 @@ class Bot:
             # print(f"Break {int(time_sleep/60)} minutes.")
             # time.sleep(time_sleep)
             print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
+            self.reset_bot()
             self.report()
 
     @class_errors
@@ -406,3 +451,25 @@ class Bot:
         df['avg_daily'] = (df.high - df.low) / df.open
         self.avg_vol = df['avg_daily'].mean()
 
+    @class_errors
+    def volume_calc(self, max_pos_margin, min_volume):
+        symbol_info = mt.symbol_info(self.symbol)._asdict()
+        if min_volume:
+            return symbol_info["volume_min"]
+        price = mt.symbol_info_tick(self.symbol)._asdict()
+        margin_min = round(((symbol_info["volume_min"] *
+                        symbol_info["trade_contract_size"])/100) *
+                        price["bid"], 2)
+        account = mt.account_info()._asdict()
+        self.avg_daily_vol_()
+        max_pos_margin = round(account["balance"] * (max_pos_margin/100) /
+                            (self.avg_vol * 100))
+        if "JP" not in self.symbol:
+            volume = round((max_pos_margin / margin_min)) *\
+                            symbol_info["volume_min"]
+        else:
+            volume = round((max_pos_margin * 100 / margin_min)) *\
+                            symbol_info["volume_min"]
+        if volume > symbol_info["volume_max"]:
+            volume = float(symbol_info["volume_max"])
+        return volume
