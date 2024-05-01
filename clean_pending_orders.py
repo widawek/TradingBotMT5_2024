@@ -18,6 +18,7 @@ def close_request(symbol):
                     "type_filling": mt.ORDER_FILLING_IOC
                     }
         order_result = mt.order_send(request)
+        print(order_result)
 
 def close_pendings(symbol, positions=True):
     if positions:

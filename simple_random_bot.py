@@ -27,6 +27,10 @@ def class_errors(func):
                 log_file.write("Symbol {}, Time: {} Error in class {}, function {}:\n\n"
                             .format(symbol, time, class_name, function_name))
                 traceback.print_exc(file=log_file)
+            if isinstance(e, RecursionError ):
+                print("Exit")
+                input()
+                exit()
             raise e
     return just_log
 

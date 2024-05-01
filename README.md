@@ -1,0 +1,1 @@
+symbols.py have only one variable symbols(type: list)
