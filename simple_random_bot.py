@@ -3,98 +3,17 @@ import pandas_ta as ta
 import numpy as np
 import random
 import MetaTrader5 as mt
-import hashlib
 import time
-from scipy.signal import argrelextrema
-import threading
-from datetime import datetime as dt
+# from scipy.signal import argrelextrema
+# import threading
 import math
-import traceback
 from symbols_rank import symbol_stats
-
-
-def class_errors(func):
-    def just_log(*args, **kwargs):
-        symbol = args[0].symbol
-        try:
-            result = func(*args, **kwargs)
-            return result
-        except Exception as e:
-            time = dt.now()
-            class_name = args[0].__class__.__name__
-            function_name = func.__name__
-            with open("class_errors.txt", "a") as log_file:
-                log_file.write("Symbol {}, Time: {} Error in class {}, function {}:\n\n"
-                            .format(symbol, time, class_name, function_name))
-                traceback.print_exc(file=log_file)
-            if isinstance(e, RecursionError ):
-                print("Exit")
-                input()
-                exit()
-            raise e
-    return just_log
-
-def timeframe_(tf):
-    return getattr(mt, 'TIMEFRAME_{}'.format(tf))
-
-
-def get_data(symbol, tf, start, counter):
-    data = pd.DataFrame(mt.copy_rates_from_pos(
-                        symbol, timeframe_(tf), start, counter))
-    data["time"] = pd.to_datetime(data["time"], unit="s")
-    data = data.drop(["real_volume"], axis=1)
-    data.columns = ["time", "open", "high", "low",
-                    "close", "volume", "spread"]
-    return data
-
-
-def magic_(symbol, comment):
-    """
-    Converts a string to an integer, using the SHA-256 hash function.
-    Assigns a unique 6-digit magic number depending on the strategy name,
-    symbol and interval.
-    """
-    expression = symbol + comment
-    hash_object = hashlib.sha256(expression.encode('utf-8'))
-    hash_hex = hash_object.hexdigest()
-    result = int(hash_hex, 16)
-    return result // 10 ** (len(str(result)) - 6)
-
-
-def round_number_(symbol):
-    return mt.symbol_info(symbol).digits
-
-
-def real_spread(symbol):
-    s = mt.symbol_info(symbol)
-    return s.spread / 10**s.digits
-
-actions = {
-    # Place an order for an instant deal with the specified parameters (set a market order)
-    'deal': mt.TRADE_ACTION_DEAL,
-    # Place an order for performing a deal at specified conditions (pending order)
-    'pending': mt.TRADE_ACTION_PENDING,
-    # Change open position Stop Loss and Take Profit
-    'sltp': mt.TRADE_ACTION_SLTP,
-    # Change parameters of the previously placed trading order
-    'modify': mt.TRADE_ACTION_MODIFY,
-    # Remove previously placed pending order
-    'remove': mt.TRADE_ACTION_REMOVE,
-    # Close a position by an opposite one
-    'close': mt.TRADE_ACTION_CLOSE_BY
-    }
-
-pendings = {
-    'long_stop': mt.ORDER_TYPE_BUY_STOP,
-    'short_stop': mt.ORDER_TYPE_SELL_STOP,
-    'long_limit': mt.ORDER_TYPE_BUY_LIMIT,
-    'short_limit': mt.ORDER_TYPE_SELL_LIMIT,
-    }
+from functions import *
 
 class Bot:
 
-    sl_mdv_multiplier = 2
-    position_size = 1
+    sl_mdv_multiplier = 1.2
+    position_size = 5 # percent of balance
 
     def __init__(self, symbol, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
@@ -155,6 +74,7 @@ class Bot:
         print("LIMITS: ", limits)
         return stops, limits
 
+    @class_errors
     def pos_creator(self):
         # return int(input("What position do You want to open? (0 -> LONG / 1 -> SHORT) "))
         return random.randint(0, 1)
@@ -170,12 +90,12 @@ class Bot:
             df = df[df['time'] > last_position_open_time]
             if self.pos_type == 0:
                 highest_price = df.high.max()
-                if act_price < (highest_price - self.mdv * Bot.sl_mdv_multiplier/2):
+                if act_price < (highest_price - self.mdv * Bot.sl_mdv_multiplier/4):
                     new_tp = round(highest_price + self.mdv * Bot.sl_mdv_multiplier, self.round_number)
                     self.tp = new_tp if new_tp > self.barrier_price else self.tp
             elif self.pos_type == 1:
                 lowest_price = df.low.min()
-                if act_price > (lowest_price + self.mdv * Bot.sl_mdv_multiplier/2):
+                if act_price > (lowest_price + self.mdv * Bot.sl_mdv_multiplier/4):
                     new_tp = round(lowest_price - self.mdv * Bot.sl_mdv_multiplier, self.round_number)
                     self.tp = new_tp if new_tp < self.barrier_price else self.tp
             print("Actual TP == {}".format(self.tp))
@@ -219,7 +139,7 @@ class Bot:
     @class_errors
     def positions_(self):
         self.positions = mt.positions_get(symbol=self.symbol)
-        if self.positions != ():
+        if len(self.positions) == 0 and isinstance(self.positions, tuple):
             self.positions = [i for i in self.positions if
                               (i.comment == self.comment)]
             if not len(self.positions):
@@ -236,6 +156,7 @@ class Bot:
                     print(self.limits)
                 orders = mt.orders_get(symbol=self.symbol)
                 self.positions_test()
+
                 def scan_orders(orders, price):
                     rel_tol = 1e-10 * 10**(8 - self.round_number)
                     math_true_false_list = [math.isclose(i.price_open, price, rel_tol=rel_tol, abs_tol=rel_tol) for i in orders]
@@ -253,9 +174,7 @@ class Bot:
                                 pass
                             else:
                                 self.request(actions['pending'], posType, price=p_)
-                                print("self.limits przed: ", self.limits)
                                 self.limits.remove(self.limits[idx])
-                                print("self.limits po: ", self.limits)
                                 break
                 else:
                     price_ = mt.symbol_info(self.symbol).bid
@@ -266,9 +185,7 @@ class Bot:
                                 pass
                             else:
                                 self.request(actions['pending'], posType, price=p_)
-                                print("self.limits przed: ", self.limits)
                                 self.limits.remove(self.limits[idx])
-                                print("self.limits po: ", self.limits)
                                 break
                 self.sl_giver()
                 self.tp_giver()
@@ -347,7 +264,7 @@ class Bot:
         except Exception:
             print("Pozycje zamknięte")
             self.clean_orders()
-            exit()
+            input("Error")
         account = mt.account_info()
         act_price = mt.symbol_info(self.symbol).bid
         profit = sum([i.profit for i in self.positions if
@@ -397,7 +314,7 @@ class Bot:
 
     def close_request(self):
         positions_ = mt.positions_get(symbol=self.symbol)
-        for i in positions_ :
+        for i in positions_:
             request = {"action": mt.TRADE_ACTION_DEAL,
                         "symbol": i.symbol,
                         "volume": float(i.volume),

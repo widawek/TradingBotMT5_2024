@@ -1,6 +1,7 @@
 import MetaTrader5 as mt
 mt.initialize()
 
+
 def close_request(symbol):
     if symbol == "ALL":
         positions_ = mt.positions_get()
@@ -19,6 +20,7 @@ def close_request(symbol):
                     }
         order_result = mt.order_send(request)
         print(order_result)
+
 
 def close_pendings(symbol, positions=True):
     if positions:
@@ -48,11 +50,8 @@ def close_pendings(symbol, positions=True):
 
     print(f"Usunięto łącznie {counter} zleceń na symbolu {symbol}")
 
-# if not mt.initialize():
-#     print("Nie można połączyć się z MetaTrader 5!")
-#     mt.shutdown()
-#     quit()
 
-symbol = "ALL"
-close_pendings(symbol, positions=True)
-input()
+if __name__ =='__main__':
+    symbol = "ALL"
+    close_pendings(symbol, positions=True)
+    input()
