@@ -26,6 +26,7 @@ def class_errors(func):
             raise e
     return just_log
 
+
 def timeframe_(tf):
     return getattr(mt, 'TIMEFRAME_{}'.format(tf))
 

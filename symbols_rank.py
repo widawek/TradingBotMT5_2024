@@ -7,6 +7,11 @@ print("MetaTrader5 package version: ",mt.__version__)
 mt.initialize()
 
 
+def pandas_options():
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_colwidth', None)
+
 # establish connection to MetaTrader 5 terminal
 # if not mt.initialize():
 #     print("initialize() failed, error code =", mt.last_error())
@@ -36,13 +41,13 @@ def initial_margin_for_min_vol(symbol):
     return mt.order_calc_margin(action,symbol,lot,ask)
 
 
-def symbol_stats(symbol, volume):
+def symbol_stats(symbol, volume, kill_multiplier):
     volume_min = mt.symbol_info(symbol).volume_min
     margin_open = round(initial_margin_for_min_vol(symbol)*volume/volume_min, 2)
     volatility = avg_daily_vol_(symbol)*100
     volatility1 = avg_daily_vol_points(symbol)
     real_spread_to_volatility = round(real_spread(symbol)/volatility1, 4)
-    margin_close = round(margin_open*volatility*2, 2)
+    margin_close = round(margin_open*volatility*kill_multiplier, 2)
     return margin_open, margin_close, real_spread_to_volatility
 
 
@@ -51,10 +56,11 @@ if __name__ == '__main__':
             'GBPJPY', 'XTIUSD', 'XAGUSD', 'XAUUSD', 'XAGAUD',
             'JP225', 'DE40', 'USTEC', 'US30', 'BTCUSD', 'UK100']
 
+    pandas_options()
     symbols_list = []
     for symbol in symbols:
         volume_min = mt.symbol_info(symbol).volume_min
-        margin_open, margin_close, real_spread_to_volatility = symbol_stats(symbol, volume_min)
+        margin_open, margin_close, real_spread_to_volatility = symbol_stats(symbol, volume_min, 1)
         symbols_list.append((symbol, margin_open, margin_close, real_spread_to_volatility))
     df = pd.DataFrame(symbols_list, columns=['symbol', 'margin_open', 'margin_close', 'real_spread_to_volatility'])
     df['result'] = round(df['margin_open']*df['margin_close']*df['real_spread_to_volatility'],4)
