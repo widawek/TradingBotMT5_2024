@@ -1,6 +1,8 @@
 from simple_random_bot import Bot
 import subprocess
-from symbols import symbols
+from learn_it import today_position
+
+symbols = today_position()
 
 positions_values = [3 for _ in range(len(symbols))]  # Lista wartości symmetrical_positions dla każdego symbolu
 volatility_values = [6 for _ in range(len(symbols))]  # Lista wartości daily_volatility_reduce dla każdego symbolu

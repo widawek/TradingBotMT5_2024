@@ -14,10 +14,9 @@ from functions import *
 class Bot:
 
     sl_mdv_multiplier = 1.5 # mdv multiplier for sl
-    tp_mdv_multiplier = 2.5 # mdv multiplier for tp
+    tp_mdv_multiplier = 2   # mdv multiplier for tp
     position_size = 3       # percent of balance
-    kill_multiplier = 1     # loss of daily volatility by one position multiplier
-    
+    kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
 
     def __init__(self, symbol, direction, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
@@ -175,7 +174,7 @@ class Bot:
                               (i.comment == self.comment)]
             if len(self.positions) == 0:
                 self.positions = ()
-    
+
     @class_errors
     def scan_orders(self, orders, price):
         rel_tol = 1e-10 * 10**(8 - self.round_number)
