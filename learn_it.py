@@ -247,7 +247,7 @@ def conditional_return(df, interval, value_in_days, leverage):
 
 
 def train_model_natural(factor, symbol, params, targets, df_divider):
-    t_s = 0.4
+    t_s = 0.3
     df_raw = get_df_2(factor, df_divider, symbol)
     cols = [i for i in df_raw.columns if not 'target' in i]
     dfx = df_raw.copy()
@@ -258,10 +258,18 @@ def train_model_natural(factor, symbol, params, targets, df_divider):
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=t_s, random_state=80, shuffle=True)
         model = XGBRegressor(**params)
-        model.fit(X_train, y_train,
-                  eval_metric=["merror", "mlogloss"],
-                  verbose=True
-                  )
+        # model.fit(X_train, y_train,
+        #           eval_metric=["merror", "mlogloss"],
+        #           verbose=True
+        #           )
+
+        model.fit(
+            X_train, y_train,
+            eval_set=[(X_train, y_train), (X_test, y_test)],
+            eval_metric='rmse',
+            early_stopping_rounds=20,
+            verbose=0
+        )
 
         y_pred = model.predict(X_test)
         mae = mean_absolute_error(y_test, y_pred)
@@ -279,7 +287,7 @@ def train_model_natural(factor, symbol, params, targets, df_divider):
 
 def strategy_with_chart_3(mdf, leverage, symbol):
     mdf = gimme_returns(mdf, leverage)
-    mdf['strategy'] = initial_capital * (1 + mdf['return']).cumprod()
+    mdf['strategy'] = initial_capital * (1 + mdf['return']).cumprod() - initial_capital
     mdf = mdf[mdf['strategy'] != np.NaN][1:]
     mdf.reset_index(drop=True, inplace=True)
     # Identify buy and sell signals
@@ -302,7 +310,7 @@ def strategy_with_chart_3(mdf, leverage, symbol):
         kelly = kelly_criterion(returns)
         x = [True if i > 0 else False for i in
              [real_sharpe, omega, sorotino, kelly, sharpe_all,
-              mdf['strategy'].iloc[-1] - initial_capital]
+              mdf['strategy'].iloc[-1]]
              ]
         if all(x):
             sha = f'Sharpe: {round(real_sharpe*100, 2)} '
@@ -311,8 +319,7 @@ def strategy_with_chart_3(mdf, leverage, symbol):
             kel = f'Kelly: {round(kelly*100, 2)} '
             print(sha, '\n', ome, '\n', sor, '\n', kel, '\n')   
     strategy_result = round((mdf['strategy'].mean() +
-                             mdf['strategy'].iloc[-1]) -
-                             initial_capital, 2)
+                             mdf['strategy'].iloc[-1]) / 2, 2)
     return strategy_result, sharpe_all, mdf['position'].iloc[-1]
 
 
@@ -401,25 +408,22 @@ buffer = 'on'
 interval = 'M3'
 
 params = {
-# =============================================================================
-#     'n_estimators': 200,
-#     'learning_rate': 0.05,
-# =============================================================================
+    'n_estimators': 300,
+    'learning_rate': 0.6,
     'tree_method': 'gpu_hist',
     'device': 'cuda',
     'predictor': 'gpu_predictor',
-# =============================================================================
-#     'subsample': 0.9,
-#     'colsample_by*': 0.8,
-#     'num_parallel_tree': 5, 
-#     'reg_lambda': 0.1,
-#     'reg_alpha': 0.1
-# =============================================================================
+    'subsample': 0.9,
+    'colsample_by*': 0.8,
+    'num_parallel_tree': 20, 
+    'min_child_weight': 12,
+    'max_depth': 20,
+    'objective': 'reg:squarederror',
 }
 
 symbols_ = ['JP225', 'USTEC', 'UK100', 'DE40', 'US30', 'AUDCAD', 'AUDUSD',
            'BTCUSD', 'AUDNZD', 'USDJPY', 'USDCAD', 'XAGAUD', 'XAGUSD', 'EURJPY',
-           'NZDCAD', 'EURUSD', 'USDCHF', 'GBPUSD', 'GBPJPY', 'XAUUSD', 'XTIUSD']
+           'NZDCAD', 'EURUSD', 'USDCHF', 'GBPUSD', 'GBPJPY', 'XAUUSD']
 
 
 def today_position():
@@ -439,7 +443,7 @@ def today_position():
     res = pd.DataFrame(best_models, columns=[
         'symbol', 'divider', 'buffer_mode', 'result', 'sharpe', 'position', 'models'])
     res = res[['symbol', 'divider', 'buffer_mode', 'result', 'position']]
-    res = res[(res['result'] > initial_capital)]
+    res = res[(res['result'] > 0)]
     res = res.sort_values(by=['symbol', 'result'], ascending=False)
     res['metric'] = res['position'] * res['result']
     final = res.groupby('symbol').agg({'metric': 'mean', 'symbol': 'count'})
@@ -450,3 +454,7 @@ def today_position():
     symbols = [(s, r) for s, r in zip(final.index.to_list(), final['actual_pos'].to_list())]
     print(symbols)
     return symbols
+
+
+if __name__ == '__main__':
+    _ = today_position()

@@ -17,6 +17,7 @@ class Bot:
     tp_mdv_multiplier = 2   # mdv multiplier for tp
     position_size = 3       # percent of balance
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
+    tp_miner = 3
 
     def __init__(self, symbol, direction, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
@@ -37,6 +38,8 @@ class Bot:
         self.tp = 0.0
         self.sl_positions = None
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
+        self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
+        print("Target == ", self.tp_miner, " USD")
         print("Killer == ", -self.kill_position_profit, " USD")
 
     @class_errors
@@ -337,6 +340,9 @@ class Bot:
         if profit < -self.kill_position_profit:
             print('Loss is to high. We have to kill it!')
             self.clean_orders()
+        elif profit > self.tp_miner:
+            print('The profit is nice. We want it on our accout.')
+            self.clean_orders()
 
     @class_errors
     def active_session(self):
@@ -396,7 +402,7 @@ class Bot:
             print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
             time_sleep = int(random.randint(10, 30)*60)
             print(f"Break {int(time_sleep/60)} minutes.")
-            time.sleep(30)
+            time.sleep(time_sleep)
             self.reset_bot()
             self.report()
 
@@ -443,16 +449,21 @@ class Bot:
         df_raw["time"] = pd.to_datetime(df_raw["time"], unit="s")
         df_raw = df_raw[df_raw['profit'] != 0.0]
         df = df_raw[df_raw['symbol']==self.symbol].tail(self.number_of_positions)
+        check = True if 'sl' in df.comment.to_list()[0] else False
         print(df)
         if len(df) == 0:
             return int(self.start_pos)
         profit = df.profit.sum()
         type_ = df['type'].iloc[-1]
-        text = f"Same position type as last beacuse last profit = {profit}" if profit >= 0 \
-            else f"Change positin type beacuse last profit = {profit}"
-        print(text)
+        # text = f"Same position type as last beacuse last profit = {profit}" if profit >= 0 \
+        #     else f"Change positin type beacuse last profit = {profit}"
+        # print(text)
         print("type: ", type_)
-        if profit >= 0:
-            return int(0 if type_ == 1 else 1)
-        else:
+        # if profit >= 0:
+        #     return int(0 if type_ == 1 else 1)
+        # else:
+        #     return int(type_)
+        if check and profit < 0:
             return int(type_)
+        else:
+            return int(0 if type_ == 1 else 1)

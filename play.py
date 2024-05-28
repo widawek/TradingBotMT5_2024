@@ -14,3 +14,5 @@ for symbol, direction, positions, volatility in zip(symbols, directions, positio
     command = 'start cmd /k python -c "from simple_random_bot import Bot; bot = Bot(\'{}\', {}, {}, {}); bot.report()"'\
             .format(symbol, direction, positions, volatility)
     subprocess.Popen(command, shell=True)
+
+input()

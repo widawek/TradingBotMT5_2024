@@ -57,7 +57,6 @@ if __name__ == '__main__':
             'JP225', 'DE40', 'USTEC', 'US30', 'BTCUSD', 'UK100',
             'AUDCAD', 'NZDCAD', 'AUDNZD', 'AUDUSD', 'USDCAD']
 
-
     pandas_options()
     symbols_list = []
     for symbol in symbols:
@@ -68,5 +67,6 @@ if __name__ == '__main__':
     df['result'] = round(df['margin_open']*df['margin_close']*df['real_spread_to_volatility'],4)
     df = df.sort_values(by='result')
     df.reset_index(drop=True, inplace=True)
+    print(df)
     print(df['symbol'].to_list())
     
