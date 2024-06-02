@@ -1,1 +1,1 @@
-symbols.py have only one variable symbols(type: list)
+Run play.py file to run a bot.

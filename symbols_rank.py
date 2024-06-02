@@ -52,16 +52,20 @@ def symbol_stats(symbol, volume, kill_multiplier):
 
 
 if __name__ == '__main__':
-    symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'EURJPY',
-            'GBPJPY', 'XTIUSD', 'XAGUSD', 'XAUUSD', 'XAGAUD',
-            'JP225', 'DE40', 'USTEC', 'US30', 'BTCUSD', 'UK100',
-            'AUDCAD', 'NZDCAD', 'AUDNZD', 'AUDUSD', 'USDCAD']
+    symbols = [
+        'JP225', 'USTEC', 'UK100', 'DE40', 'US30', 'AUDCAD', 'USDJPY', 'AUDUSD',
+        'BTCUSD', 'USDCAD', 'AUDNZD', 'EURJPY', 'XAGAUD', 'EURUSD', 'NZDCAD',
+        'XAGUSD', 'USDCHF', 'GBPJPY', 'GBPUSD', 'EURGBP', 'USDPLN', 'XAUUSD', 'XTIUSD'
+        ]
+    
+    symbols = ['AUDUSD', 'EURGBP', 'EURUSD', 'GBPUSD', 'XAUUSD', 'USDCAD', 'XAGAUD'] # US30
+    symbols = list(set(symbols))
 
     pandas_options()
     symbols_list = []
     for symbol in symbols:
         volume_min = mt.symbol_info(symbol).volume_min
-        margin_open, margin_close, real_spread_to_volatility = symbol_stats(symbol, volume_min, 1)
+        margin_open, margin_close, real_spread_to_volatility = symbol_stats(symbol, volume_min, 1.5)
         symbols_list.append((symbol, margin_open, margin_close, real_spread_to_volatility))
     df = pd.DataFrame(symbols_list, columns=['symbol', 'margin_open', 'margin_close', 'real_spread_to_volatility'])
     df['result'] = round(df['margin_open']*df['margin_close']*df['real_spread_to_volatility'],4)
@@ -69,4 +73,10 @@ if __name__ == '__main__':
     df.reset_index(drop=True, inplace=True)
     print(df)
     print(df['symbol'].to_list())
+    number_ = df.margin_close.sum()
+    print("All by min vol sum: ", round(df.margin_open.sum(), 2))
+    print("All not good by bot killer: ", round(number_, 2))
+    print("All good by bot tp killer: ", round(number_*2, 2))
+    print(f"Propose start account balance: {round(number_*4, 2)}")
+
     

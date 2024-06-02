@@ -258,11 +258,6 @@ def train_model_natural(factor, symbol, params, targets, df_divider):
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=t_s, random_state=80, shuffle=True)
         model = XGBRegressor(**params)
-        # model.fit(X_train, y_train,
-        #           eval_metric=["merror", "mlogloss"],
-        #           verbose=True
-        #           )
-
         model.fit(
             X_train, y_train,
             eval_set=[(X_train, y_train), (X_test, y_test)],
@@ -282,7 +277,6 @@ def train_model_natural(factor, symbol, params, targets, df_divider):
         
         models.append(model)
     return models, df_raw, sharpe
-
 
 
 def strategy_with_chart_3(mdf, leverage, symbol):
@@ -317,7 +311,7 @@ def strategy_with_chart_3(mdf, leverage, symbol):
             ome = f'Omega: {omega} '
             sor = f'Sorotino: {round(sorotino*100,2)} '
             kel = f'Kelly: {round(kelly*100, 2)} '
-            print(sha, '\n', ome, '\n', sor, '\n', kel, '\n')   
+            print('\n', symbol, '\n', sha, '\n', ome, '\n', sor, '\n', kel, '\n')   
     strategy_result = round((mdf['strategy'].mean() +
                              mdf['strategy'].iloc[-1]) / 2, 2)
     return strategy_result, sharpe_all, mdf['position'].iloc[-1]
@@ -377,7 +371,7 @@ def this_shit(symbol, factor, params, leverage, mode, buffer, interval,
     elif buffer == 'off':
         dfz['price_long'] = dfz['model_low']
         dfz['price_short'] = dfz['model_high']
-    elif isinstance(buffer, int) or isinstance(buffer, float):
+    elif isinstance(buffer, (int, float)):
         dfz['volatility'] = abs(dfz['model_high'] - dfz['model_low'])
         dfz['volatility_'] = dfz['volatility'].rolling(window=5).mean()
         df['buffer'] = dfz['volatility'] * buffer_value
@@ -421,9 +415,8 @@ params = {
     'objective': 'reg:squarederror',
 }
 
-symbols_ = ['JP225', 'USTEC', 'UK100', 'DE40', 'US30', 'AUDCAD', 'AUDUSD',
-           'BTCUSD', 'AUDNZD', 'USDJPY', 'USDCAD', 'XAGAUD', 'XAGUSD', 'EURJPY',
-           'NZDCAD', 'EURUSD', 'USDCHF', 'GBPUSD', 'GBPJPY', 'XAUUSD']
+
+symbols_ = ['AUDUSD', 'EURGBP', 'EURUSD', 'GBPUSD', 'JP225', 'USDCAD', 'XAGAUD']
 
 
 def today_position():

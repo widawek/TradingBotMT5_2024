@@ -433,6 +433,7 @@ class Bot:
                             symbol_info["volume_min"]
         if volume > symbol_info["volume_max"]:
             volume = float(symbol_info["volume_max"])
+        print('Calculated volume: ', volume)
         return volume
 
     @class_errors
@@ -449,10 +450,10 @@ class Bot:
         df_raw["time"] = pd.to_datetime(df_raw["time"], unit="s")
         df_raw = df_raw[df_raw['profit'] != 0.0]
         df = df_raw[df_raw['symbol']==self.symbol].tail(self.number_of_positions)
-        check = True if 'sl' in df.comment.to_list()[0] else False
         print(df)
         if len(df) == 0:
             return int(self.start_pos)
+        check = True if 'sl' in df.comment.to_list()[0] else False
         profit = df.profit.sum()
         type_ = df['type'].iloc[-1]
         # text = f"Same position type as last beacuse last profit = {profit}" if profit >= 0 \
