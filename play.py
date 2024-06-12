@@ -2,10 +2,8 @@ from simple_random_bot import Bot
 import subprocess
 from learn_it import today_position
 
-#symbols = today_position()
-
-symbols = [('AUDUSD', 0), ('EURUSD', 0), ('GBPUSD', 1), ('JP225', 0), ('USDCAD', 1), ('XAGAUD', 1)]
-
+symbols = today_position()
+symbols = symbols[:8]
 positions_values = [3 for _ in range(len(symbols))]  # Lista wartości symmetrical_positions dla każdego symbolu
 volatility_values = [6 for _ in range(len(symbols))]  # Lista wartości daily_volatility_reduce dla każdego symbolu
 

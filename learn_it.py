@@ -10,6 +10,9 @@ import pandas as pd
 from xgboost import XGBRegressor
 import numpy as np
 from tqdm import tqdm
+from result_report import plot_results
+from datetime import datetime as dt
+import pandas_ta as ta
 warnings.filterwarnings("ignore")
 mt.initialize()
 catalog = os.path.dirname(__file__)
@@ -161,38 +164,37 @@ def get_data_price(symbol, tf, start, counter):
     return data
 
 
-def get_df(factor, df_divider, symbol, train=True):
-    zzz = 14
-    df_raw = pd.read_excel(f'{catalog}\\{symbol}_ml_data.xlsx', index_col=0)
-    print("DataFrame length", len(df_raw))
-    df_raw['week_day'] = df_raw.date.dt.weekday
-    df_raw['standard_dev_c'] = df_raw['price_close'].rolling(zzz).std()
-    df = df_raw.copy()
-    from_ = int(len(df)*df_divider)
-    if train:
-        df = df.copy()[:from_]
-        df = copy_shifted(df, factor)
-        df['target_close'] = df['price_close'].shift(-factor)
-        df['target_high'] = df['price_high'].shift(-factor)
-        df['target_low'] = df['price_low'].shift(-factor)
-    else:
-        df = df.copy()[from_-factor:]
-        df = copy_shifted(df, factor)
-        
-    df = df.dropna()
-    df.reset_index(drop=True, inplace=True)
-    return df.drop(columns=['date']), df['date']
-
-
 def get_df_2(factor, df_divider, symbol, train=True):
     zzz = 14
-    
+
     def higher_lower_closer(df, factor):
+        df['adj'] = (df.high + df.low + df.close)/3
+        df['adj_log'] = np.log(df['adj']/df['adj'].shift(1))
+        df['adj_log2'] = np.log(df['adj']/df['adj'].shift(2))
+        df['close_closer'] = np.where(df['close'] > df['close'].shift(factor), 1, -1)
+        df['close_square'] = np.sin(np.log(df['close']**2))
+        df['close_log'] = np.log(df.close/df.close.shift(1))
+        df['close_log2'] = np.log(df.close/df.close.shift(2))
         df['high_higher'] = np.where(df['high'] > df['high'].shift(factor), 1, 0)
         df['high_lower'] = np.where(df['low'] < df['low'].shift(factor), 1, 0)
-        df['close_closer'] = np.where(df['close'] > df['close'].shift(factor), 1, -1)
+        df['high_square'] = np.sin(np.log(df['high']**2))
+        df['high_close'] = df['high'] - df['close']
+        df['high_log'] = np.log(df.high/df.high.shift(1))
+        df['high_log2'] = np.log(df.high/df.high.shift(2))
+        df['low_square'] = np.sin(np.log(df['low']**2))
+        df['low_close'] = df['low'] - df['close']
+        df['low_log2'] = np.log(df.low/df.low.shift(1))
+        df['low_log'] = np.log(df.low/df.low.shift(2))
+        df['volume_log'] = np.log(df.volume/df.volume.shift(1))
+        df['volume_log2'] = np.log(df.volume/df.volume.shift(2))
+        df['percent_volatility'] = (df['high'] - df['low']) / df['open']
+        df['hour'] = pd.to_datetime(df['time'], unit='s').dt.hour
+        df['minute'] = pd.to_datetime(df['time'], unit='s').dt.minute
+        df['sma'] = df.ta.sma()
+        df['ema'] = df.ta.ema()
+        df['wma'] = df.ta.wma()
         return df
-    
+
     years_ = 5
     df_raw = get_data_price(symbol, "D1", 1, int(365*years_))
     df_raw['standard_dev_c'] = df_raw['close'].rolling(zzz).std()
@@ -209,7 +211,7 @@ def get_df_2(factor, df_divider, symbol, train=True):
         df = df.copy()[:from_]
         df = copy_shifted(df, factor)
         df = higher_lower_closer(df, factor)
-        
+
         df['target_close'] = df['close'].shift(-factor_)
         df['target_high'] = df['high'].shift(-factor_)
         df['target_low'] = df['low'].shift(-factor_)
@@ -224,7 +226,7 @@ def get_df_2(factor, df_divider, symbol, train=True):
 def gimme_returns(mdf, leverage):
     mdf['position'] = mdf['stance'].ffill()
     mdf["cross"] = np.where(
-        ((mdf.position == 1) & (mdf.position.shift(1) != 1)) | 
+        ((mdf.position == 1) & (mdf.position.shift(1) != 1)) |
         ((mdf.position == -1) & (mdf.position.shift(1) != -1)), 1, 0
     )
     mdf['mkt_move'] = np.log(mdf.close / mdf.close.shift(1))
@@ -247,12 +249,14 @@ def conditional_return(df, interval, value_in_days, leverage):
 
 
 def train_model_natural(factor, symbol, params, targets, df_divider):
-    t_s = 0.3
+    t_s = 0.15
     df_raw = get_df_2(factor, df_divider, symbol)
     cols = [i for i in df_raw.columns if not 'target' in i]
     dfx = df_raw.copy()
     X = dfx[cols]
     models = []
+    sharpe = []
+    i_ = 0
     for target in targets:
         y = dfx[target]
         X_train, X_test, y_train, y_test = train_test_split(
@@ -267,15 +271,21 @@ def train_model_natural(factor, symbol, params, targets, df_divider):
         )
 
         y_pred = model.predict(X_test)
-        mae = mean_absolute_error(y_test, y_pred)
-        xxx = X_test.close - y_pred
-        sharpe = round((X_test.close.mean()/xxx.std())/100, 2)
-        percent_absolute_error = round(mae*100/X[target[7:]].mean(), 2)
-        standard_dev = round(X[target[7:]].std()/X[target[7:]].mean(), 2)
-        if percent_absolute_error < standard_dev:
-            print("OK")
-        
+
+        if i_ == 0:
+            xxx = abs(X_test.close - y_pred)
+        elif i_ == 1:
+            xxx = abs(X_test.high - y_pred)
+        elif i_ == 2:
+            xxx = abs(X_test.low - y_pred)
+
+        yyy = X_test.high - X_test.low
+        sharpe_ = round((yyy.mean()/xxx.mean()), 2)
         models.append(model)
+        sharpe.append(sharpe_)
+        i_ += 1
+    sharpe = round(np.mean(sharpe_), 2)
+    print("Virtual sharpe: ", sharpe)
     return models, df_raw, sharpe
 
 
@@ -285,18 +295,20 @@ def strategy_with_chart_3(mdf, leverage, symbol):
     mdf = mdf[mdf['strategy'] != np.NaN][1:]
     mdf.reset_index(drop=True, inplace=True)
     # Identify buy and sell signals
-    x = mdf['close'].shift(1) - mdf['model_close']
-    sharpe_for_close = (mdf['close'].mean() / x.std())/100
-    
-    x = mdf['high'].shift(1) - mdf['model_high']
-    sharpe_for_high = (mdf['high'].mean() / x.std())/100
-    
-    x = mdf['low'].shift(1) - mdf['model_low']
-    sharpe_for_low = (mdf['low'].mean() / x.std())/100
-    
+    yyy = mdf.high - mdf.low
+    yyy = yyy.mean()
+    x = abs(mdf['close'].shift(-1) - mdf['model_close'])
+    sharpe_for_close = (yyy / x.mean())
+
+    x = abs(mdf['high'].shift(-1) - mdf['model_high'])
+    sharpe_for_high = (yyy / x.mean())
+
+    x = abs(mdf['low'].shift(-1) - mdf['model_low'])
+    sharpe_for_low = (yyy / x.mean())
+
     sharpe_all = round(np.mean([sharpe_for_close, sharpe_for_high, sharpe_for_low]), 2)
-    # Plotting the charts
     returns, mean_time, tp, sl = get_returns(mdf, symbol)
+    print('Position mean time in minutes: ', mean_time)
     if len(returns) -1 > 0:
         real_sharpe = sharpe_ratio(returns)
         omega = omega_ratio(returns)
@@ -311,33 +323,35 @@ def strategy_with_chart_3(mdf, leverage, symbol):
             ome = f'Omega: {omega} '
             sor = f'Sorotino: {round(sorotino*100,2)} '
             kel = f'Kelly: {round(kelly*100, 2)} '
-            print('\n', symbol, '\n', sha, '\n', ome, '\n', sor, '\n', kel, '\n')   
-    strategy_result = round((mdf['strategy'].mean() +
-                             mdf['strategy'].iloc[-1]) / 2, 2)
+            tp_ = f'Takeprofit: {tp} '
+            sl_ = f'Stoploss: {sl} '
+            print('\n', symbol, '\n', sha, '\n', ome, '\n', sor, '\n', kel, '\n', tp_, '\n', sl_, '\n')
+    strategy_result = round(((mdf['strategy'].mean() +
+                             mdf['strategy'].iloc[-1]) / 2), 2)
     return strategy_result, sharpe_all, mdf['position'].iloc[-1]
 
 
-
 def condition(data):
-    cond_long = (((data['close'] < data['price_long']) & (data['close'].shift(1) > data['price_long'].shift(1))) |\
-                 ((data['close'] < data['price_long']) & (data['time'].dt.date != data['time'].dt.date.shift(1))))
-    cond_short = (((data['close'] > data['price_short']) & (data['high'].shift(1) < data['price_short'].shift(1))) |\
-                  ((data['close'] > data['price_short']) & (data['time'].dt.date != data['time'].dt.date.shift(1))))
+    cond_long = (( (data['high'] < data['price_short']) & (data['high'].shift(1) > data['price_short'].shift(1)) ) &\
+                 ( (data['low'] < data['price_long']) & (data['low'].shift(1) > data['price_long'].shift(1)) ))
+    cond_short = (((data['high'] > data['price_short']) & (data['high'].shift(1) < data['price_short'].shift(1))) &\
+                 ((data['low'] > data['price_long']) & (data['low'].shift(1) < data['price_long'].shift(1))))
     cond_long = cond_long & (data['last_price_close'] < data['model_close'])
     cond_short = cond_short & (data['last_price_close'] > data['model_close'])
     return cond_long, cond_short
 
 
+
 def this_shit(symbol, factor, params, leverage, mode, buffer, interval,
               df_divider):
 
-    models, _, _ = train_model_natural(factor, symbol, params,
+    models, _, fake_sharpe1 = train_model_natural(factor, symbol, params,
                                 ['target_close',
                                 'target_high',
                                 'target_low'], df_divider)
 
     df = get_df_2(factor, df_divider, symbol, train=False)
-    
+
     cols = [i for i in df.columns if not 'target' in i]
     df = df[cols]
     dfx = df.copy()
@@ -379,27 +393,44 @@ def this_shit(symbol, factor, params, leverage, mode, buffer, interval,
         dfz['price_short'] = dfz['model_high'] - df['buffer']
     dfz['price_long'] = dfz['price_long'].astype(float)
     dfz['price_short'] = dfz['price_short'].astype(float)
-    
+
+    def fake_sharpe_(dfz):
+        yyy = dfz.price_high - dfz.price_low
+        yyy = yyy.mean()
+        x = abs(dfz['price_close'].shift(-1) - dfz['model_close'])
+        sharpe_for_close = (yyy / x.mean())
+        x = abs(dfz['price_high'].shift(-1) - dfz['model_high'])
+        sharpe_for_high = (yyy / x.mean())
+        x = abs(dfz['price_low'].shift(-1) - dfz['model_low'])
+        sharpe_for_low = (yyy / x.mean())
+        sharpe_all = round(np.mean([sharpe_for_close, sharpe_for_high, sharpe_for_low]), 2)
+        print("Virtual sharpe on test: ", sharpe_all)
+        return sharpe_all
+
+    fake_sharpe2 = fake_sharpe_(dfz)
+
+    fake_sharpe = round(fake_sharpe1 * fake_sharpe2, 2)
+
     dfz = dfz.dropna()
     df = get_data(symbol, interval, 0, 50000)
     data = pd.merge_asof(df, dfz, on='time')
     data = data.dropna()
-    
+
     cond_long, cond_short = condition(data)
 
     data['stance'] = np.where(cond_long, 1, np.NaN)
     data['stance'] = np.where(cond_short, -1, data['stance'])
     result, sharpe_for_close, position = strategy_with_chart_3(
         data, leverage, symbol)
-    return result, sharpe_for_close, position, models
+    return result, sharpe_for_close, position, models, fake_sharpe
 
-global initial_capital 
+global initial_capital
 initial_capital = 500
 leverage = 10
 factor = 1
 mode = 'natural'
 buffer = 'on'
-interval = 'M3'
+interval = 'M5'
 
 params = {
     'n_estimators': 300,
@@ -409,43 +440,69 @@ params = {
     'predictor': 'gpu_predictor',
     'subsample': 0.9,
     'colsample_by*': 0.8,
-    'num_parallel_tree': 20, 
+    'num_parallel_tree': 1,
     'min_child_weight': 12,
     'max_depth': 20,
     'objective': 'reg:squarederror',
 }
 
 
-symbols_ = ['AUDUSD', 'EURGBP', 'EURUSD', 'GBPUSD', 'JP225', 'USDCAD', 'XAGAUD']
+symbols_ = ['NZDCAD', 'USDPLN', 'UK100', 'AUDUSD', 'GBPJPY', 'XAGAUD', 'EURUSD',
+            'JP225', 'USDJPY', 'AUDNZD',  'USDCHF', 'AUDCAD', 'XAGUSD', 'USDCAD',
+            'EURGBP', 'GBPUSD', 'EURJPY', 'US30', 'GBPJPY', 'USTEC',
+            'XTIUSD', 'XAUUSD', 'BTCUSD', 'DE40'
+            ]
 
+blacklist = ['EURJPY', 'US30', 'GBPJPY', 'USTEC', 'XTIUSD', 'XAUUSD', 'DE40', 'USDPLN']
+
+symbols_out = plot_results(6, -2, 'symbol', False, -1.5, False, True) + blacklist
+symbols_ = [s for s in symbols_ if s not in symbols_out]
+print(symbols_)
 
 def today_position():
     best_models = []
-    range_ = range(97, 99)
+    range_ = range(97, 100)
     for d in tqdm(range_):
-        for buffer in ['on', 'off', 0.1, 0.3]:
+        print()
+        for buffer in ['on', 'off', 0.1, 0.3, -0.3]:
             for symbol in symbols_:
-                df_divider = float(d/100)
-                result, sharpe_for_close, position, models = this_shit(
-                    symbol, factor, params, leverage, mode, buffer,
-                    interval, df_divider)
-                best_models.append((symbol, df_divider, buffer, result,
-                                    sharpe_for_close, position, models))
+                try:
+                    df_divider = float(d/100)
+                    result, sharpe_for_close, position, models, fake_sharpe = this_shit(
+                        symbol, factor, params, leverage, mode, buffer,
+                        interval, df_divider)
+                    best_models.append((symbol, df_divider, buffer, result,
+                                        sharpe_for_close, position, models, fake_sharpe))
+                except Exception as e:
+                    print(e)
+                    continue
 
     pandas_options()
     res = pd.DataFrame(best_models, columns=[
-        'symbol', 'divider', 'buffer_mode', 'result', 'sharpe', 'position', 'models'])
-    res = res[['symbol', 'divider', 'buffer_mode', 'result', 'position']]
+        'symbol', 'divider', 'buffer_mode', 'result', 'sharpe', 'position', 'models', 'fake_sharpe'])
+    res = res[['symbol', 'divider', 'buffer_mode', 'result', 'position', 'sharpe', 'fake_sharpe']]
     res = res[(res['result'] > 0)]
     res = res.sort_values(by=['symbol', 'result'], ascending=False)
     res['metric'] = res['position'] * res['result']
-    final = res.groupby('symbol').agg({'metric': 'mean', 'symbol': 'count'})
+    final = res.groupby('symbol').agg({'metric': 'mean', 'symbol': 'count', 'sharpe': 'mean', 'fake_sharpe': 'mean'})
     final['actual_pos'] = np.where(final['metric'] > 0, 0, 1)
     final = final.rename(columns={'symbol': 'counter'})
     final = final[final['counter'] > 1]
+    final['absolute_result'] = abs(final['metric'])
+    final = final.sort_values(by=['counter', 'absolute_result'], ascending=False)
+    final = final.drop(columns=['absolute_result'])
     print(final)
     symbols = [(s, r) for s, r in zip(final.index.to_list(), final['actual_pos'].to_list())]
     print(symbols)
+    with open('daily_ml_results.txt', 'a') as f:
+        f.write('\n')
+        f.write('\n')
+        f.write(dt.now().strftime("%Y-%m-%d %H:%M"))
+        f.write('\n')
+        f.write(final.to_string())
+        f.write('\n')
+        f.write(', '.join([str(item) for item in symbols]))
+        f.write('\n')
     return symbols
 
 

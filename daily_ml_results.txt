@@ -1,0 +1,167 @@
+03.06.2024
+
+symbol
+AUDUSD  112.440000        3           0
+EURGBP   55.524000        5           0
+EURUSD  113.192500        8           0
+GBPUSD  -32.781250        8           1
+JP225   312.014286        7           0
+USDCAD  -24.695000        4           1
+XAGAUD -157.910000        3           1
+[('AUDUSD', 0), ('EURGBP', 0), ('EURUSD', 0), ('GBPUSD', 1), ('JP225', 0), ('USDCAD', 1), ('XAGAUD', 1)]
+
+
+04.06.2024
+
+symbol
+AUDCAD  -84.937500        8           1
+AUDUSD  109.732000        5           0
+EURGBP   56.228333        6           0
+EURUSD   85.018000        5           0
+GBPUSD  -90.752857        7           1
+JP225  -253.856250        8           1
+USDCAD  -40.637500        4           1
+[('AUDCAD', 1), ('AUDUSD', 0), ('EURGBP', 0), ('EURUSD', 0), ('GBPUSD', 1), ('JP225', 1), ('USDCAD', 1)]
+
+
+05.06.2024
+
+            metric  counter  actual_pos
+symbol
+AUDCAD  -79.863333        6           1
+EURGBP   27.211429        7           0
+EURUSD    1.990000        8           0
+GBPUSD  -19.110909       11           1
+JP225   150.091429        7           0
+USDCAD   16.458333        6           0
+XAGAUD -139.246667        6           1
+[('AUDCAD', 1), ('EURGBP', 0), ('EURUSD', 0), ('GBPUSD', 1), ('JP225', 0), ('USDCAD', 0), ('XAGAUD', 1)]
+
+
+
+
+
+2024-06-06 06:38
+            metric  counter  actual_pos
+symbol                                 
+EURUSD   49.033636       11           0
+USDPLN   41.992727       11           0
+NZDCAD  -74.966667        9           1
+USDCHF   29.401111        9           0
+JP225   253.545000        8           0
+AUDNZD   23.873333        6           0
+UK100   -67.565000        4           1
+AUDUSD    8.020000        3           0
+('EURUSD', 0), ('USDPLN', 0), ('NZDCAD', 1), ('USDCHF', 0), ('JP225', 0), ('AUDNZD', 0), ('UK100', 1), ('AUDUSD', 0)
+
+
+
+2024-06-06 22:28
+            metric  counter  actual_pos
+symbol                                 
+EURUSD    1.814545       11           0
+USDPLN  113.815556        9           0
+USDCHF  -49.060000        8           1
+NZDCAD  -41.200000        6           1
+AUDNZD   27.968333        6           0
+JP225   176.618000        5           0
+USDJPY  -30.277500        4           1
+AUDUSD   25.772500        4           0
+XAGUSD -132.473333        3           1
+USDCAD  -19.640000        3           1
+GBPUSD   31.630000        2           0
+('EURUSD', 0), ('USDPLN', 0), ('USDCHF', 1), ('NZDCAD', 1), ('AUDNZD', 0), ('JP225', 0), ('USDJPY', 1), ('AUDUSD', 0), ('XAGUSD', 1), ('USDCAD', 1), ('GBPUSD', 0)
+
+
+2024-06-06 22:53
+            metric  counter  actual_pos
+symbol                                 
+USDCHF  -49.810000        8           1
+EURUSD    1.738571        7           0
+USDPLN  114.353333        6           0
+AUDNZD   27.905000        6           0
+JP225   179.700000        5           0
+NZDCAD -126.010000        3           1
+AUDUSD   26.755000        2           0
+USDCAD  -24.275000        2           1
+('USDCHF', 1), ('EURUSD', 0), ('USDPLN', 0), ('AUDNZD', 0), ('JP225', 0), ('NZDCAD', 1), ('AUDUSD', 0), ('USDCAD', 1)
+
+
+2024-06-07 07:23
+             metric  counter  actual_pos
+symbol                                  
+AUDNZD    27.476364       11           0
+EURUSD     3.985000       10           0
+USDPLN    78.670000        9           0
+NZDCAD   -17.838571        7           1
+BTCUSD -1081.602000        5           1
+JP225    202.160000        4           0
+USDCHF    67.582500        4           0
+DE40     -30.272500        4           1
+USDCAD     8.175000        4           0
+GBPUSD    26.526667        3           0
+('AUDNZD', 0), ('EURUSD', 0), ('USDPLN', 0), ('NZDCAD', 1), ('BTCUSD', 1), ('JP225', 0), ('USDCHF', 0), ('DE40', 1), ('USDCAD', 0), ('GBPUSD', 0)
+
+
+
+
+2024-06-10 06:38
+            metric  counter    sharpe  fake_sharpe  actual_pos
+symbol                                                        
+USDPLN  137.146667       12  0.083333     4.783333           0
+BTCUSD -159.497778        9  0.071111     4.372222           1
+NZDCAD   19.811250        8  0.086250     4.287500           0
+GBPUSD   16.230000        8  0.088750     5.180000           0
+USDCHF  -14.261429        7  0.081429     4.468571           1
+XAGUSD -177.863333        3  0.026667     1.260000           1
+USDJPY   -2.120000        3  0.020000     0.990000           1
+DE40    -35.765000        2  0.030000     1.380000           1
+('USDPLN', 0), ('BTCUSD', 1), ('NZDCAD', 0), ('GBPUSD', 0), ('USDCHF', 1), ('XAGUSD', 1), ('USDJPY', 1), ('DE40', 1)
+
+
+2024-06-11 06:40
+            metric  counter    sharpe  fake_sharpe  actual_pos
+symbol                                                        
+AUDCAD   28.638889        9  0.094444     6.431111           0
+NZDCAD   91.272500        8  0.096250     4.325000           0
+USDCAD   -9.200000        8  0.081250     4.128750           1
+USDPLN  -69.778571        7  0.075714     4.122857           1
+BTCUSD -269.213333        6  0.065000     3.783333           1
+EURGBP   43.223333        6  0.076667     4.880000           0
+USDCHF  -15.052500        4  0.090000     4.740000           1
+DE40    -11.412500        4  0.030000     1.540000           1
+USDJPY   -9.140000        4  0.027500     1.090000           1
+XAGUSD -186.753333        3  0.026667     1.320000           1
+JP225    82.225000        2  0.075000     3.195000           0
+('AUDCAD', 0), ('NZDCAD', 0), ('USDCAD', 1), ('USDPLN', 1), ('BTCUSD', 1), ('EURGBP', 0), ('USDCHF', 1), ('DE40', 1), ('USDJPY', 1), ('XAGUSD', 1), ('JP225', 0)
+
+
+2024-06-11 19:58
+           metric  counter    sharpe  fake_sharpe  actual_pos
+symbol                                                       
+US30    87.138889        9  0.043333     2.314444           0
+DE40   -26.887500        4  0.030000     1.540000           1
+('US30', 0), ('DE40', 1)
+
+
+2024-06-11 20:08
+            metric  counter    sharpe  fake_sharpe  actual_pos
+symbol                                                        
+EURUSD  -42.918000       10  0.077000     4.467000           1
+USDPLN  -50.807143        7  0.075714     4.122857           1
+BTCUSD -360.653333        6  0.065000     3.783333           1
+('EURUSD', 1), ('USDPLN', 1), ('BTCUSD', 1)
+
+
+2024-06-12 06:32
+            metric  counter    sharpe  fake_sharpe  actual_pos
+symbol                                                        
+NZDCAD   18.641111        9  0.093333     3.920000           0
+GBPUSD  -78.787143        7  0.100000     4.495714           1
+USDCAD   -6.570000        7  0.072857     3.761429           1
+AUDCAD   85.831667        6  0.095000     6.488333           0
+XAGAUD -213.220000        4  0.040000     2.142500           1
+BTCUSD -186.677500        4  0.062500     3.840000           1
+XAGUSD -211.643333        3  0.030000     1.800000           1
+USDCHF    2.950000        3  0.080000     3.370000           0
+('NZDCAD', 0), ('GBPUSD', 1), ('USDCAD', 1), ('AUDCAD', 0), ('XAGAUD', 1), ('BTCUSD', 1), ('XAGUSD', 1), ('USDCHF', 0)

@@ -4,6 +4,7 @@ import numpy as np
 import random
 import MetaTrader5 as mt
 import time
+import sys
 from datetime import timedelta
 # from scipy.signal import argrelextrema
 # import threading
@@ -25,7 +26,7 @@ class Bot:
         self.symmetrical_positions = symmetrical_positions
         self.daily_volatility_reduce = daily_volatility_reduce
         self.mdv = self.MDV_() / daily_volatility_reduce
-        self.volume = self.volume_calc(Bot.position_size, False)
+        self.volume = self.volume_calc(Bot.position_size, True)
         self.comment = f'srb_{self.symbol}_{symmetrical_positions}_{daily_volatility_reduce}'
         self.magic = magic_(self.symbol, self.comment)
         self.round_number = round_number_(self.symbol)
@@ -226,7 +227,7 @@ class Bot:
                 self.change_tp_sl()
 
             else:
-                posType = self.direction_()
+                posType = self.direction_() # Off from 11.06.2024 On from 12.06.2024
                 stops, _ = self.prices_list(posType)
                 print(stops)
                 self.request(actions['deal'], posType)
@@ -285,6 +286,10 @@ class Bot:
     def report(self):
         self.positions_()
         while True:
+            now_ = dt.now()
+            if now_.hour >= 21 and now_.minute >= 45:
+                self.clean_orders()
+                sys.exit()
             self.request_get()
             print("Czas:", time.strftime("%H:%M:%S"))
             self.data()
@@ -400,7 +405,7 @@ class Bot:
                     counter += 1
 
             print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
-            time_sleep = int(random.randint(10, 30)*60)
+            time_sleep = int(random.randint(5, 15)*60)
             print(f"Break {int(time_sleep/60)} minutes.")
             time.sleep(time_sleep)
             self.reset_bot()
@@ -415,8 +420,8 @@ class Bot:
     @class_errors
     def volume_calc(self, max_pos_margin, min_volume):
         symbol_info = mt.symbol_info(self.symbol)._asdict()
-        if min_volume:
-            return symbol_info["volume_min"]
+        # if min_volume:
+        #     return symbol_info["volume_min"]
         price = mt.symbol_info_tick(self.symbol)._asdict()
         margin_min = round(((symbol_info["volume_min"] *
                         symbol_info["trade_contract_size"])/100) *
@@ -428,43 +433,52 @@ class Bot:
         if "JP" not in self.symbol:
             volume = round((max_pos_margin / margin_min)) *\
                             symbol_info["volume_min"]
+            print('Volume form: ', (max_pos_margin / margin_min))
         else:
             volume = round((max_pos_margin * 100 / margin_min)) *\
                             symbol_info["volume_min"]
+            print('Volume form: ', (max_pos_margin * 100 / margin_min))
         if volume > symbol_info["volume_max"]:
             volume = float(symbol_info["volume_max"])
+        print('Min volume: ', min_volume)
         print('Calculated volume: ', volume)
+        if min_volume and volume < symbol_info["volume_min"]:
+            return symbol_info["volume_min"]
         return volume
 
     @class_errors
-    def direction_(self):
-        from_date = dt.today() - timedelta(days=1)
-        to_date = dt.today() + timedelta(days=1)
-        from_date = dt(from_date.year, from_date.month, from_date.day)
-        to_date = dt(to_date.year, to_date.month, to_date.day)
-        data = mt.history_deals_get(from_date, to_date)
-        try:
-            df_raw = pd.DataFrame(list(data), columns=data[0]._asdict().keys())
-        except IndexError:
-            return self.start_pos
-        df_raw["time"] = pd.to_datetime(df_raw["time"], unit="s")
-        df_raw = df_raw[df_raw['profit'] != 0.0]
-        df = df_raw[df_raw['symbol']==self.symbol].tail(self.number_of_positions)
-        print(df)
-        if len(df) == 0:
-            return int(self.start_pos)
-        check = True if 'sl' in df.comment.to_list()[0] else False
-        profit = df.profit.sum()
-        type_ = df['type'].iloc[-1]
-        # text = f"Same position type as last beacuse last profit = {profit}" if profit >= 0 \
-        #     else f"Change positin type beacuse last profit = {profit}"
-        # print(text)
-        print("type: ", type_)
-        # if profit >= 0:
-        #     return int(0 if type_ == 1 else 1)
-        # else:
-        #     return int(type_)
-        if check and profit < 0:
-            return int(type_)
+    def direction_(self, switch=True):
+        if switch:
+            from_date = dt.today() - timedelta(days=1)
+            to_date = dt.today() + timedelta(days=1)
+            from_date = dt(from_date.year, from_date.month, from_date.day)
+            to_date = dt(to_date.year, to_date.month, to_date.day)
+            data = mt.history_deals_get(from_date, to_date)
+            try:
+                df_raw = pd.DataFrame(list(data), columns=data[0]._asdict().keys())
+            except IndexError:
+                return self.start_pos
+            df_raw["time"] = pd.to_datetime(df_raw["time"], unit="s")
+            df_raw = df_raw[df_raw['profit'] != 0.0]
+            df = df_raw[df_raw['symbol']==self.symbol].tail(self.number_of_positions)
+            print(df)
+            if len(df) == 0:
+                return int(self.start_pos)
+            check = True if 'sl' in df.comment.to_list()[0] else False
+            profit = df.profit.sum()
+            type_ = df['type'].iloc[-1]
+            # text = f"Same position type as last beacuse last profit = {profit}" if profit >= 0 \
+            #     else f"Change positin type beacuse last profit = {profit}"
+            # print(text)
+            print("type: ", type_)
+            # if profit >= 0:
+            #     return int(0 if type_ == 1 else 1)
+            # else:
+            #     return int(type_)
+
+            if check or profit < 0: # 11.06.2024 change and to or
+                return int(type_)
+            else:
+                return int(0 if type_ == 1 else 1)
         else:
-            return int(0 if type_ == 1 else 1)
+            return self.start_pos

@@ -55,10 +55,10 @@ if __name__ == '__main__':
     symbols = [
         'JP225', 'USTEC', 'UK100', 'DE40', 'US30', 'AUDCAD', 'USDJPY', 'AUDUSD',
         'BTCUSD', 'USDCAD', 'AUDNZD', 'EURJPY', 'XAGAUD', 'EURUSD', 'NZDCAD',
-        'XAGUSD', 'USDCHF', 'GBPJPY', 'GBPUSD', 'EURGBP', 'USDPLN', 'XAUUSD', 'XTIUSD'
+        'XAGUSD', 'USDCHF', 'GBPJPY', 'GBPUSD', 'EURGBP', 'USDPLN', 'XAUUSD', 'XTIUSD', 'XAUAUD', 'XAUJPY'
         ]
     
-    symbols = ['AUDUSD', 'EURGBP', 'EURUSD', 'GBPUSD', 'XAUUSD', 'USDCAD', 'XAGAUD'] # US30
+    #symbols = ['AUDUSD', 'EURGBP', 'EURUSD', 'GBPUSD', 'JP225', 'USDCAD', 'XAGAUD', 'AUDCAD'] # US30
     symbols = list(set(symbols))
 
     pandas_options()
