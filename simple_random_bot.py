@@ -5,12 +5,19 @@ import random
 import MetaTrader5 as mt
 import time
 import sys
+import os
 from datetime import timedelta
+from datetime import datetime as dt
 # from scipy.signal import argrelextrema
 # import threading
 import math
+import xgboost as xgb
 from symbols_rank import symbol_stats
 from functions import *
+
+catalog = os.path.dirname(__file__)
+catalog = f'{catalog}\\models'
+
 
 class Bot:
 
@@ -19,14 +26,15 @@ class Bot:
     position_size = 3       # percent of balance
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
+    time_limit_multiplier = 4
 
-    def __init__(self, symbol, direction, symmetrical_positions, daily_volatility_reduce):
+    def __init__(self, symbol, _, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
         self.symbol = symbol
         self.symmetrical_positions = symmetrical_positions
         self.daily_volatility_reduce = daily_volatility_reduce
         self.mdv = self.MDV_() / daily_volatility_reduce
-        self.volume = self.volume_calc(Bot.position_size, True)
+        self.volume = self.volume_calc(Bot.position_size, False)
         self.comment = f'srb_{self.symbol}_{symmetrical_positions}_{daily_volatility_reduce}'
         self.magic = magic_(self.symbol, self.comment)
         self.round_number = round_number_(self.symbol)
@@ -34,12 +42,14 @@ class Bot:
         self.avg_daily_vol_()
         self.positions_()
         self.limits = None
-        self.start_pos = self.pos_type = direction
         self.sl = 0.0
         self.tp = 0.0
         self.sl_positions = None
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
+        self.load_models(catalog)
+        self.start_pos = self.pos_type = self.actual_position()
+        self.barOpen = mt.copy_rates_from_pos(self.symbol, timeframe_(self.interval), 0, 1)[0][0]
         print("Target == ", self.tp_miner, " USD")
         print("Killer == ", -self.kill_position_profit, " USD")
 
@@ -227,7 +237,8 @@ class Bot:
                 self.change_tp_sl()
 
             else:
-                posType = self.direction_() # Off from 11.06.2024 On from 12.06.2024
+                self.check_model_()
+                posType = self.actual_position()
                 stops, _ = self.prices_list(posType)
                 print(stops)
                 self.request(actions['deal'], posType)
@@ -284,6 +295,7 @@ class Bot:
 
     @class_errors
     def report(self):
+        self.pos_type = self.actual_position()
         self.positions_()
         while True:
             now_ = dt.now()
@@ -298,12 +310,16 @@ class Bot:
 
     @class_errors
     def data(self, report=True):
+        if self.check_new_bar():
+            self.pos_type = self.actual_position()
         try:
-            self.pos_type = self.positions[0].type
-        except Exception as e:
-            print(e)
-            print("Pozycje zamknięte")
+            act_pos = self.positions[0].type
+            if self.pos_type != act_pos:
+                self.clean_orders()
+        except Exception:
             self.clean_orders()
+
+
         self.number_of_positions = len(self.positions)
         account = mt.account_info()
         act_price = mt.symbol_info(self.symbol).bid
@@ -340,6 +356,7 @@ class Bot:
             print(f"Actual price:                                     {act_price}")
             print(f"Barrier price:                                    {self.barrier_price}")
             print(f"Spread:                                           {spread}")
+            print(f"Actual position from model:                       {self.pos_type}")
             print()
 
         if profit < -self.kill_position_profit:
@@ -405,9 +422,9 @@ class Bot:
                     counter += 1
 
             print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
-            time_sleep = int(random.randint(5, 15)*60)
-            print(f"Break {int(time_sleep/60)} minutes.")
-            time.sleep(time_sleep)
+            # time_sleep = int(random.randint(5, 15)*60)
+            # print(f"Break {int(time_sleep/60)} minutes.")
+            time.sleep(5)
             self.reset_bot()
             self.report()
 
@@ -447,38 +464,150 @@ class Bot:
         return volume
 
     @class_errors
-    def direction_(self, switch=True):
-        if switch:
+    def check_model_(self):
+        time_now = dt.now()
+        act_prof = mt.account_info().profit
+        act_prof = 0 if act_prof < 0 else act_prof
+        if time_now - timedelta(minutes=self.limit_time) > self.time_stp:
             from_date = dt.today() - timedelta(days=1)
             to_date = dt.today() + timedelta(days=1)
             from_date = dt(from_date.year, from_date.month, from_date.day)
             to_date = dt(to_date.year, to_date.month, to_date.day)
             data = mt.history_deals_get(from_date, to_date)
             try:
-                df_raw = pd.DataFrame(list(data), columns=data[0]._asdict().keys())
+                df = pd.DataFrame(list(data), columns=data[0]._asdict().keys())
             except IndexError:
-                return self.start_pos
-            df_raw["time"] = pd.to_datetime(df_raw["time"], unit="s")
-            df_raw = df_raw[df_raw['profit'] != 0.0]
-            df = df_raw[df_raw['symbol']==self.symbol].tail(self.number_of_positions)
-            print(df)
-            if len(df) == 0:
-                return int(self.start_pos)
-            check = True if 'sl' in df.comment.to_list()[0] else False
-            profit = df.profit.sum()
-            type_ = df['type'].iloc[-1]
-            # text = f"Same position type as last beacuse last profit = {profit}" if profit >= 0 \
-            #     else f"Change positin type beacuse last profit = {profit}"
-            # print(text)
-            print("type: ", type_)
-            # if profit >= 0:
-            #     return int(0 if type_ == 1 else 1)
-            # else:
-            #     return int(type_)
+                pass
+            df["time"] = pd.to_datetime(df["time"], unit="s")
+            df = df[df['profit'] != 0.0]
 
-            if check or profit < 0: # 11.06.2024 change and to or
-                return int(type_)
+            df_limit_time = df["time"].iloc[-1]
+            limit_time = df_limit_time - timedelta(minutes=self.limit_time)
+            df = df[df['time'] > limit_time]
+            if len(df) > 0:
+                profit = df['profit'].sum() + act_prof
             else:
-                return int(0 if type_ == 1 else 1)
+                profit = 0
+
+            if profit >= 0:
+                self.time_stp = dt.now()
+                self.limit_time = int(self.limit_time*1.33)
+            else:
+                self.delete_model()
+                self.load_models(catalog)
+                self.clean_orders()
+
+    @class_errors
+    def find_files(self, directory):
+        """
+        Znajduje pliki w danym folderze, których nazwy zawierają określone słowo kluczowe.
+
+        Args:
+        - directory (str): Ścieżka do folderu, w którym mają być przeszukiwane pliki.
+        - symbol (str): Słowo kluczowe, które ma występować w nazwach plików.
+
+        Returns:
+        - list: Lista plików, których nazwy zawierają określone słowo kluczowe.
+        """
+        matching_files = []
+        for filename in os.listdir(directory):
+            if self.symbol in filename:
+                matching_files.append(filename[:-6].split('_')[:-1])
+        df = pd.DataFrame(matching_files, columns=['symbol', 'interval', 'factor', 'result'])
+        df['factor'] = df['factor'].astype(int)
+        df['result'] = df['result'].astype(int)
+        df = df.sort_values(by='result', ascending=False)[::2]
+        df.reset_index(drop=True, inplace=True)
+        print(df)
+        interval = df['interval'].iloc[0]
+        factor = df['factor'].iloc[0]
+        result = df['result'].iloc[0]
+        name = f'{self.symbol}_{interval}_{factor}_{result}'
+        return name
+
+    @class_errors
+    def load_models(self, directory):
+        model_name = self.find_files(directory)
+        # buy
+        model_path_buy = os.path.join(directory, f'{model_name}_buy.model')
+        model_path_sell = os.path.join(directory, f'{model_name}_sell.model')
+        model_buy = xgb.Booster()
+        model_sell = xgb.Booster()
+        model_buy.load_model(model_path_buy)
+        model_sell.load_model(model_path_sell)
+        mod_buy = [model_buy, model_path_buy]
+        print(model_path_buy)
+        mod_sell = [model_sell, model_path_sell]
+        print(model_path_sell)
+
+        # class return
+        self.time_stp = dt.now()
+        self.interval = mod_buy[1].split('_')[-4]
+        self.limit_time = interval_time(self.interval) * Bot.time_limit_multiplier
+        self.model_buy = mod_buy
+        self.model_sell = mod_sell
+
+    @class_errors
+    def actual_position(self):
+        # Przykładowe użycie:
+        df = get_data_for_model(self.symbol, self.interval, 1, 200)
+        df = self.data_operations(df)
+        dfx = df.copy()
+        dtest_buy = xgb.DMatrix(df)
+        dtest_sell = xgb.DMatrix(df)
+        buy = self.model_buy[0].predict(dtest_buy)
+        sell = self.model_sell[0].predict(dtest_sell)
+        buy = np.where(buy > 0, 1, 0)
+        sell = np.where(sell > 0, -1, 0)
+        dfx['stance'] = buy + sell
+        dfx['stance'] = dfx['stance'].replace(0, np.NaN)
+        dfx['stance'] = dfx['stance'].ffill()
+        return 0 if dfx['stance'].iloc[-1] == 1 else 1
+    
+    @class_errors
+    def data_operations(self, df):
+        df['adj'] = (df.high + df.low + df.close) / 3
+        df['adj_higher'] = np.where(df['adj'] > df['adj'].shift(1), 1, 0)
+        df['high_higher'] = np.where(df['high'] > df['high'].shift(1), 1, 0)
+        df['low_lower'] = np.where(df['low'] < df['low'].shift(1), 1, 0)
+        df['close_higher'] = np.where(df['close'] > df['close'].shift(1), 1, 0)
+        df['volume_square'] = np.sin(np.log(df['volume']**2))
+        df['high_square'] = np.sin(np.log(df['high']**2))
+        df['low_square'] = np.sin(np.log(df['low']**2))
+        df['close_square'] = np.sin(np.log(df['close']**2))
+        df['high_close'] = df['high'] - df['close']
+        df['low_close'] = df['low'] - df['close']
+        df['high_log'] = np.log(df.high/df.high.shift(1))
+        df['low_log'] = np.log(df.low/df.low.shift(1))
+        df['close_log'] = np.log(df.close/df.close.shift(1))
+        df['adj_log'] = np.log(df.adj/df.adj.shift(1))
+        df['high_log2'] = np.log(df.high/df.high.shift(2))
+        df['low_log2'] = np.log(df.low/df.low.shift(2))
+        df['close_log2'] = np.log(df.close/df.close.shift(2))
+        df['adj_log2'] = np.log(df.adj/df.adj.shift(2))
+        df['volume_log'] = np.log(df.volume/df.volume.shift(1))
+        df['volume_log2'] = np.log(df.volume/df.volume.shift(2))
+        df['volatility_'] = (df['high'] - df['low'])/df['open']
+        df['vola_vol'] = df['volume'] / df['volatility_']
+        #df['vola_vol_log'] = np.log(df['vola_vol']/df['vola_vol'].shift(1))
+        df.replace(np.inf, 0, inplace=True)
+        df = df.dropna()
+        df.reset_index(drop=True, inplace=True)
+        return df
+    
+    @class_errors
+    def check_new_bar(self):
+        bar = mt.copy_rates_from_pos(
+            self.symbol, timeframe_(self.interval), 0, 1)
+        if self.barOpen == bar[0][0]:
+            return False
         else:
-            return self.start_pos
+            self.barOpen == bar[0][0]
+            return True
+        
+    @class_errors
+    def delete_model(self):
+        os.remove(self.model_buy[1])
+        print(f"Model removed: {self.model_buy[1]}")
+        os.remove(self.model_sell[1])
+        print(f"Model removed: {self.model_sell[1]}")

@@ -61,7 +61,10 @@ def plot_results(from_when: int, to_when: int=-1,
     Returns:
     None
     """
-    df = get_raw_close_postions_data(from_when, to_when)
+    try:
+        df = get_raw_close_postions_data(from_when, to_when)
+    except IndexError:
+        return []
     print(df.columns)
     margin = mt.account_info().balance
     print(f"Actual balance: {margin}")

@@ -5,6 +5,13 @@ import MetaTrader5 as mt
 import hashlib
 
 
+def interval_time(time):
+    h = time[0]
+    t = int(time[1:])
+    x = {"M": 1, "H": 60, "D": 1440, "W": 10800}
+    return int(t * x[h])
+
+
 def class_errors(func):
     def just_log(*args, **kwargs):
         symbol = args[0].symbol
@@ -38,6 +45,17 @@ def get_data(symbol, tf, start, counter):
     data = data.drop(["real_volume"], axis=1)
     data.columns = ["time", "open", "high", "low",
                     "close", "volume", "spread"]
+    return data
+
+
+def get_data_for_model(symbol, tf, start, counter):
+    data = pd.DataFrame(mt.copy_rates_from_pos(
+                        symbol, timeframe_(tf), start, counter))
+    data = data.drop(["real_volume"], axis=1)
+    data.columns = ["time", "open", "high", "low",
+                    "close", "volume", "spread"]
+    data['volume'] = data['volume'].astype('int32')
+    data['spread'] = data['spread'].astype('int16')
     return data
 
 

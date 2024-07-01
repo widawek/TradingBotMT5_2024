@@ -165,3 +165,180 @@ BTCUSD -186.677500        4  0.062500     3.840000           1
 XAGUSD -211.643333        3  0.030000     1.800000           1
 USDCHF    2.950000        3  0.080000     3.370000           0
 ('NZDCAD', 0), ('GBPUSD', 1), ('USDCAD', 1), ('AUDCAD', 0), ('XAGAUD', 1), ('BTCUSD', 1), ('XAGUSD', 1), ('USDCHF', 0)
+
+
+2024-06-13 06:28
+            metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                      
+USDPLN  222.336667        3    0.08         4.06           0
+NZDCAD  102.666667        3    0.10         4.09           0
+('USDPLN', 0), ('NZDCAD', 0)
+
+
+2024-06-13 06:37
+            metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                      
+GBPUSD  -53.325000        4    0.09         3.65           1
+USDPLN  222.356667        3    0.08         4.06           0
+NZDCAD  101.170000        3    0.10         4.09           0
+AUDUSD   51.116667        3    0.08         3.50           0
+('GBPUSD', 1), ('USDPLN', 0), ('NZDCAD', 0), ('AUDUSD', 0)
+
+
+2024-06-13 17:45
+            metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                      
+XTIUSD  121.203333        6  0.0900         3.50           0
+GBPUSD -137.280000        4  0.0900         4.09           1
+USDCAD    2.975000        4  0.0775         4.26           0
+NZDCAD  210.790000        3  0.1000         4.25           0
+USDPLN   90.346667        3  0.0800         4.38           0
+('XTIUSD', 0), ('GBPUSD', 1), ('USDCAD', 0), ('NZDCAD', 0), ('USDPLN', 0)
+
+
+2024-06-13 18:55
+testnpt=5
+            metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                      
+AUDNZD -138.123333        3    0.11         5.33           1
+NZDCAD   98.190000        3    0.11         4.52           0
+EURUSD  -93.353333        3    0.08         4.99           1
+USDCAD  -52.713333        3    0.08         4.08           1
+EURGBP  -38.840000        3    0.09         4.64           1
+AUDUSD   35.686667        3    0.10         3.96           0
+('AUDNZD', 1), ('NZDCAD', 0), ('EURUSD', 1), ('USDCAD', 1), ('EURGBP', 1), ('AUDUSD', 0)
+
+
+2024-06-13 19:12
+testnpt=1, no_cuda
+            metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                      
+EURUSD  -58.782500        4    0.08       4.0325           1
+XTIUSD -443.743333        3    0.08       2.8600           1
+USDPLN  144.290000        3    0.08       3.6800           0
+AUDUSD   10.916667        3    0.07       3.6400           0
+('EURUSD', 1), ('XTIUSD', 1), ('USDPLN', 0), ('AUDUSD', 0)
+
+
+2024-06-13 19:27
+testobjective: reg:gamma
+        metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                  
+USDCAD  -24.19        4    0.07         3.85           1
+XTIUSD   80.35        3    0.09         3.18           0
+('USDCAD', 1), ('XTIUSD', 0)
+
+
+2024-06-13 06:37
+            metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                      
+GBPUSD  -53.325000        4    0.09         3.65           1
+USDPLN  222.356667        3    0.08         4.06           0
+NZDCAD  101.170000        3    0.10         4.09           0
+AUDUSD   51.116667        3    0.08         3.50           0
+('GBPUSD', 1), ('USDPLN', 0), ('NZDCAD', 0), ('AUDUSD', 0)
+
+2024-06-13 19:33
+testobjective: reg:tweedie
+            metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                      
+AUDUSD  173.306667        3    0.09         4.02           0
+AUDCAD  -79.370000        3    0.08         4.38           1
+XTIUSD  -74.170000        3    0.08         2.88           1
+NZDCAD   48.280000        3    0.10         4.23           0
+AUDNZD  -33.130000        3    0.09         4.52           1
+USDCHF   28.710000        3    0.08         3.90           0
+GBPUSD  -17.940000        3    0.08         3.21           1
+('AUDUSD', 0), ('AUDCAD', 1), ('XTIUSD', 1), ('NZDCAD', 0), ('AUDNZD', 1), ('USDCHF', 0), ('GBPUSD', 1)
+
+
+2024-06-13 19:45
+testobjective: reg:tweedie, num_parallel_tree: 2
+            metric  counter    sharpe  fake_sharpe  actual_pos
+symbol                                                        
+AUDNZD   23.241429        7  0.095714     4.791429           0
+XTIUSD -621.143333        3  0.080000     2.700000           1
+USDPLN -140.023333        3  0.080000     3.880000           1
+EURUSD -100.180000        3  0.070000     3.890000           1
+('AUDNZD', 0), ('XTIUSD', 1), ('USDPLN', 1), ('EURUSD', 1)
+
+
+2024-06-13 19:50
+testmany many
+             metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                       
+XTIUSD  1494.500000        3    0.10         3.54           0
+JP225   -121.426667        3    0.11         4.42           1
+GBPUSD   -37.390000        3    0.09         4.44           1
+('XTIUSD', 0), ('JP225', 1), ('GBPUSD', 1)
+
+
+2024-06-13 19:55
+testobjective: reg:tweedie, tweedie_variance_power: 1.5
+             metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                       
+XTIUSD  1485.780000        3    0.10         3.54           0
+JP225   -120.316667        3    0.11         4.42           1
+GBPUSD   -37.163333        3    0.09         4.44           1
+('XTIUSD', 0), ('JP225', 1), ('GBPUSD', 1)
+
+
+2024-06-13 20:49
+test 
+'n_estimators': 400,
+'learning_rate': 0.6,
+'tree_method': 'gpu_hist',
+'device': 'cuda',
+'predictor': 'gpu_predictor',
+'subsample': 0.9,
+'colsample_by*': 0.8,
+'num_parallel_tree': 10,
+'min_child_weight': 12,
+'max_depth': 30,
+'objective': 'reg:tweedie'
+    
+Empty DataFrame
+Columns: [metric, counter, sharpe, fake_sharpe, actual_pos]
+Index: []
+
+
+
+2024-06-13 21:06
+test
+    {"n_estimators": 300, "learning_rate": 0.5, "tree_method": "gpu_hist", "device": "cuda", "predictor": "gpu_predictor", "subsample": 0.9, "colsample_by*": 0.8, "num_parallel_tree": 1, "min_child_weight": 12, "max_depth": 20, "objective": "reg:tweedie"}
+    
+           metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                     
+AUDUSD  80.691667        6   0.085        3.775           0
+GBPUSD  24.260000        3   0.080        3.890           0
+XTIUSD  10.766667        3   0.080        2.880           0
+('AUDUSD', 0), ('GBPUSD', 0), ('XTIUSD', 0)
+
+
+2024-06-13 21:09
+test
+    {"n_estimators": 300, "learning_rate": 0.6, "tree_method": "gpu_hist", "device": "cuda", "predictor": "gpu_predictor", "subsample": 0.9, "colsample_by*": 0.8, "num_parallel_tree": 1, "min_child_weight": 12, "max_depth": 20, "objective": "reg:tweedie"}
+    
+Empty DataFrame
+Columns: [metric, counter, sharpe, fake_sharpe, actual_pos]
+Index: []
+
+
+
+2024-06-14 06:02
+            metric  counter  sharpe  fake_sharpe  actual_pos
+symbol                                                      
+GBPUSD   64.997500        4    0.08        4.055           0
+EURUSD -120.266667        3    0.07        3.820           1
+USDCHF    7.620000        3    0.08        3.900           0
+('GBPUSD', 0), ('EURUSD', 1), ('USDCHF', 0)
+
+
+2024-06-14 17:39
+test
+    {"n_estimators": 300, "learning_rate": 0.6, "tree_method": "gpu_hist", "device": "cuda", "predictor": "gpu_predictor", "subsample": 0.9, "colsample_by*": 0.8, "num_parallel_tree": 1, "min_child_weight": 12, "max_depth": 20, "objective": "reg:squarederror"}
+    
+Empty DataFrame
+Columns: [metric, counter, sharpe, fake_sharpe, actual_pos]
+Index: []
+
