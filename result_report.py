@@ -14,7 +14,6 @@ def pandas_options():
 pandas_options()
 
 def get_raw_close_postions_data(from_when: int, to_when: int = -1):
-
     from_date = dt.today().date() - timedelta(days=from_when)
     to_date = dt.today().date() - timedelta(days=to_when)
     print(f"Data from {from_date.strftime('%A')} {from_date} to {to_date.strftime('%A')} {to_date}")
@@ -39,6 +38,7 @@ def get_raw_close_postions_data(from_when: int, to_when: int = -1):
     df['hour_open'] = df['time_open'].dt.hour
     df['hour_close'] = df['time_close'].dt.hour
     df['weekday'] = df['time_close'].dt.day_name()
+    df['interval'] = df['comment'].str.split('_').str[0]
     df.reset_index(drop=True, inplace=True)
     return df
 
@@ -78,7 +78,7 @@ def plot_results(from_when: int, to_when: int=-1,
         sort_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
         df['weekday'] = pd.Categorical(df['weekday'], categories=sort_order, ordered=True)
         df = df.sort_values('weekday')
-
+    print(df)
     if plot:
         plt.figure(figsize=(10, 6))
         plt.bar(df[by_], df['profit'], color='skyblue')
@@ -92,6 +92,7 @@ def plot_results(from_when: int, to_when: int=-1,
         # Wyświetlenie wykresu
         plt.tight_layout()
         plt.show()
+    
     if by_ == 'symbol':
         x1 = sorted(df.symbol.to_list())
         print(x1, f'\nNumber of symbols: {len(x1)}')
@@ -99,5 +100,5 @@ def plot_results(from_when: int, to_when: int=-1,
     return []
 
 if __name__ == "__main__":
-    x1 = plot_results(11, -2, 'symbol', False, -1, True, False)
+    x1 = plot_results(0, -1, 'interval', False, -1, True, False)
     print(x1)

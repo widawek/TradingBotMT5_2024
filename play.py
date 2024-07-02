@@ -1,11 +1,19 @@
-from simple_random_bot import Bot
 import subprocess
+from model_generator import generate_my_models
 
-symbols = ['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCAD']
+
+intervals = ['M5', 'M6', 'M10', 'M12', 'M15', 'M20']
+symbols = ['EURUSD', 'USDCHF', 'GBPUSD']
+leverage = 20
+delete_old_models = True
+positions_number = 3
+volatility_divider = 13
+
+
+generate_my_models(symbols, intervals, leverage, delete_old_models)
 symbols = [(symbol, 0) for symbol in symbols]
-positions_values = [3 for _ in range(len(symbols))]  # Lista wartości symmetrical_positions dla każdego symbolu
-volatility_values = [15 for _ in range(len(symbols))]  # Lista wartości daily_volatility_reduce dla każdego symbolu
-
+positions_values = [positions_number for _ in range(len(symbols))]  # Lista wartości symmetrical_positions dla każdego symbolu
+volatility_values = [volatility_divider for _ in range(len(symbols))]  # Lista wartości daily_volatility_reduce dla każdego symbolu
 directions = [i[1] for i in symbols]
 symbols = [i[0] for i in symbols]
 

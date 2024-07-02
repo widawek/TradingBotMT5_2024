@@ -3,6 +3,15 @@ import traceback
 from datetime import datetime as dt
 import MetaTrader5 as mt
 import hashlib
+import numpy as np
+import pandas_ta as ta
+import os
+
+
+def pandas_options():
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_colwidth', None)
 
 
 def interval_time(time):
@@ -102,3 +111,143 @@ pendings = {
     'long_limit': mt.ORDER_TYPE_BUY_LIMIT,
     'short_limit': mt.ORDER_TYPE_SELL_LIMIT,
     }
+
+
+def sortino_ratio(returns):
+    """
+    Calculate the Sortino Ratio.
+
+    Parameters:
+    returns (numpy.ndarray or list): Array of investment returns.
+    risk_free_rate (float): The risk-free rate.
+
+    Returns:
+    float: The Sortino Ratio.
+    """
+    returns = np.array(returns)
+    downside_returns = returns[returns < 0]
+    mean_return = np.mean(returns)
+    downside_deviation = np.std(downside_returns, ddof=1)
+    sortino_ratio = mean_return / downside_deviation
+    return sortino_ratio
+
+
+def omega_ratio(returns, threshold=0):
+    """
+    Calculate the Omega Ratio.
+
+    Parameters:
+    returns (numpy.ndarray or list): Array of investment returns.
+    threshold (float): The threshold return. Default is 0.
+
+    Returns:
+    float: The Omega Ratio.
+    """
+    returns = np.array(returns)
+    excess_returns = returns - threshold
+    gains = excess_returns[excess_returns > 0]
+    losses = -excess_returns[excess_returns < 0]
+    omega_ratio = np.sum(gains) / np.sum(losses) if np.sum(losses) != 0 else np.inf
+    return omega_ratio
+
+
+def max_vol_times_price_price(df, window=30):
+    # Obliczamy vol * price
+    df['vol_times_price'] = df['close'] * df['volume']
+    # Tworzymy kolumnę z sumami vol * price dla ostatnich window okresów
+    df['sum_vol_times_price'] = df['vol_times_price'].rolling(window, min_periods=1).sum()
+    # Znajdujemy indeks, gdzie suma jest największa
+    max_index = df['sum_vol_times_price'].idxmax()
+    # Pobieramy cenę przy tym indeksie
+    max_price = df.loc[max_index, 'close']
+    # Usuwamy tymczasowe kolumny
+    df.drop(['vol_times_price', 'sum_vol_times_price'], axis=1, inplace=True)
+    return max_price
+
+
+def calculate_dominant(data, num_ranges=50):
+    # Obliczanie minimalnej i maksymalnej wartości w zbiorze danych
+    min_val = np.min(data)
+    max_val = np.max(data)
+
+    # Określenie szerokości każdego zakresu
+    range_width = (max_val - min_val) / num_ranges
+
+    # Tworzenie listy zakresów
+    ranges = [(
+        min_val + i*range_width, min_val + (i+1)*range_width,
+     ((min_val + i*range_width)+(min_val + (i+1)*range_width))/2
+     ) for i in range(num_ranges)]
+
+    # Obliczanie średniej wartości w każdym zakresie
+    dominant_values = []
+    for r in ranges:
+        in_range = (len([x for x in data if r[0] <= x < r[1]]), r[2])
+        dominant_values.append(in_range)
+
+    if len(dominant_values) > 0:
+        overall_dominant = sorted(dominant_values, key=lambda x: x[0], reverse=True)[0][1]
+    else:
+        overall_dominant = None
+    #print("Dominanta: ", overall_dominant)
+    return overall_dominant
+
+
+def is_this_curve_grow(curve, density):
+    window_ = int(len(curve)*(density/100))
+    max_ = curve.rolling(window=window_).max()
+    min_ = curve.rolling(window=window_).min()
+    maxes = np.where(max_ > max_.shift(1), 1, 0)
+    mins = np.where(min_ < min_.shift(1), 1, 0)
+    return round(np.sum(maxes)/np.sum(mins), 3)
+
+
+def is_this_curve_grow2(curve, density):
+    window_ = int(len(curve)*(density/100))
+    sma_ = ta.sma(curve, length=window_)
+    return np.sum(np.diff(sma_.dropna()))
+
+
+def is_this_curve_grow3(prices, window_size):
+    window_size = int(window_size)
+    df = pd.DataFrame({'prices': prices})
+    df['rolling_max'] = df['prices'].rolling(window=window_size).max()
+    df['rolling_min'] = df['prices'].rolling(window=window_size).min()
+    len_max = len(df[df['prices'] == df['rolling_max']])
+    len_min = len(df[df['prices'] == df['rolling_min']])
+    if len_min == 0:
+        return np.inf
+    return round(len_max / len_min, 2)
+
+
+def get_returns(df, symbol):
+    r_num = round_number_(symbol)
+    df = df.dropna()
+    df.reset_index(drop=True, inplace=True)
+    df['cross'].iloc[-1] = 1
+    ret = df[df['cross'] == 1][['time', 'close', 'stance', 'strategy']]
+    ret.reset_index(drop=True, inplace=True)
+    ret['t_delta'] = ret['time'] - ret['time'].shift(1)
+    ret = ret.replace(np.NaN, 0)
+    ret.reset_index(drop=True, inplace=True)
+    ret['return'] = ret['strategy'] - ret['strategy'].shift(1)
+    positive = ret[ret['return'] > 0]
+    positive['positive'] = positive['return'] * positive['close']
+    negative = ret[ret['return'] < 0]
+    negative['negative'] = abs(negative['return']) * negative['close']
+    tp = positive['positive'].mean() + positive['positive'].std()
+    tp = round(tp, r_num)
+    sl = negative['negative'].mean() + negative['negative'].std()
+    sl = round(sl, r_num)
+    if sl == 0:
+        sl = round(0.5*tp, r_num)
+    return ret['return'].dropna(), tp, sl
+
+
+def delete_model(path, fragment):
+    for filename in os.listdir(path):
+        if fragment in filename:
+            file_path = os.path.join(path, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+                print(f"Model removed: {file_path}")

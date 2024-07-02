@@ -14,6 +14,7 @@ import math
 import xgboost as xgb
 from symbols_rank import symbol_stats
 from functions import *
+from model_generator import data_operations
 
 catalog = os.path.dirname(__file__)
 catalog = f'{catalog}\\models'
@@ -31,13 +32,11 @@ class Bot:
     def __init__(self, symbol, _, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
         self.symbol = symbol
+        self.round_number = round_number_(self.symbol)
         self.symmetrical_positions = symmetrical_positions
         self.daily_volatility_reduce = daily_volatility_reduce
         self.mdv = self.MDV_() / daily_volatility_reduce
         self.volume = self.volume_calc(Bot.position_size, False)
-        self.comment = f'srb_{self.symbol}_{symmetrical_positions}_{daily_volatility_reduce}'
-        self.magic = magic_(self.symbol, self.comment)
-        self.round_number = round_number_(self.symbol)
         self.number_of_positions = 0
         self.avg_daily_vol_()
         self.positions_()
@@ -47,7 +46,7 @@ class Bot:
         self.sl_positions = None
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
-        self.load_models(catalog)
+        self.load_models(catalog)  # initialize few class variables
         self.start_pos = self.pos_type = self.actual_position()
         self.barOpen = mt.copy_rates_from_pos(self.symbol, timeframe_(self.interval), 0, 1)[0][0]
         print("Target == ", self.tp_miner, " USD")
@@ -546,12 +545,14 @@ class Bot:
         self.limit_time = interval_time(self.interval) * Bot.time_limit_multiplier
         self.model_buy = mod_buy
         self.model_sell = mod_sell
+        self.comment = f'{self.interval}_{self.symbol}_{self.symmetrical_positions}_{self.daily_volatility_reduce}'
+        self.magic = magic_(self.symbol, self.comment)
 
     @class_errors
     def actual_position(self):
         # Przykładowe użycie:
         df = get_data_for_model(self.symbol, self.interval, 1, 200)
-        df = self.data_operations(df)
+        df = data_operations(df)
         dfx = df.copy()
         dtest_buy = xgb.DMatrix(df)
         dtest_sell = xgb.DMatrix(df)
@@ -563,37 +564,6 @@ class Bot:
         dfx['stance'] = dfx['stance'].replace(0, np.NaN)
         dfx['stance'] = dfx['stance'].ffill()
         return 0 if dfx['stance'].iloc[-1] == 1 else 1
-    
-    @class_errors
-    def data_operations(self, df):
-        df['adj'] = (df.high + df.low + df.close) / 3
-        df['adj_higher'] = np.where(df['adj'] > df['adj'].shift(1), 1, 0)
-        df['high_higher'] = np.where(df['high'] > df['high'].shift(1), 1, 0)
-        df['low_lower'] = np.where(df['low'] < df['low'].shift(1), 1, 0)
-        df['close_higher'] = np.where(df['close'] > df['close'].shift(1), 1, 0)
-        df['volume_square'] = np.sin(np.log(df['volume']**2))
-        df['high_square'] = np.sin(np.log(df['high']**2))
-        df['low_square'] = np.sin(np.log(df['low']**2))
-        df['close_square'] = np.sin(np.log(df['close']**2))
-        df['high_close'] = df['high'] - df['close']
-        df['low_close'] = df['low'] - df['close']
-        df['high_log'] = np.log(df.high/df.high.shift(1))
-        df['low_log'] = np.log(df.low/df.low.shift(1))
-        df['close_log'] = np.log(df.close/df.close.shift(1))
-        df['adj_log'] = np.log(df.adj/df.adj.shift(1))
-        df['high_log2'] = np.log(df.high/df.high.shift(2))
-        df['low_log2'] = np.log(df.low/df.low.shift(2))
-        df['close_log2'] = np.log(df.close/df.close.shift(2))
-        df['adj_log2'] = np.log(df.adj/df.adj.shift(2))
-        df['volume_log'] = np.log(df.volume/df.volume.shift(1))
-        df['volume_log2'] = np.log(df.volume/df.volume.shift(2))
-        df['volatility_'] = (df['high'] - df['low'])/df['open']
-        df['vola_vol'] = df['volume'] / df['volatility_']
-        #df['vola_vol_log'] = np.log(df['vola_vol']/df['vola_vol'].shift(1))
-        df.replace(np.inf, 0, inplace=True)
-        df = df.dropna()
-        df.reset_index(drop=True, inplace=True)
-        return df
     
     @class_errors
     def check_new_bar(self):
