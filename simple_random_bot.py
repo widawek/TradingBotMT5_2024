@@ -28,10 +28,12 @@ class Bot:
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
     time_limit_multiplier = 4
+    reverse = False
 
     def __init__(self, symbol, _, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
         self.symbol = symbol
+        self.active_session()
         self.round_number = round_number_(self.symbol)
         self.symmetrical_positions = symmetrical_positions
         self.daily_volatility_reduce = daily_volatility_reduce
@@ -198,53 +200,52 @@ class Bot:
 
     @class_errors
     def request_get(self):
-        if self.active_session():
-            if self.positions:
-                posType = self.positions[0].type
-                price_open = self.positions[0].price_open
-                if self.limits is None:
-                    _, self.limits = self.prices_list(posType, price_open=price_open)
-                    print(self.limits)
-                orders = mt.orders_get(symbol=self.symbol)
-                self.positions_test()
+        if self.positions:
+            posType = self.positions[0].type
+            price_open = self.positions[0].price_open
+            if self.limits is None:
+                _, self.limits = self.prices_list(posType, price_open=price_open)
+                print(self.limits)
+            orders = mt.orders_get(symbol=self.symbol)
+            self.positions_test()
 
-                if posType == 0:
-                    price_ = mt.symbol_info(self.symbol).bid
-                    for idx, i in enumerate(self.limits):
-                        p_ = round(i+self.mdv, self.round_number)
-                        if price_ < i:
-                            if self.scan_orders(orders, p_):
-                                pass
-                            else:
-                                self.request(actions['pending'], posType, price=p_)
-                                self.limits.remove(self.limits[idx])
-                                break
-                else:
-                    price_ = mt.symbol_info(self.symbol).bid
-                    for idx, i in enumerate(self.limits):
-                        p_ = round(i-self.mdv, self.round_number)
-                        if price_ > i:
-                            if self.scan_orders(orders, p_):
-                                pass
-                            else:
-                                self.request(actions['pending'], posType, price=p_)
-                                self.limits.remove(self.limits[idx])
-                                break
-
-                self.sl_giver()
-                self.tp_giver()
-                self.change_tp_sl()
-
+            if posType == 0:
+                price_ = mt.symbol_info(self.symbol).bid
+                for idx, i in enumerate(self.limits):
+                    p_ = round(i+self.mdv, self.round_number)
+                    if price_ < i:
+                        if self.scan_orders(orders, p_):
+                            pass
+                        else:
+                            self.request(actions['pending'], posType, price=p_)
+                            self.limits.remove(self.limits[idx])
+                            break
             else:
-                self.check_model_()
-                posType = self.actual_position()
-                stops, _ = self.prices_list(posType)
-                print(stops)
-                self.request(actions['deal'], posType)
-                for i in stops:
-                    self.request(actions['pending'], posType, i)
+                price_ = mt.symbol_info(self.symbol).bid
+                for idx, i in enumerate(self.limits):
+                    p_ = round(i-self.mdv, self.round_number)
+                    if price_ > i:
+                        if self.scan_orders(orders, p_):
+                            pass
+                        else:
+                            self.request(actions['pending'], posType, price=p_)
+                            self.limits.remove(self.limits[idx])
+                            break
 
-            self.positions_()
+            self.sl_giver()
+            self.tp_giver()
+            self.change_tp_sl()
+
+        else:
+            self.check_model_()
+            posType = self.actual_position()
+            stops, _ = self.prices_list(posType)
+            print(stops)
+            self.request(actions['deal'], posType)
+            for i in stops:
+                self.request(actions['pending'], posType, i)
+
+        self.positions_()
 
     @class_errors
     def request(self, action, posType, price=None):
@@ -298,7 +299,7 @@ class Bot:
         self.positions_()
         while True:
             now_ = dt.now()
-            if now_.hour >= 21 and now_.minute >= 45:
+            if now_.hour >= 21:# and now_.minute >= 45:
                 self.clean_orders()
                 sys.exit()
             self.request_get()
@@ -356,21 +357,28 @@ class Bot:
             print(f"Barrier price:                                    {self.barrier_price}")
             print(f"Spread:                                           {spread}")
             print(f"Actual position from model:                       {self.pos_type}")
+            print(f"Mode:                                             {'reverse' if Bot.reverse else 'normal'}")
             print()
 
         if profit < -self.kill_position_profit:
-            print('Loss is to high. We have to kill it!')
+            print('Loss is to high. I have to kill it!')
             self.clean_orders()
         elif profit > self.tp_miner:
-            print('The profit is nice. We want it on our accout.')
+            print('The profit is nice. I want it on our accout.')
             self.clean_orders()
 
     @class_errors
     def active_session(self):
+        #from model_generator import morning_hour
         df = get_data(self.symbol, 'D1', 0, 1)
         today_date_tuple = time.localtime()
         formatted_date = time.strftime("%Y-%m-%d", today_date_tuple)
-        return str(df.time[0].date()) == formatted_date
+        if str(df.time[0].date()) == formatted_date:
+            pass
+        else:
+            print(f"Session on {self.symbol} does not active")
+            input()
+            sys.exit(1)
 
     @class_errors
     def close_request(self):
@@ -563,7 +571,10 @@ class Bot:
         dfx['stance'] = buy + sell
         dfx['stance'] = dfx['stance'].replace(0, np.NaN)
         dfx['stance'] = dfx['stance'].ffill()
-        return 0 if dfx['stance'].iloc[-1] == 1 else 1
+        position = 0 if dfx['stance'].iloc[-1] == 1 else 1
+        if Bot.reverse:
+            position = 0 if position == 1 else 1
+        return position
     
     @class_errors
     def check_new_bar(self):

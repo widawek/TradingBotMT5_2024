@@ -14,6 +14,9 @@ mt.initialize()
 import os
 catalog = os.path.dirname(__file__)
 
+morning_hour = 6
+evening_hour = 22
+
 
 def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage):
     status = "NO"
@@ -114,7 +117,7 @@ def ma_shift4(df, direction, factor):
     return df
 
 
-def train_dataset(df, direction, parameters, factor, n_estimators, function, show_results=True):
+def train_dataset(df, direction, parameters, factor, n_estimators, function, t_set, show_results=True):
     dataset = df.copy()
     dataset = function(dataset, direction, factor)
     #isolate the x and y variables
@@ -139,7 +142,7 @@ def train_dataset(df, direction, parameters, factor, n_estimators, function, sho
 
     #split dataset into training and test set
     X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.2,
+                                                        test_size=t_set,
                                                         random_state=1502)
 
     print(f"\nGoal: {round(np.mean(y_test)*100, 2)} % yes/no")
@@ -181,14 +184,12 @@ def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, pri
     density = round((df['cross'].sum()/len(df))*100, 2)
     #print(df['cross'].sum()/len(df))
     df['mkt_move'] = np.log(df.close/df.close.shift(1))
-    df['return'] = df.mkt_move * df.stance.shift(1) * leverage -\
-                    (df.cross *(df.spread/divider)/df.open)
+    df['return'] = np.where(df['time2'].dt.date == df['time2'].dt.date.shift(1),
+                            df.mkt_move * df.stance.shift(1) * leverage -\
+                                (df.cross *(df.spread/divider)/df.open), 0)
     df['strategy'] = (1+df['return']).cumprod() - 1
     df['max_price'] = df.apply(lambda row: max_vol_times_price_price(df.loc[:row.name]), axis=1)
     dominant = calculate_dominant(df['close'].to_list(), num_ranges=10)
-    buy = df[(df.stance == 1) & (df.stance.shift(1) != 1)]
-    sell = df[(df.stance == -1) & (df.stance.shift(1) != -1)]
-    
     just_line = np.linspace(df['strategy'].dropna().iloc[0], df['strategy'].dropna().iloc[-1], num=len(df['strategy'].dropna()))
     df.loc[df.index[-1] - len(df.strategy.dropna()) + 1:df.index[-1] , 'just_line'] = just_line
     
@@ -262,8 +263,10 @@ def generate_my_models(
 
     n_estimators = 4000
     function = ma_shift4
-
+    lr_list = [0.4, 0.5, 0.6, 0.7, 0.8]
+    ts_list = [0.2, 0.4]
     factors = [_ for _ in range(4, 31, 2)]
+
     results = []
     for interval in tqdm(intervals):
         for symbol in symbols:
@@ -276,7 +279,7 @@ def generate_my_models(
                 train_length = 0.97
             dataset = df.copy()[:int(train_length*len(df))]
             testset = df.copy()[int(train_length*len(df)):]
-            for learning_rate in [0.4, 0.5, 0.6, 0.7, 0.8]:
+            for learning_rate in lr_list:
                 parameters = {
                     'learning_rate': learning_rate,
                     'max_depth': len(dataset.columns),
@@ -286,29 +289,34 @@ def generate_my_models(
                     'eval_metric': 'auc',
                     'objective': 'binary:hinge'
                 }
-                for factor in factors:
-                    print("Interval: ", interval)
-                    dfx = testset.copy()
-                    model_buy = train_dataset(dataset, 'buy', parameters, factor,
-                                            n_estimators, function, show_results=False)
-                    model_sell = train_dataset(dataset, 'sell', parameters, factor,
-                                            n_estimators, function, show_results=False)
-                    buy = model_buy.predict(xgb.DMatrix(testset))
-                    sell = model_sell.predict(xgb.DMatrix(testset))
-                    buy = np.where(buy > 0, 1, 0)
-                    sell = np.where(sell > 0, -1, 0)
-                    dfx['stance'] = buy + sell
-                    dfx['stance'] = dfx['stance'].replace(0, np.NaN)
-                    dfx['stance'] = dfx['stance'].ffill()
-                    result, status, density, how_it_grow, sqrt_error, final = strategy_with_chart_(
-                        dfx, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
-                        )
-                    results.append((symbol, interval, leverage, factor, result, density,
-                                    how_it_grow, sqrt_error, final, status))
-                    if generate_model:
-                        if status == "YES":
-                            model_buy.save_model(f"{catalog}\\models\\{symbol}_{interval}_{factor}_{final}_buy.model")
-                            model_sell.save_model(f"{catalog}\\models\\{symbol}_{interval}_{factor}_{final}_sell.model")
+                for t_set in ts_list:
+                    for factor in factors:
+                        print("Interval: ", interval)
+                        dfx = testset.copy()
+                        model_buy = train_dataset(dataset, 'buy', parameters, factor,
+                                                n_estimators, function, t_set, show_results=False)
+                        model_sell = train_dataset(dataset, 'sell', parameters, factor,
+                                                n_estimators, function, t_set, show_results=False)
+                        buy = model_buy.predict(xgb.DMatrix(testset))
+                        sell = model_sell.predict(xgb.DMatrix(testset))
+                        buy = np.where(buy > 0, 1, 0)
+                        sell = np.where(sell > 0, -1, 0)
+                        dfx['time2'] = pd.to_datetime(dfx['time'], unit='s')
+                        dfx['stance'] = buy + sell
+                        dfx['stance'] = dfx['stance'].replace(0, np.NaN)
+                        dfx['stance'] = dfx['stance'].ffill()
+                        dfx['stance'] = np.where((dfx['time2'].dt.hour > morning_hour) & (dfx['time2'].dt.hour < evening_hour), dfx['stance'], 0)
+                        dfx = dfx[dfx['stance'] != 0]
+                        dfx.reset_index(drop=True, inplace=True)
+                        result, status, density, how_it_grow, sqrt_error, final = strategy_with_chart_(
+                            dfx, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
+                            )
+                        results.append((symbol, interval, leverage, factor, result, density,
+                                        how_it_grow, sqrt_error, final, status))
+                        if generate_model:
+                            if status == "YES":
+                                model_buy.save_model(f"{catalog}\\models\\{symbol}_{interval}_{factor}_{final}_buy.model")
+                                model_sell.save_model(f"{catalog}\\models\\{symbol}_{interval}_{factor}_{final}_sell.model")
 
 
 if __name__ == '__main__':
