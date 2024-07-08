@@ -208,7 +208,10 @@ def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, pri
     dom_ret = calculate_dominant(df['return'].dropna().to_list(), num_ranges=10)
     mean_return = sharpe_multiplier * np.mean(df['return'].dropna().to_list())
     result = round((((sharpe + sorotino)/2) * omega * mean_return) * 100, 2)
-    final = int(result * (how_it_grow if how_it_grow != np.inf else 1000) * (1-sqrt_error))
+    try:
+        final = int(result * (how_it_grow if how_it_grow != np.inf else 1000) * (1-sqrt_error))
+    except OverflowError:
+        final = 1000000
     
     if print_:
         print()
@@ -263,8 +266,8 @@ def generate_my_models(
 
     n_estimators = 4000
     function = ma_shift4
-    lr_list = [0.4, 0.5, 0.6, 0.7, 0.8]
-    ts_list = [0.2, 0.4]
+    lr_list = [0.4, 0.45, 0.5, 0.55]
+    ts_list = [0.2, 0.25, 0.3]
     factors = [_ for _ in range(4, 31, 2)]
 
     results = []

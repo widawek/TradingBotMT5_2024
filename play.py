@@ -7,7 +7,7 @@ symbols = ['EURUSD', 'USDCHF', 'GBPUSD']
 leverage = 20
 delete_old_models = True
 positions_number = 3
-volatility_divider = 13
+volatility_divider = 10
 
 
 generate_my_models(symbols, intervals, leverage, delete_old_models)

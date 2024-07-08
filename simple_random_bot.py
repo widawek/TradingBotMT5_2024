@@ -24,11 +24,11 @@ class Bot:
 
     sl_mdv_multiplier = 1.5 # mdv multiplier for sl
     tp_mdv_multiplier = 2   # mdv multiplier for tp
-    position_size = 3       # percent of balance
+    position_size = 4       # percent of balance
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
     time_limit_multiplier = 4
-    reverse = False
+    reverse_ = 'normal_mix'
 
     def __init__(self, symbol, _, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
@@ -357,7 +357,7 @@ class Bot:
             print(f"Barrier price:                                    {self.barrier_price}")
             print(f"Spread:                                           {spread}")
             print(f"Actual position from model:                       {self.pos_type}")
-            print(f"Mode:                                             {'reverse' if Bot.reverse else 'normal'}")
+            print(f"Mode:                                             {Bot.reverse_}")
             print()
 
         if profit < -self.kill_position_profit:
@@ -550,10 +550,11 @@ class Bot:
         # class return
         self.time_stp = dt.now()
         self.interval = mod_buy[1].split('_')[-4]
+        factor = mod_buy[1].split('_')[-3]
         self.limit_time = interval_time(self.interval) * Bot.time_limit_multiplier
         self.model_buy = mod_buy
         self.model_sell = mod_sell
-        self.comment = f'{self.interval}_{self.symbol}_{self.symmetrical_positions}_{self.daily_volatility_reduce}'
+        self.comment = f'{self.interval}_{self.symbol}_{factor}_{self.daily_volatility_reduce}'
         self.magic = magic_(self.symbol, self.comment)
 
     @class_errors
@@ -572,8 +573,14 @@ class Bot:
         dfx['stance'] = dfx['stance'].replace(0, np.NaN)
         dfx['stance'] = dfx['stance'].ffill()
         position = 0 if dfx['stance'].iloc[-1] == 1 else 1
-        if Bot.reverse:
+        if Bot.reverse_ == 'normal':
+            pass
+        elif Bot.reverse_ == 'reverse':
             position = 0 if position == 1 else 1
+        elif Bot.reverse_ == 'normal_mix':
+            time_ = dt.now()
+            if time_.hour >= 14:
+                position = 0 if position == 1 else 1
         return position
     
     @class_errors
