@@ -4,7 +4,7 @@ from datetime import datetime as dt
 from time import sleep
 
 
-while dt.now().hour < 8:
+while dt.now().hour < 9:
     print("Waiting until it is 8 o'clock.")
     sleep(60)
 print(dt.now())

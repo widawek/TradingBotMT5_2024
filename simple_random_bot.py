@@ -516,21 +516,25 @@ class Bot:
         for filename in os.listdir(directory):
             if self.symbol in filename:
                 matching_files.append(filename[:-6].split('_')[:-1])
-        df = pd.DataFrame(matching_files, columns=['symbol', 'interval', 'factor', 'result'])
+        df = pd.DataFrame(matching_files, columns=[
+            'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result'])
         df['factor'] = df['factor'].astype(int)
         df['result'] = df['result'].astype(int)
         df = df.sort_values(by='result', ascending=False)[::2]
         df.reset_index(drop=True, inplace=True)
         print(df)
+        learning_rate = df['learning_rate'].iloc[0]
+        training_set = df['training_set'].iloc[0]
         interval = df['interval'].iloc[0]
         factor = df['factor'].iloc[0]
         result = df['result'].iloc[0]
-        name = f'{self.symbol}_{interval}_{factor}_{result}'
+        name = f'{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
         return name
 
     @class_errors
     def load_models(self, directory):
         model_name = self.find_files(directory)
+        print(model_name)
         # buy
         model_path_buy = os.path.join(directory, f'{model_name}_buy.model')
         model_path_sell = os.path.join(directory, f'{model_name}_sell.model')
@@ -539,18 +543,21 @@ class Bot:
         model_buy.load_model(model_path_buy)
         model_sell.load_model(model_path_sell)
         mod_buy = [model_buy, model_path_buy]
-        print(model_path_buy)
         mod_sell = [model_sell, model_path_sell]
-        print(model_path_sell)
         # class return
         self.time_stp = dt.now()
-        self.interval = mod_buy[1].split('_')[-4]
-        self.factor = mod_buy[1].split('_')[-3]
+        _string_data = mod_buy[1].split('_')
+        self.interval = _string_data[-4]
+        self.factor = _string_data[-3]
+        self.ts = _string_data[-6]
+        self.lr = _string_data[-7][-2:]
+        if len(self.lr) < 2:
+            self.lr = self.lr + '0'
         self.limit_time = interval_time(self.interval) * Bot.time_limit_multiplier
         self.model_buy = mod_buy
         self.model_sell = mod_sell
         self.daily_volatility_reducer()
-        self.comment = f'{self.interval}_{self.symbol}_{self.factor}_{self.daily_volatility_reduce}'
+        self.comment = f'{self.lr}_{self.ts}_{self.interval}_{self.symbol[:2]}_{self.factor}_{self.daily_volatility_reduce}'
         self.magic = magic_(self.symbol, self.comment)
         self.mdv = self.MDV_() / self.daily_volatility_reduce
 

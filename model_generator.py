@@ -264,7 +264,7 @@ def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, pri
 
 n_estimators = 4000
 function = ma_shift4
-lr_list = [0.05, 0.12, 0.55]
+lr_list = [0.05, 0.55]
 ts_list = [0.2, 0.3]
 factors = [_ for _ in range(6, 27, 2)]
 
@@ -330,7 +330,10 @@ def generate_my_models(
                                         how_it_grow, sqrt_error, final, status))
                         if generate_model:
                             if status == "YES":
-                                name_ = f'{symbol}_{interval}_{factor}_{final}'
+                                # name_ {-7}_{-6}-{-5}_{-4}_{-3}_{-2}_
+                                _lr_name = str(learning_rate).split('.')[-1]
+                                _ts_name = str(t_set).split('.')[-1]
+                                name_ = f'{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
                                 model_buy.save_model(f"{catalog}\\models\\{name_}_buy.model")
                                 model_sell.save_model(f"{catalog}\\models\\{name_}_sell.model")
                         end = time.time()
