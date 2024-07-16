@@ -6,6 +6,7 @@ import hashlib
 import numpy as np
 import pandas_ta as ta
 import os
+from itertools import product
 
 
 def pandas_options():
@@ -251,3 +252,19 @@ def delete_model(path, fragment):
             if os.path.isfile(file_path):
                 os.remove(file_path)
                 print(f"Model removed: {file_path}")
+
+
+# def time_remaining(func):
+#     def function(*args, **kwargs):
+        
+#         combinations = list(product(*args))
+#         number_of_combinations = len(combinations)
+#         i = 0
+#         times = []
+
+#         result = func(*args, **kwargs)
+
+
+#         return result
+        
+#     return function

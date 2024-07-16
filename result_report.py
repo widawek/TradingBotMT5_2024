@@ -39,6 +39,7 @@ def get_raw_close_postions_data(from_when: int, to_when: int = -1):
     df['hour_close'] = df['time_close'].dt.hour
     df['weekday'] = df['time_close'].dt.day_name()
     df['interval'] = df['comment'].str.split('_').str[0]
+    df['factor'] = df['comment'].str.split('_').str[2]
     df.reset_index(drop=True, inplace=True)
     return df
 
@@ -100,5 +101,5 @@ def plot_results(from_when: int, to_when: int=-1,
     return []
 
 if __name__ == "__main__":
-    x1 = plot_results(0, -1, 'interval', False, -1, True, False)
+    x1 = plot_results(3, -1, 'symbol', False, -1, True, False)
     print(x1)

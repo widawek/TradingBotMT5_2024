@@ -7,6 +7,8 @@ import MetaTrader5 as mt
 import pandas_ta as ta
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import time
+from itertools import product
 from functions import *
 import warnings
 warnings.filterwarnings("ignore")
@@ -14,8 +16,8 @@ mt.initialize()
 import os
 catalog = os.path.dirname(__file__)
 
-morning_hour = 6
-evening_hour = 22
+morning_hour = 7
+evening_hour = 21
 
 
 def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage):
@@ -53,7 +55,7 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
         print(f"Growing factor {annotation}:       ", how_it_grow)
 
     if (omega > 1 and sharpe > 3 and sorotino > 3 and mean_return > 0 and
-     (how_it_grow > 10 or how_it_grow == np.inf) and curve_result3 > 1 and
+     (how_it_grow > 10 or how_it_grow == np.inf or how_it_grow == np.NaN) and curve_result3 > 1 and
      strategy_result.iloc[-1] > 0):
         status = "YES"
         print(f"OK {annotation} "*30)
@@ -63,7 +65,10 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
 
 def data_operations(df):
     df['adj'] = (df.high + df.low + df.close) / 3
-    df['adj_higher'] = np.where(df['adj'] > df['adj'].shift(1), 1, 0)
+    df['adj_higher1'] = np.where(df['adj'] > df['adj'].shift(1), 1, 0)
+    df['adj_higher2'] = np.where(df['adj'] > df['adj'].shift(2), 1, 0)
+    df['adj_higher3'] = np.where(df['adj'] > df['adj'].shift(3), 1, 0)
+    df['adj_higher4'] = np.where(df['adj'] > df['adj'].shift(4), 1, 0)
     df['high_higher'] = np.where(df['high'] > df['high'].shift(1), 1, 0)
     df['low_lower'] = np.where(df['low'] < df['low'].shift(1), 1, 0)
     df['close_higher'] = np.where(df['close'] > df['close'].shift(1), 1, 0)
@@ -103,7 +108,7 @@ def interval_time_sharpe(interval):
 
 def ma_shift4(df, direction, factor):
     ma = ta.sma(df['close'], length=int(factor))
-    ma = ma.shift(-int(factor/2))
+    ma = ma.shift(-int(factor/3))
     df['goal'] = np.where(df['close'] < ma, 1, -1)
     if direction == 'buy':
         df['goal'] = np.where(((df['close'] < ma) &
@@ -145,7 +150,7 @@ def train_dataset(df, direction, parameters, factor, n_estimators, function, t_s
                                                         test_size=t_set,
                                                         random_state=1502)
 
-    print(f"\nGoal: {round(np.mean(y_test)*100, 2)} % yes/no")
+    print(f"Goal: {round(np.mean(y_test)*100, 2)} % yes/no")
     #create xgboost matrices part 2
     Train = xgb.DMatrix(X_train, label = y_train, feature_names = feature_columns)
     Test = xgb.DMatrix(X_test, label = y_test, feature_names = feature_columns)
@@ -210,7 +215,7 @@ def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, pri
     result = round((((sharpe + sorotino)/2) * omega * mean_return) * 100, 2)
     try:
         final = int(result * (how_it_grow if how_it_grow != np.inf else 1000) * (1-sqrt_error))
-    except OverflowError:
+    except Exception:
         final = 1000000
     
     if print_:
@@ -230,7 +235,7 @@ def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, pri
         print("Final:               ", final)
 
     if (omega > 1 and sharpe > 3 and sorotino > 3 and mean_return > 0 and
-     (how_it_grow > 10 or how_it_grow == np.inf) and curve_result3 > 1 and
+     (how_it_grow > 10 or how_it_grow == np.inf or how_it_grow == np.NaN) and curve_result3 > 1 and
       df['strategy'].iloc[-1] > 0):
         status = "YES"
         print("OK "*30)
@@ -257,18 +262,23 @@ def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, pri
     return result, summary_status, density, how_it_grow, sqrt_error, final
 
 
+n_estimators = 4000
+function = ma_shift4
+lr_list = [0.05, 0.12, 0.55]
+ts_list = [0.2, 0.3]
+factors = [_ for _ in range(6, 27, 2)]
+
 def generate_my_models(
         symbols, intervals, leverage, delete_old_models, 
         show_results_on_graph=False, print_=True, generate_model=True):
 
+    combinations = list(product(intervals, symbols, lr_list, ts_list, factors))
+    number_of_combinations = len(combinations)
+    i = 0
+    times = []
+
     if delete_old_models:
         delete_model(f"{catalog}\\models\\", '')
-
-    n_estimators = 4000
-    function = ma_shift4
-    lr_list = [0.4, 0.45, 0.5, 0.55]
-    ts_list = [0.2, 0.25, 0.3]
-    factors = [_ for _ in range(4, 31, 2)]
 
     results = []
     for interval in tqdm(intervals):
@@ -290,11 +300,13 @@ def generate_my_models(
                     'min_child_weight': len(dataset.columns),
                     'random_state': 42,
                     'eval_metric': 'auc',
+                    'tree_method': 'hist',
                     'objective': 'binary:hinge'
                 }
                 for t_set in ts_list:
                     for factor in factors:
-                        print("Interval: ", interval)
+                        start = time.time()
+                        print(f"\nSymbol: {symbol}; Interval: {interval}; Factor: {factor}")
                         dfx = testset.copy()
                         model_buy = train_dataset(dataset, 'buy', parameters, factor,
                                                 n_estimators, function, t_set, show_results=False)
@@ -318,9 +330,18 @@ def generate_my_models(
                                         how_it_grow, sqrt_error, final, status))
                         if generate_model:
                             if status == "YES":
-                                model_buy.save_model(f"{catalog}\\models\\{symbol}_{interval}_{factor}_{final}_buy.model")
-                                model_sell.save_model(f"{catalog}\\models\\{symbol}_{interval}_{factor}_{final}_sell.model")
-
+                                name_ = f'{symbol}_{interval}_{factor}_{final}'
+                                model_buy.save_model(f"{catalog}\\models\\{name_}_buy.model")
+                                model_sell.save_model(f"{catalog}\\models\\{name_}_sell.model")
+                        end = time.time()
+                        times.append(end-start)
+                        i += 1
+                        time_remaining = round((number_of_combinations - i) * np.mean(times), 2)
+                        hours = int(time_remaining // 3600)
+                        minutes = int((time_remaining % 3600) // 60)
+                        seconds = int((time_remaining % 3600) % 60)
+                        time_info = f'Time remaining {hours:02}:{minutes:02}:{seconds:02}'
+                        print(time_info)
 
 if __name__ == '__main__':
     generate_my_models(['GBPUSD'], ['M5', 'M10', 'M20'], 20, False, True, True, False)

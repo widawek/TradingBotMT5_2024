@@ -8,13 +8,11 @@ import sys
 import os
 from datetime import timedelta
 from datetime import datetime as dt
-# from scipy.signal import argrelextrema
-# import threading
 import math
 import xgboost as xgb
 from symbols_rank import symbol_stats
 from functions import *
-from model_generator import data_operations
+from model_generator import data_operations, evening_hour
 
 catalog = os.path.dirname(__file__)
 catalog = f'{catalog}\\models'
@@ -28,7 +26,7 @@ class Bot:
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
     time_limit_multiplier = 4
-    reverse_ = 'normal_mix'
+    reverse_ = 'normal'  # 'normal' 'reverse' 'normal_mix'
 
     def __init__(self, symbol, _, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
@@ -36,16 +34,16 @@ class Bot:
         self.active_session()
         self.round_number = round_number_(self.symbol)
         self.symmetrical_positions = symmetrical_positions
-        self.daily_volatility_reduce = daily_volatility_reduce
-        self.mdv = self.MDV_() / daily_volatility_reduce
-        self.volume = self.volume_calc(Bot.position_size, False)
+        self.daily_volatility_reduce_values = daily_volatility_reduce[0]
+        self.max_reduce = daily_volatility_reduce[1]
+        self.min_reduce = daily_volatility_reduce[2]
+        self.volume_calc(Bot.position_size, False)
         self.number_of_positions = 0
-        self.avg_daily_vol_()
         self.positions_()
         self.limits = None
+        self.sl_positions = None
         self.sl = 0.0
         self.tp = 0.0
-        self.sl_positions = None
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
         self.load_models(catalog)  # initialize few class variables
@@ -299,7 +297,7 @@ class Bot:
         self.positions_()
         while True:
             now_ = dt.now()
-            if now_.hour >= 21:# and now_.minute >= 45:
+            if now_.hour >= evening_hour-2:# and now_.minute >= 45:
                 self.clean_orders()
                 sys.exit()
             self.request_get()
@@ -318,7 +316,6 @@ class Bot:
                 self.clean_orders()
         except Exception:
             self.clean_orders()
-
 
         self.number_of_positions = len(self.positions)
         account = mt.account_info()
@@ -339,7 +336,7 @@ class Bot:
             self.zero_point = round(mean_open_price - spread, self.round_number)
             self.barrier_price = round(self.zero_point - Bot.sl_mdv_multiplier * self.mdv, self.round_number)
         else:
-            self.distance = 'Unknown'
+            distance = 'Unknown'
             self.zero_point = 'Unknown'
             self.barrier_price = 'Unknown'
 
@@ -467,8 +464,8 @@ class Bot:
         print('Min volume: ', min_volume)
         print('Calculated volume: ', volume)
         if min_volume and volume < symbol_info["volume_min"]:
-            return symbol_info["volume_min"]
-        return volume
+            self.volume = symbol_info["volume_min"]
+        self.volume = volume
 
     @class_errors
     def check_model_(self):
@@ -487,7 +484,6 @@ class Bot:
                 pass
             df["time"] = pd.to_datetime(df["time"], unit="s")
             df = df[df['profit'] != 0.0]
-
             df_limit_time = df["time"].iloc[-1]
             limit_time = df_limit_time - timedelta(minutes=self.limit_time)
             df = df[df['time'] > limit_time]
@@ -546,16 +542,17 @@ class Bot:
         print(model_path_buy)
         mod_sell = [model_sell, model_path_sell]
         print(model_path_sell)
-
         # class return
         self.time_stp = dt.now()
         self.interval = mod_buy[1].split('_')[-4]
-        factor = mod_buy[1].split('_')[-3]
+        self.factor = mod_buy[1].split('_')[-3]
         self.limit_time = interval_time(self.interval) * Bot.time_limit_multiplier
         self.model_buy = mod_buy
         self.model_sell = mod_sell
-        self.comment = f'{self.interval}_{self.symbol}_{factor}_{self.daily_volatility_reduce}'
+        self.daily_volatility_reducer()
+        self.comment = f'{self.interval}_{self.symbol}_{self.factor}_{self.daily_volatility_reduce}'
         self.magic = magic_(self.symbol, self.comment)
+        self.mdv = self.MDV_() / self.daily_volatility_reduce
 
     @class_errors
     def actual_position(self):
@@ -592,10 +589,17 @@ class Bot:
         else:
             self.barOpen == bar[0][0]
             return True
-        
+
     @class_errors
     def delete_model(self):
         os.remove(self.model_buy[1])
         print(f"Model removed: {self.model_buy[1]}")
         os.remove(self.model_sell[1])
         print(f"Model removed: {self.model_sell[1]}")
+
+    @class_errors
+    def daily_volatility_reducer(self):
+        numbers = np.linspace(self.max_reduce, self.min_reduce, len(self.daily_volatility_reduce_values))
+        index_ = self.daily_volatility_reduce_values.index(int(self.interval[1:])*int(self.factor))
+        self.daily_volatility_reduce = int(numbers[index_])
+        print("New model reduce:", self.daily_volatility_reduce)
