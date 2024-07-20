@@ -13,6 +13,7 @@ import xgboost as xgb
 from symbols_rank import symbol_stats
 from functions import *
 from model_generator import data_operations, evening_hour
+from play import intervals
 
 catalog = os.path.dirname(__file__)
 catalog = f'{catalog}\\models'
@@ -22,11 +23,13 @@ class Bot:
 
     sl_mdv_multiplier = 1.5 # mdv multiplier for sl
     tp_mdv_multiplier = 2   # mdv multiplier for tp
-    position_size = 4       # percent of balance
+    position_size = 6       # percent of balance
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
     time_limit_multiplier = 4
     reverse_ = 'normal'  # 'normal' 'reverse' 'normal_mix'
+    system = 'weighted_democracy'# absolute, weighted_democracy, ranked_democracy, just_democracy
+    master_interval = intervals[-1]
 
     def __init__(self, symbol, _, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
@@ -46,9 +49,14 @@ class Bot:
         self.tp = 0.0
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
-        self.load_models(catalog)  # initialize few class variables
-        self.start_pos = self.pos_type = self.actual_position()
-        self.barOpen = mt.copy_rates_from_pos(self.symbol, timeframe_(self.interval), 0, 1)[0][0]
+        if not 'democracy' in Bot.system:
+            self.load_models(catalog)  # initialize few class variables
+            self.start_pos = self.pos_type = self.actual_position()
+            self.barOpen = mt.copy_rates_from_pos(self.symbol, timeframe_(self.interval), 0, 1)[0][0]
+        else:
+            self.load_models_democracy(catalog)  # initialize few class variables
+            self.start_pos = self.pos_type = self.actual_position_democracy()
+            self.barOpen = mt.copy_rates_from_pos(self.symbol, timeframe_(self.interval), 0, 1)[0][0]
         print("Target == ", self.tp_miner, " USD")
         print("Killer == ", -self.kill_position_profit, " USD")
 
@@ -235,8 +243,11 @@ class Bot:
             self.change_tp_sl()
 
         else:
-            self.check_model_()
-            posType = self.actual_position()
+            if Bot.system == 'absolute':
+                self.check_model_()
+                posType = self.actual_position()
+            else:
+                posType = self.actual_position_democracy()
             stops, _ = self.prices_list(posType)
             print(stops)
             self.request(actions['deal'], posType)
@@ -309,7 +320,10 @@ class Bot:
     @class_errors
     def data(self, report=True):
         if self.check_new_bar():
-            self.pos_type = self.actual_position()
+            if 'democracy' not in Bot.system:
+                self.pos_type = self.actual_position()
+            else:
+                self.pos_type = self.actual_position_democracy()
         try:
             act_pos = self.positions[0].type
             if self.pos_type != act_pos:
@@ -522,15 +536,30 @@ class Bot:
         df['result'] = df['result'].astype(int)
         df = df.sort_values(by='result', ascending=False)[::2]
         df.reset_index(drop=True, inplace=True)
+        df['rank'] = df.index + 1
+        _ = df['rank'].to_list()
+        _.reverse()
+        df['rank'] = _
         print(df)
-        learning_rate = df['learning_rate'].iloc[0]
-        training_set = df['training_set'].iloc[0]
-        interval = df['interval'].iloc[0]
-        factor = df['factor'].iloc[0]
-        result = df['result'].iloc[0]
-        name = f'{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
-        return name
-
+        if Bot.system == 'absolute':
+            learning_rate = df['learning_rate'].iloc[0]
+            training_set = df['training_set'].iloc[0]
+            interval = df['interval'].iloc[0]
+            factor = df['factor'].iloc[0]
+            result = df['result'].iloc[0]
+            name = f'{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
+            return name
+        else:
+            names = []
+            for i in range(0, len(df)):
+                interval = df['interval'].iloc[i]
+                result = df['result'].iloc[i]
+                rank = df['rank'].iloc[i]
+                name = f'{self.symbol}_{interval}_{rank}_{result}'
+                names.append(name)
+            print(names)
+            return names
+        
     @class_errors
     def load_models(self, directory):
         model_name = self.find_files(directory)
@@ -550,6 +579,8 @@ class Bot:
         self.interval = _string_data[-4]
         self.factor = _string_data[-3]
         self.ts = _string_data[-6]
+        if len(self.ts) < 2:
+            self.ts = self.ts + '0'
         self.lr = _string_data[-7][-2:]
         if len(self.lr) < 2:
             self.lr = self.lr + '0'
@@ -557,9 +588,10 @@ class Bot:
         self.model_buy = mod_buy
         self.model_sell = mod_sell
         self.daily_volatility_reducer()
-        self.comment = f'{self.lr}_{self.ts}_{self.interval}_{self.symbol[:2]}_{self.factor}_{self.daily_volatility_reduce}'
+        self.comment = f'{self.lr}_{self.ts}_{self.interval}_{self.factor}_{self.daily_volatility_reduce}'
         self.magic = magic_(self.symbol, self.comment)
         self.mdv = self.MDV_() / self.daily_volatility_reduce
+
 
     @class_errors
     def actual_position(self):
@@ -610,3 +642,80 @@ class Bot:
         index_ = self.daily_volatility_reduce_values.index(int(self.interval[1:])*int(self.factor))
         self.daily_volatility_reduce = int(numbers[index_])
         print("New model reduce:", self.daily_volatility_reduce)
+
+    @class_errors
+    def load_models_democracy(self, directory):
+        model_names = self.find_files(directory)
+        print(model_names)
+        # buy
+        self.buy_models = []
+        self.sell_models = []
+        for model_name in model_names:
+            model_path_buy = os.path.join(directory, f'{model_name}_buy.model')
+            model_path_sell = os.path.join(directory, f'{model_name}_sell.model')
+            model_buy = xgb.Booster()
+            model_sell = xgb.Booster()
+            model_buy.load_model(model_path_buy)
+            model_sell.load_model(model_path_sell)
+            self.buy_models.append((model_buy, model_name))
+            self.sell_models.append((model_sell, model_name))
+        assert len(self.buy_models) == len(self.sell_models)
+        # class return
+        self.interval = Bot.master_interval
+        self.limit_time = interval_time(self.interval) * Bot.time_limit_multiplier
+        self.daily_volatility_reducer()
+        y_ = Bot.system.split('_')[1][:4]
+        self.comment = f'{Bot.system[0]+y_}_{self.daily_volatility_reduce}'
+        self.magic = magic_(self.symbol, self.comment)
+        self.mdv = self.MDV_() / self.daily_volatility_reduce
+        print('cmment: ', self.comment)
+        print('model')
+        input()
+        # models
+        # else:
+        #     names = []
+        #     for i in range(0, len(df)):
+        #         interval = df['interval'].iloc[i]
+        #         result = df['result'].iloc[i]
+        #         rank = df['rank'].iloc[i]
+        #         name = f'{self.symbol}_{interval}_{rank}_{result}'
+        #         names.append(name)
+        #     print(names)
+        #     return names
+
+    @class_errors
+    def actual_position_democracy(self):
+        # Przykładowe użycie:
+        stance_values = []
+        for mbuy, msell in (self.buy_models, self.sell_models): 
+            df = get_data_for_model(self.symbol, mbuy[1].split('_')[1], 1, 200)
+            df = data_operations(df)
+            dfx = df.copy()
+            dtest_buy = xgb.DMatrix(df)
+            dtest_sell = xgb.DMatrix(df)
+            buy = mbuy[0].predict(dtest_buy)
+            sell = msell[0].predict(dtest_sell)
+            buy = np.where(buy > 0, 1, 0)
+            sell = np.where(sell > 0, -1, 0)
+            dfx['stance'] = buy + sell
+            dfx['stance'] = dfx['stance'].replace(0, np.NaN)
+            dfx['stance'] = dfx['stance'].ffill()
+            
+            if Bot.system == 'just_democracy':
+                position_ = -1 if dfx['stance'].iloc[-1] == 1 else 1
+            elif Bot.system =='weighted_democracy':
+                position_ = dfx['stance'].iloc[-1] * mbuy[1].split('_')[-1]
+            elif Bot.system == 'ranked_democracy':
+                position_ = dfx['stance'].iloc[-1] * mbuy[1].split('_')[-2]
+            stance_values.append(int(position_))
+
+        position = 0 if np.mean(stance_values) < 0 else 1
+        if Bot.reverse_ == 'normal':
+            pass
+        elif Bot.reverse_ == 'reverse':
+            position = 0 if position == 1 else 1
+        elif Bot.reverse_ == 'normal_mix':
+            time_ = dt.now()
+            if time_.hour >= 14:
+                position = 0 if position == 1 else 1
+        return position

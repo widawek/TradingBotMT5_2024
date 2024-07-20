@@ -7,6 +7,7 @@ import numpy as np
 import pandas_ta as ta
 import os
 from itertools import product
+from time import sleep
 
 
 def pandas_options():
@@ -252,6 +253,19 @@ def delete_model(path, fragment):
             if os.path.isfile(file_path):
                 os.remove(file_path)
                 print(f"Model removed: {file_path}")
+
+
+def timer(hour_):
+    while dt.now().hour < hour_:
+        print(f"Waiting until it is {hour_} o'clock.")
+        sleep(60)
+    print(dt.now())
+
+
+def reduce_values(intervals, range_from, range_to):
+    return sorted(
+        list(set([i*n for i in [int(_[1:]) for _ in intervals]
+        for n in [_ for _ in range(range_from, range_to, 2)]])))
 
 
 # def time_remaining(func):

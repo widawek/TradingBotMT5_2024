@@ -18,6 +18,8 @@ catalog = os.path.dirname(__file__)
 
 morning_hour = 7
 evening_hour = 21
+min_factor = 6
+max_factor = 23
 
 
 def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage):
@@ -266,7 +268,7 @@ n_estimators = 4000
 function = ma_shift4
 lr_list = [0.05, 0.55]
 ts_list = [0.2, 0.3]
-factors = [_ for _ in range(6, 27, 2)]
+factors = [_ for _ in range(min_factor, max_factor, 2)]
 
 def generate_my_models(
         symbols, intervals, leverage, delete_old_models, 
@@ -287,9 +289,9 @@ def generate_my_models(
             #df = my_test
             print("DF length: ", len(df))
             df = data_operations(df)
-            train_length = 0.98
-            if interval == "M1" or interval == "M2":
-                train_length = 0.97
+            train_length = 0.97
+            if interval == "M1" or interval == "M2" or interval == 'M3':
+                train_length = 0.95
             dataset = df.copy()[:int(train_length*len(df))]
             testset = df.copy()[int(train_length*len(df)):]
             for learning_rate in lr_list:
@@ -301,7 +303,13 @@ def generate_my_models(
                     'random_state': 42,
                     'eval_metric': 'auc',
                     'tree_method': 'hist',
-                    'objective': 'binary:hinge'
+                    'objective': 'binary:hinge',
+                    # 'updater': 'grow_quantile_histmaker',
+                    # 'grow_policy': 'lossguide',
+                    # 'booster': 'dart',
+                    # 'sample_type': 'weighted',
+                    # 'rate_drop': 0.05,
+                    # 'skip_drop': 0.08,
                 }
                 for t_set in ts_list:
                     for factor in factors:
@@ -347,4 +355,4 @@ def generate_my_models(
                         print(time_info)
 
 if __name__ == '__main__':
-    generate_my_models(['GBPUSD'], ['M5', 'M10', 'M20'], 20, False, True, True, False)
+    generate_my_models(['BTCUSD'], ['M12'], 2, False, False, False, True)

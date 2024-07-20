@@ -1,25 +1,21 @@
 import subprocess
-from model_generator import generate_my_models
-from datetime import datetime as dt
-from time import sleep
-
-
-while dt.now().hour < 9:
-    print("Waiting until it is 8 o'clock.")
-    sleep(60)
-print(dt.now())
-
+from model_generator import generate_my_models, min_factor, max_factor
+from functions import timer, reduce_values
 
 intervals = ['M5', 'M6', 'M10', 'M12']
 symbols = ['EURUSD', 'USDCHF', 'GBPUSD']
+intervals = ['M6', 'M12']
+symbols = ['BTCUSD']
 leverage = 30
 delete_old_models = True
 positions_number = 3
 max_reducer = 15
 min_reducer = 6
-volatility_divider = [sorted(list(set([i*n for i in [int(_[1:]) for _ in intervals] for n in [_ for _ in range(6, 27, 2)]]))), max_reducer, min_reducer]  
+volatility_divider = [reduce_values(intervals, min_factor, max_factor), max_reducer, min_reducer]  
 print(volatility_divider)
-generate_my_models(symbols, intervals, leverage, delete_old_models)
+#timer(7)
+#generate_my_models(symbols, intervals, leverage, delete_old_models)
+#timer(9)
 symbols = [(symbol, 0) for symbol in symbols]
 positions_values = [positions_number for _ in range(len(symbols))]  # Lista wartości symmetrical_positions dla każdego symbolu
 volatility_values = [volatility_divider for _ in range(len(symbols))]  # Lista wartości daily_volatility_reduce dla każdego symbolu
