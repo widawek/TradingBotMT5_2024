@@ -13,7 +13,7 @@ import xgboost as xgb
 from symbols_rank import symbol_stats
 from functions import *
 from model_generator import data_operations, evening_hour
-from play import intervals
+from parameters import intervals, game_system
 
 catalog = os.path.dirname(__file__)
 catalog = f'{catalog}\\models'
@@ -28,8 +28,9 @@ class Bot:
     tp_miner = 3
     time_limit_multiplier = 4
     reverse_ = 'normal'  # 'normal' 'reverse' 'normal_mix'
-    system = 'weighted_democracy'# absolute, weighted_democracy, ranked_democracy, just_democracy
-    master_interval = intervals[-1]
+    system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
+    master_interval = intervals[0]
+    factor_to_delete = 24
 
     def __init__(self, symbol, _, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
@@ -304,7 +305,12 @@ class Bot:
 
     @class_errors
     def report(self):
-        self.pos_type = self.actual_position()
+        if Bot.system == 'absolute':
+            time_sleep = 5
+            self.pos_type = self.actual_position()
+        else:
+            time_sleep = 10
+            self.pos_type = self.actual_position_democracy()
         self.positions_()
         while True:
             now_ = dt.now()
@@ -314,21 +320,24 @@ class Bot:
             self.request_get()
             print("Czas:", time.strftime("%H:%M:%S"))
             self.data()
-            time.sleep(5)
+            time.sleep(time_sleep)
             print()
 
     @class_errors
     def data(self, report=True):
         if self.check_new_bar():
             if 'democracy' not in Bot.system:
+                print("One model")
                 self.pos_type = self.actual_position()
             else:
+                print(Bot.system)
                 self.pos_type = self.actual_position_democracy()
         try:
             act_pos = self.positions[0].type
             if self.pos_type != act_pos:
                 self.clean_orders()
-        except Exception:
+        except Exception as e:
+            print(e)
             self.clean_orders()
 
         self.number_of_positions = len(self.positions)
@@ -387,7 +396,7 @@ class Bot:
         if str(df.time[0].date()) == formatted_date:
             pass
         else:
-            print(f"Session on {self.symbol} does not active")
+            print(f"Session on {self.symbol} is not active")
             input()
             sys.exit(1)
 
@@ -551,13 +560,37 @@ class Bot:
             return name
         else:
             names = []
+            create_df = []
             for i in range(0, len(df)):
+                learning_rate = df['learning_rate'].iloc[i]
+                training_set = df['training_set'].iloc[i]
                 interval = df['interval'].iloc[i]
+                factor = df['factor'].iloc[i]
                 result = df['result'].iloc[i]
                 rank = df['rank'].iloc[i]
-                name = f'{self.symbol}_{interval}_{rank}_{result}'
-                names.append(name)
+                name = f'{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
+                names.append((name, rank))
+                create_df.append(f'{name}'.split('_'))
             print(names)
+            # I am creating a DataFrame to filter out the high results which are greater than the sum of the rest of the results.
+            if Bot.system == 'weighted_democracy':
+                for _ in range(len(create_df)):
+                    df_result_filter = pd.DataFrame(create_df, columns=[
+                        'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result']
+                        )
+                    print(df_result_filter)
+                    df_result_filter['result'] = df_result_filter['result'].astype(int)
+                    print("sum", sum(df_result_filter['result'][1:]))
+                    print("result", df_result_filter['result'].iloc[0])
+                    if df_result_filter['result'].iloc[0] > sum(df_result_filter['result'][1:]):
+                        # It needs to be improved by changing the result in the tuple (str) to the mean result from the DataFrame result.iloc[int(len(df)/2)]
+                        del create_df[0]
+                        del names[0]
+                        print("delete model")
+                    else:
+                        print('break')
+                        break    
+                
             return names
         
     @class_errors
@@ -639,7 +672,10 @@ class Bot:
     @class_errors
     def daily_volatility_reducer(self):
         numbers = np.linspace(self.max_reduce, self.min_reduce, len(self.daily_volatility_reduce_values))
-        index_ = self.daily_volatility_reduce_values.index(int(self.interval[1:])*int(self.factor))
+        if Bot.system == 'absolute':
+            index_ = self.daily_volatility_reduce_values.index(int(self.interval[1:])*int(self.factor))
+        else:
+            index_ = self.daily_volatility_reduce_values.index(int(self.interval[1:])*int(Bot.factor_to_delete))
         self.daily_volatility_reduce = int(numbers[index_])
         print("New model reduce:", self.daily_volatility_reduce)
 
@@ -651,14 +687,14 @@ class Bot:
         self.buy_models = []
         self.sell_models = []
         for model_name in model_names:
-            model_path_buy = os.path.join(directory, f'{model_name}_buy.model')
-            model_path_sell = os.path.join(directory, f'{model_name}_sell.model')
+            model_path_buy = os.path.join(directory, f'{model_name[0]}_buy.model')
+            model_path_sell = os.path.join(directory, f'{model_name[0]}_sell.model')
             model_buy = xgb.Booster()
             model_sell = xgb.Booster()
             model_buy.load_model(model_path_buy)
             model_sell.load_model(model_path_sell)
-            self.buy_models.append((model_buy, model_name))
-            self.sell_models.append((model_sell, model_name))
+            self.buy_models.append((model_buy, f'{model_name[0]}_{model_name[1]}'))
+            self.sell_models.append((model_sell, f'{model_name[0]}_{model_name[1]}'))
         assert len(self.buy_models) == len(self.sell_models)
         # class return
         self.interval = Bot.master_interval
@@ -668,9 +704,8 @@ class Bot:
         self.comment = f'{Bot.system[0]+y_}_{self.daily_volatility_reduce}'
         self.magic = magic_(self.symbol, self.comment)
         self.mdv = self.MDV_() / self.daily_volatility_reduce
-        print('cmment: ', self.comment)
-        print('model')
-        input()
+        print('comment: ', self.comment)
+        print('Democracy')
         # models
         # else:
         #     names = []
@@ -683,12 +718,14 @@ class Bot:
         #     print(names)
         #     return names
 
+
+    #{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}_{rank}
     @class_errors
     def actual_position_democracy(self):
         # Przykładowe użycie:
         stance_values = []
-        for mbuy, msell in (self.buy_models, self.sell_models): 
-            df = get_data_for_model(self.symbol, mbuy[1].split('_')[1], 1, 200)
+        for mbuy, msell in zip(self.buy_models, self.sell_models): 
+            df = get_data_for_model(self.symbol, mbuy[1].split('_')[3], 1, 200)
             df = data_operations(df)
             dfx = df.copy()
             dtest_buy = xgb.DMatrix(df)
@@ -702,14 +739,31 @@ class Bot:
             dfx['stance'] = dfx['stance'].ffill()
             
             if Bot.system == 'just_democracy':
-                position_ = -1 if dfx['stance'].iloc[-1] == 1 else 1
+                position_ = dfx['stance'].iloc[-1]
             elif Bot.system =='weighted_democracy':
-                position_ = dfx['stance'].iloc[-1] * mbuy[1].split('_')[-1]
+                position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
             elif Bot.system == 'ranked_democracy':
-                position_ = dfx['stance'].iloc[-1] * mbuy[1].split('_')[-2]
+                position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
             stance_values.append(int(position_))
+        
+        print('Stances: ', stance_values)
+        sum_of_position = np.sum(stance_values)
+        print("Sum of democratic votes: ", sum_of_position)
+        try:
+            fx = round(1/(sum_of_position/len(stance_values)))
+            print("Force of democratic votes: ", fx)
+        except Exception:
+            pass
+        if sum_of_position != 0:
+            position = 0 if sum_of_position > 0 else 1
+        else:
+            try:
+                position = self.pos_type
+            except Exception as e:
+                print(e)
+                self.pos_type = self.pos_creator()
 
-        position = 0 if np.mean(stance_values) < 0 else 1
+
         if Bot.reverse_ == 'normal':
             pass
         elif Bot.reverse_ == 'reverse':
@@ -719,3 +773,7 @@ class Bot:
             if time_.hour >= 14:
                 position = 0 if position == 1 else 1
         return position
+
+
+if __name__ == '__main__':
+    print('Yo, wtf?')
