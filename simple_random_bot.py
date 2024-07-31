@@ -12,8 +12,8 @@ import math
 import xgboost as xgb
 from symbols_rank import symbol_stats
 from functions import *
-from model_generator import data_operations, evening_hour
-from parameters import intervals, game_system
+from model_generator import data_operations, evening_hour, probability_edge
+from parameters import intervals, game_system, reverse_
 
 catalog = os.path.dirname(__file__)
 catalog = f'{catalog}\\models'
@@ -27,7 +27,7 @@ class Bot:
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
     time_limit_multiplier = 4
-    reverse_ = 'normal'  # 'normal' 'reverse' 'normal_mix'
+    reverse_ = reverse_ 
     system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
     master_interval = intervals[0]
     factor_to_delete = 24
@@ -104,10 +104,10 @@ class Bot:
 
     @class_errors
     def pos_creator(self):
-        if (self.pos_type is None) and (self.start_pos is None):
+        try:
+            return self.pos_type
+        except NameError:
             return random.randint(0, 1)
-        else:
-            return self.start_pos
 
     @class_errors
     def tp_giver(self):
@@ -550,6 +550,10 @@ class Bot:
         _.reverse()
         df['rank'] = _
         print(df)
+        if len(df) < 6:
+            print(f"Za mało modeli --> ({len(df)})")
+            input("Wciśnij cokolwek żeby wyjść.")
+            sys.exit(1)
         if Bot.system == 'absolute':
             learning_rate = df['learning_rate'].iloc[0]
             training_set = df['training_set'].iloc[0]
@@ -567,30 +571,42 @@ class Bot:
                 interval = df['interval'].iloc[i]
                 factor = df['factor'].iloc[i]
                 result = df['result'].iloc[i]
-                rank = df['rank'].iloc[i]
+                if Bot.system != 'invertedrank_democracy':
+                    rank = df['rank'].iloc[i]
+                else:
+                    rank = df['rank'].iloc[len(df)-i-1]
                 name = f'{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
-                names.append((name, rank))
+                names.append([name, rank]) # change tuple to list
                 create_df.append(f'{name}'.split('_'))
             print(names)
-            # I am creating a DataFrame to filter out the high results which are greater than the sum of the rest of the results.
+
             if Bot.system == 'weighted_democracy':
-                for _ in range(len(create_df)):
-                    df_result_filter = pd.DataFrame(create_df, columns=[
+                print(names)
+                df_result_filter = pd.DataFrame(create_df, columns=[
                         'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result']
                         )
-                    print(df_result_filter)
-                    df_result_filter['result'] = df_result_filter['result'].astype(int)
-                    print("sum", sum(df_result_filter['result'][1:]))
-                    print("result", df_result_filter['result'].iloc[0])
-                    if df_result_filter['result'].iloc[0] > sum(df_result_filter['result'][1:]):
-                        # It needs to be improved by changing the result in the tuple (str) to the mean result from the DataFrame result.iloc[int(len(df)/2)]
-                        del create_df[0]
-                        del names[0]
-                        print("delete model")
+                print(df_result_filter)
+                df_result_filter['result'] = df_result_filter['result'].astype(int)
+                range_ = len(create_df)
+                for n in range(range_):
+                    sum_ = int(df_result_filter.copy().drop(range(n, len(df_result_filter)))['result'].sum()/2)
+                    result_ = df_result_filter['result'].iloc[n]
+                    print("sum", sum_)
+                    print("result", result_)
+                    if result_ > sum_:
+                        old_list = names[n][0].split('_')
+                        print("OLD: ", old_list)
+                        old_list[-1] = str(df_result_filter['result'].iloc[int(len(df_result_filter)/2)-3])
+                        new_str = '_'.join(old_list)
+                        self.rename_files_in_directory(names[n][0], new_str)
+                        names[n][0] = new_str
+                        print("change names")
+                        print(names)
                     else:
                         print('break')
                         break    
-                
+ 
+            print(names)
             return names
         
     @class_errors
@@ -630,14 +646,14 @@ class Bot:
     def actual_position(self):
         # Przykładowe użycie:
         df = get_data_for_model(self.symbol, self.interval, 1, 200)
-        df = data_operations(df)
+        df = data_operations(df, 10)
         dfx = df.copy()
         dtest_buy = xgb.DMatrix(df)
         dtest_sell = xgb.DMatrix(df)
         buy = self.model_buy[0].predict(dtest_buy)
         sell = self.model_sell[0].predict(dtest_sell)
-        buy = np.where(buy > 0, 1, 0)
-        sell = np.where(sell > 0, -1, 0)
+        buy = np.where(buy > probability_edge, 1, 0)
+        sell = np.where(sell > probability_edge, -1, 0)
         dfx['stance'] = buy + sell
         dfx['stance'] = dfx['stance'].replace(0, np.NaN)
         dfx['stance'] = dfx['stance'].ffill()
@@ -655,7 +671,7 @@ class Bot:
     @class_errors
     def check_new_bar(self):
         bar = mt.copy_rates_from_pos(
-            self.symbol, timeframe_(self.interval), 0, 1)
+            self.symbol, timeframe_('M1'), 0, 1) # change self.interval to 'M1'
         if self.barOpen == bar[0][0]:
             return False
         else:
@@ -725,15 +741,15 @@ class Bot:
         # Przykładowe użycie:
         stance_values = []
         for mbuy, msell in zip(self.buy_models, self.sell_models): 
-            df = get_data_for_model(self.symbol, mbuy[1].split('_')[3], 1, 200)
-            df = data_operations(df)
+            df = get_data_for_model(self.symbol, mbuy[1].split('_')[3], 1, 300)
+            df = data_operations(df, 10)
             dfx = df.copy()
             dtest_buy = xgb.DMatrix(df)
             dtest_sell = xgb.DMatrix(df)
             buy = mbuy[0].predict(dtest_buy)
             sell = msell[0].predict(dtest_sell)
-            buy = np.where(buy > 0, 1, 0)
-            sell = np.where(sell > 0, -1, 0)
+            buy = np.where(buy > probability_edge, 1, 0)
+            sell = np.where(sell > probability_edge, -1, 0)
             dfx['stance'] = buy + sell
             dfx['stance'] = dfx['stance'].replace(0, np.NaN)
             dfx['stance'] = dfx['stance'].ffill()
@@ -744,6 +760,12 @@ class Bot:
                 position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
             elif Bot.system == 'ranked_democracy':
                 position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
+            elif Bot.system == 'invertedrank_democracy':
+                position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
+            try:
+                pos_ = int(position_)
+            except Exception:
+                continue
             stance_values.append(int(position_))
         
         print('Stances: ', stance_values)
@@ -773,6 +795,21 @@ class Bot:
             if time_.hour >= 14:
                 position = 0 if position == 1 else 1
         return position
+
+    @class_errors
+    def rename_files_in_directory(self, old_phrase, new_phrase):
+        # Iterate over all files in the specified directory
+        for filename in os.listdir(catalog):
+            # Check if the old phrase is in the filename
+            if old_phrase in filename:
+                # Create the new filename by replacing the old phrase with the new one
+                new_filename = filename.replace(old_phrase, new_phrase)
+                # Construct the full old and new file paths
+                old_file_path = os.path.join(catalog, filename)
+                new_file_path = os.path.join(catalog, new_filename)
+                # Rename the file
+                os.rename(old_file_path, new_file_path)
+                print(f'Renamed: {old_file_path} -> {new_file_path}')
 
 
 if __name__ == '__main__':

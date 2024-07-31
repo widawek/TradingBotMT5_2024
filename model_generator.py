@@ -2,7 +2,10 @@ import pandas as pd
 import xgboost as xgb
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import (
+    confusion_matrix, classification_report, accuracy_score,
+    f1_score, precision_score, recall_score
+    )
 import MetaTrader5 as mt
 import pandas_ta as ta
 import matplotlib.pyplot as plt
@@ -17,9 +20,10 @@ import os
 catalog = os.path.dirname(__file__)
 
 morning_hour = 7
-evening_hour = 21
+evening_hour = 22
 min_factor = 6
 max_factor = 23
+probability_edge = 0.63
 
 
 def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage):
@@ -65,12 +69,16 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
     return status, strategy_result
 
 
-def data_operations(df):
+def data_operations(df, factor):
     df['adj'] = (df.high + df.low + df.close) / 3
     df['adj_higher1'] = np.where(df['adj'] > df['adj'].shift(1), 1, 0)
     df['adj_higher2'] = np.where(df['adj'] > df['adj'].shift(2), 1, 0)
     df['adj_higher3'] = np.where(df['adj'] > df['adj'].shift(3), 1, 0)
     df['adj_higher4'] = np.where(df['adj'] > df['adj'].shift(4), 1, 0)
+    df['adj_lower1'] = np.where(df['adj'] < df['adj'].shift(1), 1, 0)
+    df['adj_lower2'] = np.where(df['adj'] < df['adj'].shift(2), 1, 0)
+    df['adj_lower3'] = np.where(df['adj'] < df['adj'].shift(3), 1, 0)
+    df['adj_lower4'] = np.where(df['adj'] < df['adj'].shift(4), 1, 0)
     df['high_higher'] = np.where(df['high'] > df['high'].shift(1), 1, 0)
     df['low_lower'] = np.where(df['low'] < df['low'].shift(1), 1, 0)
     df['close_higher'] = np.where(df['close'] > df['close'].shift(1), 1, 0)
@@ -92,6 +100,11 @@ def data_operations(df):
     df['volume_log2'] = np.log(df.volume/df.volume.shift(2))
     df['volatility_'] = (df['high'] - df['low'])/df['open']
     df['vola_vol'] = df['volume'] / df['volatility_']
+    df['high_corr'] = df['close'].rolling(window=factor).corr(df['high'])
+    df['low_corr'] = df['close'].rolling(window=factor).corr(df['low'])
+    df['high_low_corr'] = df['high'].rolling(window=factor).corr(df['low'])
+    df['logs_corr'] = df['close_log'].rolling(window=factor).corr(df['volume_log'])
+
     #df['vola_vol_log'] = np.log(df['vola_vol']/df['vola_vol'].shift(1))
     df.replace(np.inf, 0, inplace=True)
     df = df.dropna()
@@ -169,12 +182,22 @@ def train_dataset(df, direction, parameters, factor, n_estimators, function, t_s
     if show_results:
         #predictions
         predictions2 = model.predict(Test)
-        predictions2 = np.where(predictions2 > 0.5, 1, 0)
+        predictions2 = np.where(predictions2 > probability_edge, 1, 0)
         #confusion matrix
         confusion_matrix2 = confusion_matrix(y_test, predictions2)
         print(confusion_matrix2)
         report2 = classification_report(y_test, predictions2)
         print(report2)
+
+        accuracy = accuracy_score(y_test, predictions2)
+        precision = precision_score(y_test, predictions2)
+        recall = recall_score(y_test, predictions2)
+        f1 = f1_score(y_test, predictions2)
+
+        print(f'Accuracy: {round(accuracy, 3)}')
+        print(f'Precision: {round(precision, 3)}')
+        print(f'Recall: {round(recall, 3)}')
+        print(f'F1 Score: {round(f1, 3)}')
         # plot importances
         # xgb.plot_importance(model, max_num_features=10)
     return model
@@ -266,7 +289,7 @@ def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, pri
 
 n_estimators = 4000
 function = ma_shift4
-lr_list = [0.05, 0.55]
+lr_list = [0.05, 0.15, 0.55]
 ts_list = [0.2, 0.3]
 factors = [_ for _ in range(min_factor, max_factor, 2)]
 
@@ -288,62 +311,68 @@ def generate_my_models(
             df = get_data_for_model(symbol, interval, 1, 80000)
             #df = my_test
             print("DF length: ", len(df))
-            df = data_operations(df)
-            train_length = 0.97
+            df = data_operations(df, 10)
+            train_length = 0.98
             if interval == "M1" or interval == "M2" or interval == 'M3':
-                train_length = 0.95
+                train_length = 0.97
             dataset = df.copy()[:int(train_length*len(df))]
             testset = df.copy()[int(train_length*len(df)):]
             for learning_rate in lr_list:
                 parameters = {
                     'learning_rate': learning_rate,
-                    'max_depth': len(dataset.columns),
+                    'max_depth': 2*len(dataset.columns),
                     'colsample_by*': 0.9,
-                    'min_child_weight': len(dataset.columns),
+                    'min_child_weight': int(len(dataset.columns)/4),
                     'random_state': 42,
                     'eval_metric': 'auc',
                     'tree_method': 'hist',
-                    'objective': 'binary:hinge',
-                    # 'updater': 'grow_quantile_histmaker',
-                    # 'grow_policy': 'lossguide',
-                    # 'booster': 'dart',
-                    # 'sample_type': 'weighted',
-                    # 'rate_drop': 0.05,
-                    # 'skip_drop': 0.08,
+                    'objective': 'binary:logistic',
+                    'gamma': 1,
+                    'alpha': 0.3,
+                    'lambda': 0.01,
                 }
                 for t_set in ts_list:
                     for factor in factors:
                         start = time.time()
-                        print(f"\nSymbol: {symbol}; Interval: {interval}; Factor: {factor}")
-                        dfx = testset.copy()
-                        model_buy = train_dataset(dataset, 'buy', parameters, factor,
-                                                n_estimators, function, t_set, show_results=False)
-                        model_sell = train_dataset(dataset, 'sell', parameters, factor,
-                                                n_estimators, function, t_set, show_results=False)
-                        buy = model_buy.predict(xgb.DMatrix(testset))
-                        sell = model_sell.predict(xgb.DMatrix(testset))
-                        buy = np.where(buy > 0, 1, 0)
-                        sell = np.where(sell > 0, -1, 0)
-                        dfx['time2'] = pd.to_datetime(dfx['time'], unit='s')
-                        dfx['stance'] = buy + sell
-                        dfx['stance'] = dfx['stance'].replace(0, np.NaN)
-                        dfx['stance'] = dfx['stance'].ffill()
-                        dfx['stance'] = np.where((dfx['time2'].dt.hour > morning_hour) & (dfx['time2'].dt.hour < evening_hour), dfx['stance'], 0)
-                        dfx = dfx[dfx['stance'] != 0]
-                        dfx.reset_index(drop=True, inplace=True)
-                        result, status, density, how_it_grow, sqrt_error, final = strategy_with_chart_(
-                            dfx, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
-                            )
-                        results.append((symbol, interval, leverage, factor, result, density,
-                                        how_it_grow, sqrt_error, final, status))
-                        if generate_model:
-                            if status == "YES":
-                                # name_ {-7}_{-6}-{-5}_{-4}_{-3}_{-2}_
-                                _lr_name = str(learning_rate).split('.')[-1]
-                                _ts_name = str(t_set).split('.')[-1]
-                                name_ = f'{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
-                                model_buy.save_model(f"{catalog}\\models\\{name_}_buy.model")
-                                model_sell.save_model(f"{catalog}\\models\\{name_}_sell.model")
+                        try:
+                            print(f"\nSymbol: {symbol}; Interval: {interval}; Factor: {factor}")
+                            dfx = testset.copy()
+                            model_buy = train_dataset(dataset, 'buy', parameters, factor,
+                                                    n_estimators, function, t_set, show_results=show_results_on_graph)
+                            model_sell = train_dataset(dataset, 'sell', parameters, factor,
+                                                    n_estimators, function, t_set, show_results=show_results_on_graph)
+                            buy = model_buy.predict(xgb.DMatrix(testset))
+                            sell = model_sell.predict(xgb.DMatrix(testset))
+                            buy = np.where(buy > probability_edge, 1, 0)
+                            sell = np.where(sell > probability_edge, -1, 0)
+                            dfx['time2'] = pd.to_datetime(dfx['time'], unit='s')
+                            dfx['stance'] = buy + sell
+                            dfx['stance'] = dfx['stance'].replace(0, np.NaN)
+                            dfx['stance'] = dfx['stance'].ffill()
+                            dfx['stance'] = np.where((dfx['time2'].dt.hour > morning_hour) & (dfx['time2'].dt.hour < evening_hour), dfx['stance'], 0)
+                            dfx = dfx[dfx['stance'] != 0]
+                            dfx.reset_index(drop=True, inplace=True)
+                            result, status, density, how_it_grow, sqrt_error, final = strategy_with_chart_(
+                                dfx, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
+                                )
+                            results.append((symbol, interval, leverage, factor, result, density,
+                                            how_it_grow, sqrt_error, final, status))
+                            finals = []
+                            if generate_model:
+                                if status == "YES":
+                                    if final in finals:
+                                        continue
+                                    # name_ {-7}_{-6}-{-5}_{-4}_{-3}_{-2}_
+                                    _lr_name = str(learning_rate).split('.')[-1]
+                                    _ts_name = str(t_set).split('.')[-1]
+                                    name_ = f'{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
+                                    finals.append(final)
+                                    model_buy.save_model(f"{catalog}\\models\\{name_}_buy.model")
+                                    model_sell.save_model(f"{catalog}\\models\\{name_}_sell.model")
+                        except Exception as e:
+                            print(e)
+                            i += 1
+                            continue
                         end = time.time()
                         times.append(end-start)
                         i += 1
@@ -355,4 +384,4 @@ def generate_my_models(
                         print(time_info)
 
 if __name__ == '__main__':
-    generate_my_models(['BTCUSD'], ['M12'], 2, False, False, False, True)
+    generate_my_models(['EURUSD', 'USDCHF'], ['M5', 'M6', 'M10', 'M12'], 30, False, True, True, True)

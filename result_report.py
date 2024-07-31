@@ -104,5 +104,5 @@ def plot_results(from_when: int, to_when: int=-1,
 
 if __name__ == "__main__":
     # by_ 'symbol', 'comment', 'interval', 'factor', 'learing_rate', 'training_set'
-    x1 = plot_results(3, -1, 'training_set', False, -1, True, False)
+    x1 = plot_results(1, 0, 'symbol', False, -1, True, False)
     print(x1)

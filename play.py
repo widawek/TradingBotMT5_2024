@@ -6,7 +6,7 @@ from parameters import *
 
 timer(7)
 generate_my_models(symbols, intervals, leverage, delete_old_models)
-timer(9)
+timer(8)
 symbols = [(symbol, 0) for symbol in symbols]
 positions_values = [positions_number for _ in range(len(symbols))]  # Lista wartości symmetrical_positions dla każdego symbolu
 volatility_values = [volatility_divider for _ in range(len(symbols))]  # Lista wartości daily_volatility_reduce dla każdego symbolu
