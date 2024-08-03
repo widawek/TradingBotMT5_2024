@@ -9,14 +9,124 @@ import os
 from datetime import timedelta
 from datetime import datetime as dt
 import math
+from icecream import ic
 import xgboost as xgb
 from symbols_rank import symbol_stats
 from functions import *
 from model_generator import data_operations, evening_hour, probability_edge
 from parameters import intervals, game_system, reverse_
+from dataclasses import dataclass
 
 catalog = os.path.dirname(__file__)
 catalog = f'{catalog}\\models'
+
+
+@dataclass
+class CheckOpenPositions:
+    symbol: str
+    interval: str
+    kill: float
+
+    @class_errors
+    def __post_init__(self):
+        self.cutoff_time = self.interval_time() * 4
+        self.time_shift = self.time_zone_shift()
+        self.pos_time = 0
+        self.non_profit_time = 0
+
+    @class_errors
+    def interval_time(self):
+        h = self.interval[0]
+        t = int(self.interval[1:])
+        x = {"M": 1, "H": 60, "D": 1440, "W": 10800}
+        return int(t * x[h])
+
+    @class_errors
+    def time_zone_shift(self) -> int:
+        """
+            Function shows gap from the mt5 platform time hour to dt.now() hour.
+        """
+        mt5_time = mt.copy_rates_from_pos('BTCUSD', timeframe_('M1'), 0, 1)[0][0]
+        mt5_time = pd.to_datetime(mt5_time, unit='s')
+        mt5_hour = mt5_time.hour
+        now_hour = dt.now().hour
+        return mt5_hour - now_hour
+
+    @class_errors
+    def positions_(self):
+        self.positions = ic(mt.positions_get())
+        self.positions = [i for i in self.positions if i[-3] == self.symbol]
+        self.number_of_positions = ic(len(self.positions))
+        try:
+            self.direction = self.positions[0][5]
+        except IndexError:
+            self.direction = None
+
+    @class_errors
+    def time_from_pos(self, which_one: str='first') -> int:
+        self.positions_()
+        if which_one == 'first':
+            pos = 0
+        elif which_one == 'last':
+            pos = self.number_of_positions - 1
+
+        try:
+            first_position_time_open = ic(pd.to_datetime(self.positions[pos][3], unit='s'))
+        except IndexError:
+            print("Any position is open.")
+            return 0
+        first_position_time_open = ic(first_position_time_open - timedelta(hours=self.time_shift))
+        time_now = dt.now()
+        time_ = ic(int((time_now-first_position_time_open).total_seconds()/60))
+        return time_
+
+    @class_errors
+    def all_positions_non_profit(self) -> bool:
+        if self.number_of_positions == 0:
+            return False
+        return ic(all([i[-4] < 0 for i in self.positions]))
+
+    @class_errors
+    def profit_to_kill(self):
+        profit = sum([i[-4] for i in self.positions])
+        if ic(profit < -self.kill/3):
+            return True
+        return False
+
+    @class_errors
+    def adx_pos(self):
+
+        def stance_shit(df):
+            df[['atr', 'long', 'short']] = df.ta.adx(length=self.cutoff_time)
+            df = df.dropna()
+            df['stance'] = np.where(
+                ((df.atr > df.short) & (df.atr.shift(1) < df.short.shift(1)) &
+                (df.long > df.short)),
+                1, np.NaN
+                )
+            df['stance'] = np.where(
+                ((df.atr > df.long) & (df.atr.shift(1) < df.long.shift(1)) &
+                (df.short > df.long)),
+                -1, df['stance']
+                )
+            df['stance'] = df['stance'].ffill()
+            return df
+
+        df_raw = get_data(self.symbol, 'M1', 1, 400)
+        df = df_raw.copy()
+        df = ic(stance_shit(df))
+        return ic(df['stance'].iloc-[1])
+
+    @class_errors
+    def reverse_or_not(self):
+        pos_time = self.time_from_pos()
+        all_non_prof = self.all_positions_non_profit()
+        killer_profit = self.profit_to_kill()
+        if (True if ((pos_time > self.cutoff_time) and all_non_prof and killer_profit) else False):
+            pos = ic(0 if self.adx_pos == 1 else 1)
+            if pos != self.direction:
+                return True
+        return False
 
 
 class Bot:
@@ -27,13 +137,14 @@ class Bot:
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
     time_limit_multiplier = 4
-    reverse_ = reverse_ 
+    reverse_ = reverse_
     system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
     master_interval = intervals[0]
     factor_to_delete = 24
 
     def __init__(self, symbol, _, symmetrical_positions, daily_volatility_reduce):
         mt.initialize()
+        self.reverse = reverse_
         self.symbol = symbol
         self.active_session()
         self.round_number = round_number_(self.symbol)
@@ -50,6 +161,7 @@ class Bot:
         self.tp = 0.0
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
+        self.reverse_mechanism = CheckOpenPositions(symbol, Bot.master_interval, self.kill_position_profit)
         if not 'democracy' in Bot.system:
             self.load_models(catalog)  # initialize few class variables
             self.start_pos = self.pos_type = self.actual_position()
@@ -60,6 +172,7 @@ class Bot:
             self.barOpen = mt.copy_rates_from_pos(self.symbol, timeframe_(self.interval), 0, 1)[0][0]
         print("Target == ", self.tp_miner, " USD")
         print("Killer == ", -self.kill_position_profit, " USD")
+
 
     @class_errors
     def MDV_(self):
@@ -377,7 +490,7 @@ class Bot:
             print(f"Barrier price:                                    {self.barrier_price}")
             print(f"Spread:                                           {spread}")
             print(f"Actual position from model:                       {self.pos_type}")
-            print(f"Mode:                                             {Bot.reverse_}")
+            print(f"Mode:                                             {self.reverse}")
             print()
 
         if profit < -self.kill_position_profit:
@@ -604,11 +717,11 @@ class Bot:
                         print(names)
                     else:
                         print('break')
-                        break    
- 
+                        break
+
             print(names)
             return names
-        
+
     @class_errors
     def load_models(self, directory):
         model_name = self.find_files(directory)
@@ -658,16 +771,16 @@ class Bot:
         dfx['stance'] = dfx['stance'].replace(0, np.NaN)
         dfx['stance'] = dfx['stance'].ffill()
         position = 0 if dfx['stance'].iloc[-1] == 1 else 1
-        if Bot.reverse_ == 'normal':
+        if self.reverse == 'normal':
             pass
-        elif Bot.reverse_ == 'reverse':
+        elif self.reverse == 'reverse':
             position = 0 if position == 1 else 1
-        elif Bot.reverse_ == 'normal_mix':
+        elif self.reverse == 'normal_mix':
             time_ = dt.now()
             if time_.hour >= 14:
                 position = 0 if position == 1 else 1
         return position
-    
+
     @class_errors
     def check_new_bar(self):
         bar = mt.copy_rates_from_pos(
@@ -722,25 +835,19 @@ class Bot:
         self.mdv = self.MDV_() / self.daily_volatility_reduce
         print('comment: ', self.comment)
         print('Democracy')
-        # models
-        # else:
-        #     names = []
-        #     for i in range(0, len(df)):
-        #         interval = df['interval'].iloc[i]
-        #         result = df['result'].iloc[i]
-        #         rank = df['rank'].iloc[i]
-        #         name = f'{self.symbol}_{interval}_{rank}_{result}'
-        #         names.append(name)
-        #     print(names)
-        #     return names
 
-
-    #{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}_{rank}
     @class_errors
     def actual_position_democracy(self):
+        if self.reverse_mechanism.reverse_or_not():
+            if self.reverse == 'normal':
+                self.reverse = 'reverse'
+            elif self.reverse == 'reverse':
+                self.reverse = 'normal'
+            else:
+                pass
         # Przykładowe użycie:
         stance_values = []
-        for mbuy, msell in zip(self.buy_models, self.sell_models): 
+        for mbuy, msell in zip(self.buy_models, self.sell_models):
             df = get_data_for_model(self.symbol, mbuy[1].split('_')[3], 1, 300)
             df = data_operations(df, 10)
             dfx = df.copy()
@@ -753,7 +860,7 @@ class Bot:
             dfx['stance'] = buy + sell
             dfx['stance'] = dfx['stance'].replace(0, np.NaN)
             dfx['stance'] = dfx['stance'].ffill()
-            
+
             if Bot.system == 'just_democracy':
                 position_ = dfx['stance'].iloc[-1]
             elif Bot.system =='weighted_democracy':
@@ -767,7 +874,7 @@ class Bot:
             except Exception:
                 continue
             stance_values.append(int(position_))
-        
+
         print('Stances: ', stance_values)
         sum_of_position = np.sum(stance_values)
         print("Sum of democratic votes: ", sum_of_position)
@@ -785,12 +892,11 @@ class Bot:
                 print(e)
                 self.pos_type = self.pos_creator()
 
-
-        if Bot.reverse_ == 'normal':
+        if self.reverse == 'normal':
             pass
-        elif Bot.reverse_ == 'reverse':
+        elif self.reverse == 'reverse':
             position = 0 if position == 1 else 1
-        elif Bot.reverse_ == 'normal_mix':
+        elif self.reverse == 'normal_mix':
             time_ = dt.now()
             if time_.hour >= 14:
                 position = 0 if position == 1 else 1
