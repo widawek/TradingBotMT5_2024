@@ -29,7 +29,7 @@ class CheckOpenPositions:
 
     @class_errors
     def __post_init__(self):
-        self.cutoff_time = self.interval_time() * 4
+        self.cutoff_time = self.interval_time() * 3
         self.time_shift = self.time_zone_shift()
         self.pos_time = 0
         self.non_profit_time = 0
@@ -54,9 +54,8 @@ class CheckOpenPositions:
 
     @class_errors
     def positions_(self):
-        self.positions = ic(mt.positions_get())
-        self.positions = [i for i in self.positions if i[-3] == self.symbol]
-        self.number_of_positions = ic(len(self.positions))
+        self.positions = ic(mt.positions_get(symbol=self.symbol))
+        self.number_of_positions = len(self.positions)
         try:
             self.direction = self.positions[0][5]
         except IndexError:
@@ -89,7 +88,9 @@ class CheckOpenPositions:
     @class_errors
     def profit_to_kill(self):
         profit = sum([i[-4] for i in self.positions])
-        if ic(profit < -self.kill/3):
+        killer = -round(self.kill/4, 2)
+        print("Kill it profit:", killer)
+        if ic(profit < killer):
             return True
         return False
 
@@ -115,16 +116,19 @@ class CheckOpenPositions:
         df_raw = get_data(self.symbol, 'M1', 1, 400)
         df = df_raw.copy()
         df = ic(stance_shit(df))
-        return ic(df['stance'].iloc-[1])
+        return ic(df['stance'].iloc[-1])
 
     @class_errors
     def reverse_or_not(self):
         pos_time = self.time_from_pos()
         all_non_prof = self.all_positions_non_profit()
         killer_profit = self.profit_to_kill()
-        if (True if ((pos_time > self.cutoff_time) and all_non_prof and killer_profit) else False):
-            pos = ic(0 if self.adx_pos == 1 else 1)
-            if pos != self.direction:
+        if (pos_time > self.cutoff_time) and all_non_prof and killer_profit:
+            pos_ = self.adx_pos()
+            print('ADX pos:', pos_)
+            pos = ic(0 if pos_ == 1 else 1)
+            print('ADX pos:', pos)
+            if ic(pos != self.direction):
                 return True
         return False
 
@@ -137,7 +141,6 @@ class Bot:
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
     time_limit_multiplier = 4
-    reverse_ = reverse_
     system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
     master_interval = intervals[0]
     factor_to_delete = 24
@@ -396,7 +399,6 @@ class Bot:
             "type_filling": mt.ORDER_FILLING_IOC,
             }
 
-        print(request)
         order_result = mt.order_send(request)
         print(order_result)
 
@@ -841,10 +843,13 @@ class Bot:
         if self.reverse_mechanism.reverse_or_not():
             if self.reverse == 'normal':
                 self.reverse = 'reverse'
+                print(f"Reverse mode is changed to {self.reverse}")
             elif self.reverse == 'reverse':
                 self.reverse = 'normal'
+                print(f"Reverse mode is changed to {self.reverse}")
             else:
                 pass
+
         # Przykładowe użycie:
         stance_values = []
         for mbuy, msell in zip(self.buy_models, self.sell_models):
@@ -870,7 +875,7 @@ class Bot:
             elif Bot.system == 'invertedrank_democracy':
                 position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
             try:
-                pos_ = int(position_)
+                _ = int(position_)
             except Exception:
                 continue
             stance_values.append(int(position_))

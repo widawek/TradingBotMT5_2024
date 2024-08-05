@@ -20,7 +20,7 @@ import os
 catalog = os.path.dirname(__file__)
 
 morning_hour = 7
-evening_hour = 22
+evening_hour = 23
 min_factor = 6
 max_factor = 23
 probability_edge = 0.63
@@ -307,6 +307,7 @@ def generate_my_models(
 
     results = []
     for interval in tqdm(intervals):
+        finals = []
         for symbol in symbols:
             df = get_data_for_model(symbol, interval, 1, 80000)
             #df = my_test
@@ -357,7 +358,6 @@ def generate_my_models(
                                 )
                             results.append((symbol, interval, leverage, factor, result, density,
                                             how_it_grow, sqrt_error, final, status))
-                            finals = []
                             if generate_model:
                                 if status == "YES":
                                     if final in finals:

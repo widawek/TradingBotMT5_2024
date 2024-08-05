@@ -7,7 +7,10 @@ import numpy as np
 import pandas_ta as ta
 import os
 from itertools import product
+import builtins
 from time import sleep
+import sys
+import functools
 
 
 def pandas_options():
@@ -266,19 +269,3 @@ def reduce_values(intervals, range_from, range_to):
     return sorted(
         list(set([i*n for i in [int(_[1:]) for _ in intervals]
         for n in [_ for _ in range(range_from, range_to, 2)]])))
-
-
-# def time_remaining(func):
-#     def function(*args, **kwargs):
-        
-#         combinations = list(product(*args))
-#         number_of_combinations = len(combinations)
-#         i = 0
-#         times = []
-
-#         result = func(*args, **kwargs)
-
-
-#         return result
-        
-#     return function
