@@ -6,11 +6,11 @@ import hashlib
 import numpy as np
 import pandas_ta as ta
 import os
-from itertools import product
-import builtins
+# from itertools import product
+# import builtins
 from time import sleep
-import sys
-import functools
+# import sys
+# import functools
 
 
 def pandas_options():
@@ -265,7 +265,7 @@ def timer(hour_):
     print(dt.now())
 
 
-def reduce_values(intervals, range_from, range_to):
+def reduce_values(intervals, range_from, range_to, range_):
     return sorted(
         list(set([i*n for i in [int(_[1:]) for _ in intervals]
-        for n in [_ for _ in range(range_from, range_to, 2)]])))
+        for n in [_ for _ in range(range_from, range_to, range_)]])))

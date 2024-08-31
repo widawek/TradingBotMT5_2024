@@ -4,7 +4,7 @@ from model_generator import generate_my_models
 from parameters import *
 
 
-timer(7)
+timer(6)
 generate_my_models(symbols, intervals, leverage, delete_old_models)
 timer(8)
 symbols = [(symbol, 0) for symbol in symbols]

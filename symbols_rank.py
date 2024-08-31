@@ -58,7 +58,9 @@ if __name__ == '__main__':
         'XAGUSD', 'USDCHF', 'GBPJPY', 'GBPUSD', 'EURGBP', 'USDPLN', 'XAUUSD', 'XTIUSD', 'XAUAUD', 'XAUJPY'
         ]
     
-    #symbols = ['AUDUSD', 'EURGBP', 'EURUSD', 'GBPUSD', 'JP225', 'USDCAD', 'XAGAUD', 'AUDCAD'] # US30
+    # symbols = ['AUDCAD', 'USDJPY', 'AUDUSD', 'BTCUSD', 'USDCAD', 'AUDNZD', 'EURJPY', 'EURUSD', 'NZDCAD',
+    #             'USDCHF', 'GBPJPY', 'GBPUSD', 'EURGBP', 'USDPLN']
+            
     symbols = list(set(symbols))
 
     pandas_options()

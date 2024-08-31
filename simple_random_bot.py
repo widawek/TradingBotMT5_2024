@@ -89,7 +89,7 @@ class CheckOpenPositions:
     def profit_to_kill(self):
         profit = sum([i[-4] for i in self.positions])
         killer = -round(self.kill/4, 2)
-        print("Kill it profit:", killer)
+        print("Profit; Kill it profit:", profit, killer)
         if ic(profit < killer):
             return True
         return False
@@ -155,7 +155,7 @@ class Bot:
         self.daily_volatility_reduce_values = daily_volatility_reduce[0]
         self.max_reduce = daily_volatility_reduce[1]
         self.min_reduce = daily_volatility_reduce[2]
-        self.volume_calc(Bot.position_size, False)
+        self.volume_calc(Bot.position_size, True)
         self.number_of_positions = 0
         self.positions_()
         self.limits = None
@@ -538,6 +538,7 @@ class Bot:
         self.limits = None
         self.pos_type = None
         self.positions = None
+        self.time_stp = dt.now()
 
     @class_errors
     def clean_orders(self):
@@ -601,12 +602,46 @@ class Bot:
             volume = float(symbol_info["volume_max"])
         print('Min volume: ', min_volume)
         print('Calculated volume: ', volume)
-        if min_volume and volume < symbol_info["volume_min"]:
-            self.volume = symbol_info["volume_min"]
         self.volume = volume
+        if min_volume and (volume < symbol_info["volume_min"]):
+            self.volume = symbol_info["volume_min"]
 
     @class_errors
     def check_model_(self):
+        time_now = dt.now()
+        act_prof = mt.account_info().profit
+        act_prof = 0 if act_prof < 0 else act_prof
+        if time_now - timedelta(minutes=self.limit_time) > self.time_stp:
+            from_date = dt.today() - timedelta(days=1)
+            to_date = dt.today() + timedelta(days=1)
+            from_date = dt(from_date.year, from_date.month, from_date.day)
+            to_date = dt(to_date.year, to_date.month, to_date.day)
+            data = mt.history_deals_get(from_date, to_date)
+            try:
+                df = pd.DataFrame(list(data), columns=data[0]._asdict().keys())
+            except IndexError:
+                pass
+            df["time"] = pd.to_datetime(df["time"], unit="s")
+            df = df[df['profit'] != 0.0]
+            df_limit_time = df["time"].iloc[-1]
+            limit_time = df_limit_time - timedelta(minutes=self.limit_time)
+            df = df[df['time'] > limit_time]
+            if len(df) > 0:
+                profit = df['profit'].sum() + act_prof
+            else:
+                profit = 0
+
+            if profit >= 0:
+                self.time_stp = dt.now()
+                self.limit_time = int(self.limit_time*1.33)
+            else:
+                self.delete_model()
+                self.load_models(catalog)
+                self.clean_orders()
+
+    @class_errors
+    def check_model_democracy(self):
+        shift = self.reverse_mechanism.time_shift
         time_now = dt.now()
         act_prof = mt.account_info().profit
         act_prof = 0 if act_prof < 0 else act_prof
@@ -711,7 +746,8 @@ class Bot:
                     if result_ > sum_:
                         old_list = names[n][0].split('_')
                         print("OLD: ", old_list)
-                        old_list[-1] = str(df_result_filter['result'].iloc[int(len(df_result_filter)/2)-3])
+                        index_ = int(len(df_result_filter)/2)-3 if int(len(df_result_filter)/2) > 6 else int(len(df_result_filter)/2)-1
+                        old_list[-1] = str(df_result_filter['result'].iloc[index_])
                         new_str = '_'.join(old_list)
                         self.rename_files_in_directory(names[n][0], new_str)
                         names[n][0] = new_str
@@ -755,7 +791,6 @@ class Bot:
         self.comment = f'{self.lr}_{self.ts}_{self.interval}_{self.factor}_{self.daily_volatility_reduce}'
         self.magic = magic_(self.symbol, self.comment)
         self.mdv = self.MDV_() / self.daily_volatility_reduce
-
 
     @class_errors
     def actual_position(self):
@@ -802,12 +837,13 @@ class Bot:
 
     @class_errors
     def daily_volatility_reducer(self):
-        numbers = np.linspace(self.max_reduce, self.min_reduce, len(self.daily_volatility_reduce_values))
-        if Bot.system == 'absolute':
-            index_ = self.daily_volatility_reduce_values.index(int(self.interval[1:])*int(self.factor))
-        else:
-            index_ = self.daily_volatility_reduce_values.index(int(self.interval[1:])*int(Bot.factor_to_delete))
-        self.daily_volatility_reduce = int(numbers[index_])
+        # numbers = np.linspace(self.max_reduce, self.min_reduce, len(self.daily_volatility_reduce_values))
+        # if Bot.system == 'absolute':
+        #     index_ = self.daily_volatility_reduce_values.index(int(self.interval[1:])*int(self.factor))
+        # else:
+        #     index_ = self.daily_volatility_reduce_values.index(int(self.interval[1:])*int(Bot.factor_to_delete))
+        # self.daily_volatility_reduce = int(numbers[index_])
+        self.daily_volatility_reduce = 4
         print("New model reduce:", self.daily_volatility_reduce)
 
     @class_errors

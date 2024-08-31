@@ -18,12 +18,15 @@ warnings.filterwarnings("ignore")
 mt.initialize()
 import os
 catalog = os.path.dirname(__file__)
+from scipy.signal import argrelextrema
+
 
 morning_hour = 7
 evening_hour = 23
-min_factor = 6
+min_factor = 4
 max_factor = 23
 probability_edge = 0.63
+range_ = 1
 
 
 def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage):
@@ -33,11 +36,11 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
     density = round((df['cross'].sum()/len(df))*100, 2)
     returns, _, _ = get_returns(df, symbol)
     strategy_result = (1 + returns).cumprod() - 1
-    curve_result1 = is_this_curve_grow(strategy_result.dropna(), density)
-    curve_result2 = is_this_curve_grow2(strategy_result.dropna(), density)
-    curve_result3 = is_this_curve_grow3(strategy_result.dropna(), density)
-    how_it_grow = round((curve_result1 * curve_result2 * curve_result3/leverage)*
-                        sharpe_multiplier, 2)
+    # curve_result1 = is_this_curve_grow(strategy_result.dropna(), density)
+    # curve_result2 = is_this_curve_grow2(strategy_result.dropna(), density)
+    # curve_result3 = is_this_curve_grow3(strategy_result.dropna(), density)
+    # how_it_grow = round((curve_result1 * curve_result2 * curve_result3/leverage)*
+    #                     sharpe_multiplier, 2)
     
     sharpe = sharpe_multiplier * returns.mean()/returns.std()
     sorotino = sharpe_multiplier * sortino_ratio(returns.to_list())
@@ -58,10 +61,10 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
         print(f"Mean return [%] {annotation}:      ", round(mean_return, 2))
         print(f"Median return [%] {annotation}:    ", round(
             sharpe_multiplier * np.median(df['return'].dropna().to_list()), 2))
-        print(f"Growing factor {annotation}:       ", how_it_grow)
+        # print(f"Growing factor {annotation}:       ", how_it_grow)
 
-    if (omega > 1 and sharpe > 3 and sorotino > 3 and mean_return > 0 and
-     (how_it_grow > 10 or how_it_grow == np.inf or how_it_grow == np.NaN) and curve_result3 > 1 and
+    if (omega > 1 and sharpe > 3 and mean_return > 0 and #and sorotino > 3
+     #(how_it_grow > 10 or how_it_grow == np.inf or how_it_grow == np.NaN) and curve_result3 > 1
      strategy_result.iloc[-1] > 0):
         status = "YES"
         print(f"OK {annotation} "*30)
@@ -105,6 +108,42 @@ def data_operations(df, factor):
     df['high_low_corr'] = df['high'].rolling(window=factor).corr(df['low'])
     df['logs_corr'] = df['close_log'].rolling(window=factor).corr(df['volume_log'])
 
+    library = (
+    dir(ta.trend) +
+    dir(ta.momentum)
+    # dir(ta.overlap) +
+    # dir(ta.volume) +
+    # dir(ta.statistics)
+           )
+
+    not_add = [
+        'alma', 'ma', 'mcgd', 'kama', 'jma', 'vidya', 'hilo', 'vwap',
+        'ichimoku', 'supertrend', 'hma', 'ssf', 'wma', 'sinwma', 'linreg',
+        'td_seq', 'qqe', 'inertia', 'coppock', 'cti', 'stc', 'psar', 'dpo',
+        'tos_stdevall'
+        ]
+
+    try:
+        for i in library:
+            if not i.startswith('_') and i not in not_add:
+                zxy = getattr(ta, i)
+                pdw = getattr(df.ta, zxy.__name__)
+                try:
+                    fac = factor/3 if factor > 6 else 3
+                    pdw(length=factor, slow=factor,
+                        fast=int(fac), signal=int(fac),
+                        k=factor, d=int(fac), append=True)
+                except Exception:
+                    pdw(append=True)
+    except Exception as e:
+        print(e)
+    
+    df = df.drop(columns=['low_close', 'high_close', 
+                        #'mean_close', 'pos_volume', 'neg_volume', 'total_volume'
+                          ]
+                          , axis=1)
+    #columns = list(df.columns)
+    #print(columns)
     #df['vola_vol_log'] = np.log(df['vola_vol']/df['vola_vol'].shift(1))
     df.replace(np.inf, 0, inplace=True)
     df = df.dropna()
@@ -121,20 +160,126 @@ def interval_time_sharpe(interval):
         return np.sqrt(252 * 24 * 60 / int(interval[1:]))
 
 
-def ma_shift4(df, direction, factor):
-    ma = ta.sma(df['close'], length=int(factor))
+# def ma_shift4(df, direction, factor):
+#     ma = ta.sma(df['close'], length=int(factor))
+#     ma = ma.shift(-int(factor/3))
+#     col1 = df['close']
+#     col2 = ma
+#     df['goal'] = np.where(col1 < col2, 1, -1)
+#     if direction == 'buy':
+#         df['goal'] = np.where(((col1 < col2) &
+#             (col1.shift(1) > col2.shift(1))), 'yes', 'no')
+#     elif direction == 'sell':
+#         df['goal'] = np.where(((col1 > col2) &
+#             (col1.shift(1) < col2.shift(1))), 'yes', 'no')
+#     #df['goal'] = df['goal'].shift(-int(factor/2))
+#     df = df.dropna()
+#     df.reset_index(drop=True, inplace=True)
+#     return df
+
+
+def ma_shift5(df, direction, factor):
+    ma = ta.t3(df['close'], length=int(factor), a=0.55)
     ma = ma.shift(-int(factor/3))
-    df['goal'] = np.where(df['close'] < ma, 1, -1)
+    col1 = df['close']
+    col2 = ma
+    df['goal'] = np.where(col1 < col2, 1, -1)
     if direction == 'buy':
-        df['goal'] = np.where(((df['close'] < ma) &
-            (df['close'].shift(1) > ma.shift(1))), 'yes', 'no')
+        df['goal'] = np.where(((col1 < col2) &
+            (col1.shift(1) > col2.shift(1))), 'yes', 'no')
     elif direction == 'sell':
-        df['goal'] = np.where(((df['close'] > ma) &
-            (df['close'].shift(1) < ma.shift(1))), 'yes', 'no')
+        df['goal'] = np.where(((col1 > col2) &
+            (col1.shift(1) < col2.shift(1))), 'yes', 'no')
     #df['goal'] = df['goal'].shift(-int(factor/2))
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
     return df
+
+
+# def actual_trend_high_low(df, direction, factor):
+#     local_max = argrelextrema(df['high'].values,
+#                               np.greater, order=int(factor/3))[0]
+#     local_min = argrelextrema(df['low'].values,
+#                               np.less, order=int(factor/3))[0]
+#     df['stance'] = np.NaN
+#     for i in local_max:
+#         df.loc[i, "stance"] = -1
+#     for i in local_min:
+#         df.loc[i, "stance"] = 1
+#     df['stance'] = df['stance'].ffill()
+#     if direction == 'buy':
+#         df['goal'] = np.where(((df['stance'] == 1) &
+#             (df['stance'].shift(1) != 1)), 'yes', 'no')
+#     elif direction == 'sell':
+#         df['goal'] = np.where(((df['stance'] == -1) &
+#             (df['stance'].shift(1) != -1)), 'yes', 'no')
+#     df = df.dropna()
+#     df.drop(columns=['stance'], inplace=True)
+#     df.reset_index(drop=True, inplace=True)
+#     return df
+
+
+# def something_new2(df, direction, factor):
+#     ma = ta.sma(df['close'], length=int(factor))
+#     ma = ma.shift(-int(factor/3))
+#     col1 = df['close']
+#     col2 = ma
+#     df['stance'] = np.where(col1 < col2, 1, -1)
+#     if direction == 'buy':
+#         df['goal'] = np.where(((col1 < col2) &
+#             (col1.shift(1) > col2.shift(1))), 'yes', 'no')
+#     elif direction == 'sell':
+#         df['goal'] = np.where(((col1 > col2) &
+#             (col1.shift(1) < col2.shift(1))), 'yes', 'no')
+#     local_max = argrelextrema(df['high'].values,
+#                               np.greater, order=int(factor/3))[0]
+#     local_min = argrelextrema(df['low'].values,
+#                               np.less, order=int(factor/3))[0]
+#     df['stance2'] = np.NaN
+#     for i in local_max:
+#         df.loc[i, "stance2"] = -1
+#     for i in local_min:
+#         df.loc[i, "stance2"] = 1
+#     df['stance2'] = df['stance2'].ffill()
+#     if direction == 'buy':
+#         df['goal'] = np.where(((df['stance2'] == 1) &
+#             (df['stance'].shift(1) != 1) & (df['stance']==1)), 'yes', 'no')
+#     elif direction == 'sell':
+#         df['goal'] = np.where(((df['stance2'] == -1) &
+#             (df['stance2'].shift(1) != -1) & (df['stance']==-1)), 'yes', 'no')
+#     df = df.dropna()
+#     df.drop(columns=['stance', 'stance2'], inplace=True)
+#     df.reset_index(drop=True, inplace=True)
+#     return df
+
+
+# def something_new(df, direction, factor):
+#     local_max = argrelextrema(df['high'].values,
+#                               np.greater, order=int(factor/2))[0]
+#     local_min = argrelextrema(df['low'].values,
+#                               np.less, order=int(factor/2))[0]
+#     df['stance'] = np.NaN
+#     for i in local_max:
+#         df.loc[i, "stance"] = -1
+#     for i in local_min:
+#         df.loc[i, "stance"] = 1
+#     df['stance'] = df['stance'].ffill()
+#     ma = ta.sma(df['close'], length=int(factor))
+#     ma = ma.shift(-int(factor/3))
+#     col1 = df['close']
+#     col2 = ma
+#     df['goal'] = np.where(col1 < col2, 1, -1)
+#     if direction == 'buy':
+#         df['goal'] = np.where(((col1 < col2) &
+#             (col1.shift(1) > col2.shift(1)) & (df['stance'] == 1)), 'yes', 'no')
+#     elif direction == 'sell':
+#         df['goal'] = np.where(((col1 > col2) &
+#             (col1.shift(1) < col2.shift(1)) & (df['stance'] == -1)), 'yes', 'no')
+#     #df['goal'] = df['goal'].shift(-int(factor/2))
+#     df = df.dropna()
+#     df.drop(columns=['stance'], inplace=True)
+#     df.reset_index(drop=True, inplace=True)
+#     return df
 
 
 def train_dataset(df, direction, parameters, factor, n_estimators, function, t_set, show_results=True):
@@ -165,7 +310,8 @@ def train_dataset(df, direction, parameters, factor, n_estimators, function, t_s
                                                         test_size=t_set,
                                                         random_state=1502)
 
-    print(f"Goal: {round(np.mean(y_test)*100, 2)} % yes/no")
+    goal_density = round(np.mean(y_test)*100, 2)
+    print(f"Goal: {goal_density} % yes/no")
     #create xgboost matrices part 2
     Train = xgb.DMatrix(X_train, label = y_train, feature_names = feature_columns)
     Test = xgb.DMatrix(X_test, label = y_test, feature_names = feature_columns)
@@ -175,7 +321,7 @@ def train_dataset(df, direction, parameters, factor, n_estimators, function, t_s
         dtrain = Train,
         num_boost_round = n_estimators,
         evals = [(Test, "Yes")],
-        early_stopping_rounds=40,
+        early_stopping_rounds=33,
         verbose_eval = 10000
         )
 
@@ -200,7 +346,7 @@ def train_dataset(df, direction, parameters, factor, n_estimators, function, t_s
         print(f'F1 Score: {round(f1, 3)}')
         # plot importances
         # xgb.plot_importance(model, max_num_features=10)
-    return model
+    return model, goal_density
 
 
 def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, print_=True):
@@ -226,11 +372,11 @@ def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, pri
     df['sqrt_error'] = np.sqrt((df['strategy'] - df['just_line'])**2)
     sqrt_error = round(df['sqrt_error'].mean()/df['strategy'].iloc[-1], 3)
     
-    curve_result1 = is_this_curve_grow(df['strategy'].dropna(), density)
-    curve_result2 = is_this_curve_grow2(df['strategy'].dropna(), density)
-    curve_result3 = is_this_curve_grow3(df['strategy'].dropna(), density)
-    how_it_grow = round((curve_result1 * curve_result2 * curve_result3/leverage)*
-                        sharpe_multiplier, 2)
+    # curve_result1 = is_this_curve_grow(df['strategy'].dropna(), density)
+    # curve_result2 = is_this_curve_grow2(df['strategy'].dropna(), density)
+    # curve_result3 = is_this_curve_grow3(df['strategy'].dropna(), density)
+    # how_it_grow = round((curve_result1 * curve_result2 * curve_result3/leverage)*
+    #                     sharpe_multiplier, 2)
     
     sharpe = sharpe_multiplier * df['return'].mean()/df['return'].std()
     sorotino = sharpe_multiplier * sortino_ratio(df['return'].dropna().to_list())
@@ -239,7 +385,8 @@ def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, pri
     mean_return = sharpe_multiplier * np.mean(df['return'].dropna().to_list())
     result = round((((sharpe + sorotino)/2) * omega * mean_return) * 100, 2)
     try:
-        final = int(result * (how_it_grow if how_it_grow != np.inf else 1000) * (1-sqrt_error))
+        final = int(result * (1-sqrt_error))
+        #final = int(result * (how_it_grow if how_it_grow != np.inf else 1000) * (1-sqrt_error))
     except Exception:
         final = 1000000
     
@@ -255,13 +402,14 @@ def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, pri
         print("Mean return [%]:     ", round(mean_return, 2))
         print("Median return [%]:   ", round(
             sharpe_multiplier * np.median(df['return'].dropna().to_list()), 2))
-        print("Growing factor:      ", how_it_grow)
+        #print("Growing factor:      ", how_it_grow)
         print("Sqrt error:          ", sqrt_error)
         print("Final:               ", final)
 
-    if (omega > 1 and sharpe > 3 and sorotino > 3 and mean_return > 0 and
-     (how_it_grow > 10 or how_it_grow == np.inf or how_it_grow == np.NaN) and curve_result3 > 1 and
-      df['strategy'].iloc[-1] > 0):
+    if (omega > 1 and sharpe > 3 #and sorotino > 3 
+        and mean_return > 0
+     #(how_it_grow > 10 or how_it_grow == np.inf or how_it_grow == np.NaN) and curve_result3 > 1
+     and df['strategy'].iloc[-1] > 0):
         status = "YES"
         print("OK "*30)
         print(f"""#### RESULT: {result} ####""")
@@ -278,24 +426,26 @@ def strategy_with_chart_(df, leverage, interval, symbol, factor, chart=True, pri
         ax2 = plt.subplot(312, sharex = ax1)
         plt.plot(df['strategy'])
         plt.plot(df['just_line'])
-        plt.title(f"{symbol}_{interval}_{factor}_{result}_{how_it_grow}_{sqrt_error}_{final}_{status}")
+        #plt.title(f"{symbol}_{interval}_{factor}_{result}_{how_it_grow}_{sqrt_error}_{final}_{status}")
+        plt.title(f"{symbol}_{interval}_{factor}_{result}_{0}_{sqrt_error}_{final}_{status}")
         ax3 = plt.subplot(313)
         plt.plot(strategy_result)
         plt.show()
     
     summary_status = "YES" if (status == "YES" and status2 == "YES") else "NO"
-    return result, summary_status, density, how_it_grow, sqrt_error, final
+    #return result, summary_status, density, how_it_grow, sqrt_error, final
+    return result, summary_status, density, 1, sqrt_error, final
 
 
 n_estimators = 4000
-function = ma_shift4
+function = ma_shift5
 lr_list = [0.05, 0.15, 0.55]
 ts_list = [0.2, 0.3]
-factors = [_ for _ in range(min_factor, max_factor, 2)]
+factors = [_ for _ in range(min_factor, max_factor, range_)]
 
 def generate_my_models(
-        symbols, intervals, leverage, delete_old_models, 
-        show_results_on_graph=False, print_=True, generate_model=True):
+        symbols: list, intervals: list, leverage: int, delete_old_models: bool, 
+        show_results_on_graph: bool=False, print_: bool=True, generate_model:bool=True) -> None:
 
     combinations = list(product(intervals, symbols, lr_list, ts_list, factors))
     number_of_combinations = len(combinations)
@@ -309,38 +459,38 @@ def generate_my_models(
     for interval in tqdm(intervals):
         finals = []
         for symbol in symbols:
-            df = get_data_for_model(symbol, interval, 1, 80000)
-            #df = my_test
-            print("DF length: ", len(df))
-            df = data_operations(df, 10)
-            train_length = 0.98
-            if interval == "M1" or interval == "M2" or interval == 'M3':
-                train_length = 0.97
-            dataset = df.copy()[:int(train_length*len(df))]
-            testset = df.copy()[int(train_length*len(df)):]
-            for learning_rate in lr_list:
-                parameters = {
-                    'learning_rate': learning_rate,
-                    'max_depth': 2*len(dataset.columns),
-                    'colsample_by*': 0.9,
-                    'min_child_weight': int(len(dataset.columns)/4),
-                    'random_state': 42,
-                    'eval_metric': 'auc',
-                    'tree_method': 'hist',
-                    'objective': 'binary:logistic',
-                    'gamma': 1,
-                    'alpha': 0.3,
-                    'lambda': 0.01,
-                }
-                for t_set in ts_list:
-                    for factor in factors:
+            df_raw = get_data_for_model(symbol, interval, 1, 65000)
+            for t_set in ts_list:
+                for factor in factors:
+                    #df = my_test
+                    print("DF length: ", len(df_raw))
+                    df = data_operations(df_raw.copy(), factor)
+                    train_length = 0.99
+                    if interval == "M1" or interval == "M2" or interval == 'M3':
+                        train_length = 0.97
+                    dataset = df.copy()[:int(train_length*len(df))]
+                    testset = df.copy()[int(train_length*len(df)):]
+                    for learning_rate in lr_list:
+                        parameters = {
+                            'learning_rate': learning_rate,
+                            'max_depth': 2*len(dataset.columns),
+                            'colsample_by*': 0.9,
+                            'min_child_weight': int(len(dataset.columns)/4),
+                            'random_state': 42,
+                            'eval_metric': 'auc',
+                            'tree_method': 'hist',
+                            'objective': 'binary:logistic',
+                            'gamma': 1,
+                            'alpha': 0.3,
+                            'lambda': 0.01,
+                        }
                         start = time.time()
                         try:
                             print(f"\nSymbol: {symbol}; Interval: {interval}; Factor: {factor}")
                             dfx = testset.copy()
-                            model_buy = train_dataset(dataset, 'buy', parameters, factor,
+                            model_buy, goal_density_buy = train_dataset(dataset, 'buy', parameters, factor,
                                                     n_estimators, function, t_set, show_results=show_results_on_graph)
-                            model_sell = train_dataset(dataset, 'sell', parameters, factor,
+                            model_sell, goal_density_sell = train_dataset(dataset, 'sell', parameters, factor,
                                                     n_estimators, function, t_set, show_results=show_results_on_graph)
                             buy = model_buy.predict(xgb.DMatrix(testset))
                             sell = model_sell.predict(xgb.DMatrix(testset))
@@ -384,4 +534,5 @@ def generate_my_models(
                         print(time_info)
 
 if __name__ == '__main__':
-    generate_my_models(['EURUSD', 'USDCHF'], ['M5', 'M6', 'M10', 'M12'], 30, False, True, True, True)
+    from parameters import symbols
+    generate_my_models(symbols, ['M20'], 30, True, True)
