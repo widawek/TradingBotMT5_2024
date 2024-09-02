@@ -3,7 +3,8 @@ from model_generator import min_factor, max_factor, range_
 
 
 intervals = ['M20']
-symbols = ['AUDUSD', 'USDPLN', 'USDJPY', 'EURUSD', 'GBPUSD', 'USDCAD', 'USDCHF', 'EURJPY']
+symbols = ['USDPLN', 'USDJPY', 'EURUSD', 'NZDUSD',
+           'GBPUSD', 'USDCAD', 'USDCHF', 'EURJPY', 'US30']
 leverage = 46
 delete_old_models = True
 positions_number = 2

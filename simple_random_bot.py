@@ -795,7 +795,7 @@ class Bot:
     @class_errors
     def actual_position(self):
         # Przykładowe użycie:
-        df = get_data_for_model(self.symbol, self.interval, 1, 200)
+        df = get_data_for_model(self.symbol, self.interval, 1, 800)
         df = data_operations(df, 10)
         dfx = df.copy()
         dtest_buy = xgb.DMatrix(df)
@@ -821,7 +821,7 @@ class Bot:
     @class_errors
     def check_new_bar(self):
         bar = mt.copy_rates_from_pos(
-            self.symbol, timeframe_('M1'), 0, 1) # change self.interval to 'M1'
+            self.symbol, timeframe_(self.interval), 0, 1) # change self.interval to 'M1'
         if self.barOpen == bar[0][0]:
             return False
         else:
@@ -853,7 +853,9 @@ class Bot:
         # buy
         self.buy_models = []
         self.sell_models = []
+        self.factors = []
         for model_name in model_names:
+            print(model_name)
             model_path_buy = os.path.join(directory, f'{model_name[0]}_buy.model')
             model_path_sell = os.path.join(directory, f'{model_name[0]}_sell.model')
             model_buy = xgb.Booster()
@@ -862,6 +864,7 @@ class Bot:
             model_sell.load_model(model_path_sell)
             self.buy_models.append((model_buy, f'{model_name[0]}_{model_name[1]}'))
             self.sell_models.append((model_sell, f'{model_name[0]}_{model_name[1]}'))
+            self.factors.append(int(model_name[0].split('_')[-2])) # factor
         assert len(self.buy_models) == len(self.sell_models)
         # class return
         self.interval = Bot.master_interval
@@ -888,9 +891,9 @@ class Bot:
 
         # Przykładowe użycie:
         stance_values = []
-        for mbuy, msell in zip(self.buy_models, self.sell_models):
-            df = get_data_for_model(self.symbol, mbuy[1].split('_')[3], 1, 300)
-            df = data_operations(df, 10)
+        for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
+            df = get_data_for_model(self.symbol, mbuy[1].split('_')[3], 1, int(factor**2 + 100))
+            df = data_operations(df, factor)
             dfx = df.copy()
             dtest_buy = xgb.DMatrix(df)
             dtest_sell = xgb.DMatrix(df)
