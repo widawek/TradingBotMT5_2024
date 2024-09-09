@@ -156,6 +156,36 @@ def omega_ratio(returns, threshold=0):
     return omega_ratio
 
 
+def max_drawdown(returns):
+    compRet = (returns+1).cumprod()
+    peak = compRet.expanding(min_periods=1).max()
+    dd = (compRet/peak)-1
+    return dd.min()
+
+
+def kelly_criterion(returns):
+    good = [i for i in returns if i > 0]
+    bad = [i for i in returns if i < 0]
+    p = len(good) / len(returns)
+    q = len(bad) / len(returns)
+    a = abs(sum(bad))
+    b = sum(good)
+    try:
+        win = (b/q)
+    except ZeroDivisionError:
+        return 0.1
+    try:
+        loss = (a/p)
+    except ZeroDivisionError:
+        return -0.1
+    kk = win - loss
+    if kk > 20:
+        kk = 20
+    if kk < -20:
+        kk = -20
+    return kk
+
+
 def max_vol_times_price_price(df, window=30):
     # Obliczamy vol * price
     df['vol_times_price'] = df['close'] * df['volume']
@@ -269,3 +299,18 @@ def reduce_values(intervals, range_from, range_to, range_):
     return sorted(
         list(set([i*n for i in [int(_[1:]) for _ in intervals]
         for n in [_ for _ in range(range_from, range_to, range_)]])))
+
+
+def add_comparison_columns(df, x):
+    # Pobieramy ostatnie x kolumn
+    last_columns = df.iloc[:, -x:]
+    
+    # Iterujemy przez każdą kolumnę z ostatnich x kolumn
+    for col in last_columns.columns:
+        if list(df[col].unique()) == [0, 1]:
+            continue
+        diff = np.diff(last_columns[col], prepend=np.nan)
+        # Tworzymy nową kolumnę z wartościami 1 lub 0
+        df[f'{col}_comp'] = np.where(diff > 0, 1, 0)
+        
+    return df

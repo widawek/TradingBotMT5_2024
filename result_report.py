@@ -95,7 +95,7 @@ def plot_results(from_when: int, to_when: int=-1,
         # Wyświetlenie wykresu
         plt.tight_layout()
         plt.show()
-    
+
     if by_ == 'symbol':
         x1 = sorted(df.symbol.to_list())
         print(x1, f'\nNumber of symbols: {len(x1)}')

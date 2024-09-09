@@ -21,118 +21,6 @@ catalog = os.path.dirname(__file__)
 catalog = f'{catalog}\\models'
 
 
-@dataclass
-class CheckOpenPositions:
-    symbol: str
-    interval: str
-    kill: float
-
-    @class_errors
-    def __post_init__(self):
-        self.cutoff_time = self.interval_time() * 3
-        self.time_shift = self.time_zone_shift()
-        self.pos_time = 0
-        self.non_profit_time = 0
-
-    @class_errors
-    def interval_time(self):
-        h = self.interval[0]
-        t = int(self.interval[1:])
-        x = {"M": 1, "H": 60, "D": 1440, "W": 10800}
-        return int(t * x[h])
-
-    @class_errors
-    def time_zone_shift(self) -> int:
-        """
-            Function shows gap from the mt5 platform time hour to dt.now() hour.
-        """
-        mt5_time = mt.copy_rates_from_pos('BTCUSD', timeframe_('M1'), 0, 1)[0][0]
-        mt5_time = pd.to_datetime(mt5_time, unit='s')
-        mt5_hour = mt5_time.hour
-        now_hour = dt.now().hour
-        return mt5_hour - now_hour
-
-    @class_errors
-    def positions_(self):
-        self.positions = ic(mt.positions_get(symbol=self.symbol))
-        self.number_of_positions = len(self.positions)
-        try:
-            self.direction = self.positions[0][5]
-        except IndexError:
-            self.direction = None
-
-    @class_errors
-    def time_from_pos(self, which_one: str='first') -> int:
-        self.positions_()
-        if which_one == 'first':
-            pos = 0
-        elif which_one == 'last':
-            pos = self.number_of_positions - 1
-
-        try:
-            first_position_time_open = ic(pd.to_datetime(self.positions[pos][3], unit='s'))
-        except IndexError:
-            print("Any position is open.")
-            return 0
-        first_position_time_open = ic(first_position_time_open - timedelta(hours=self.time_shift))
-        time_now = dt.now()
-        time_ = ic(int((time_now-first_position_time_open).total_seconds()/60))
-        return time_
-
-    @class_errors
-    def all_positions_non_profit(self) -> bool:
-        if self.number_of_positions == 0:
-            return False
-        return ic(all([i[-4] < 0 for i in self.positions]))
-
-    @class_errors
-    def profit_to_kill(self):
-        profit = sum([i[-4] for i in self.positions])
-        killer = -round(self.kill/4, 2)
-        print("Profit; Kill it profit:", profit, killer)
-        if ic(profit < killer):
-            return True
-        return False
-
-    @class_errors
-    def adx_pos(self):
-
-        def stance_shit(df):
-            df[['atr', 'long', 'short']] = df.ta.adx(length=self.cutoff_time)
-            df = df.dropna()
-            df['stance'] = np.where(
-                ((df.atr > df.short) & (df.atr.shift(1) < df.short.shift(1)) &
-                (df.long > df.short)),
-                1, np.NaN
-                )
-            df['stance'] = np.where(
-                ((df.atr > df.long) & (df.atr.shift(1) < df.long.shift(1)) &
-                (df.short > df.long)),
-                -1, df['stance']
-                )
-            df['stance'] = df['stance'].ffill()
-            return df
-
-        df_raw = get_data(self.symbol, 'M1', 1, 400)
-        df = df_raw.copy()
-        df = ic(stance_shit(df))
-        return ic(df['stance'].iloc[-1])
-
-    @class_errors
-    def reverse_or_not(self):
-        pos_time = self.time_from_pos()
-        all_non_prof = self.all_positions_non_profit()
-        killer_profit = self.profit_to_kill()
-        if (pos_time > self.cutoff_time) and all_non_prof and killer_profit:
-            pos_ = self.adx_pos()
-            print('ADX pos:', pos_)
-            pos = ic(0 if pos_ == 1 else 1)
-            print('ADX pos:', pos)
-            if ic(pos != self.direction):
-                return True
-        return False
-
-
 class Bot:
 
     sl_mdv_multiplier = 1.5 # mdv multiplier for sl
@@ -164,7 +52,7 @@ class Bot:
         self.tp = 0.0
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
-        self.reverse_mechanism = CheckOpenPositions(symbol, Bot.master_interval, self.kill_position_profit)
+        #self.reverse_mechanism = CheckOpenPositions(symbol, Bot.master_interval, self.kill_position_profit)
         if not 'democracy' in Bot.system:
             self.load_models(catalog)  # initialize few class variables
             self.start_pos = self.pos_type = self.actual_position()
@@ -641,7 +529,7 @@ class Bot:
 
     @class_errors
     def check_model_democracy(self):
-        shift = self.reverse_mechanism.time_shift
+        #shift = self.reverse_mechanism.time_shift
         time_now = dt.now()
         act_prof = mt.account_info().profit
         act_prof = 0 if act_prof < 0 else act_prof
@@ -700,7 +588,7 @@ class Bot:
         _.reverse()
         df['rank'] = _
         print(df)
-        if len(df) < 6:
+        if len(df) < 5:
             print(f"Za mało modeli --> ({len(df)})")
             input("Wciśnij cokolwek żeby wyjść.")
             sys.exit(1)
@@ -879,15 +767,15 @@ class Bot:
 
     @class_errors
     def actual_position_democracy(self):
-        if self.reverse_mechanism.reverse_or_not():
-            if self.reverse == 'normal':
-                self.reverse = 'reverse'
-                print(f"Reverse mode is changed to {self.reverse}")
-            elif self.reverse == 'reverse':
-                self.reverse = 'normal'
-                print(f"Reverse mode is changed to {self.reverse}")
-            else:
-                pass
+        # if self.reverse_mechanism.reverse_or_not():
+        #     if self.reverse == 'normal':
+        #         self.reverse = 'reverse'
+        #         print(f"Reverse mode is changed to {self.reverse}")
+        #     elif self.reverse == 'reverse':
+        #         self.reverse = 'normal'
+        #         print(f"Reverse mode is changed to {self.reverse}")
+        #     else:
+        #         pass
 
         # Przykładowe użycie:
         stance_values = []

@@ -16,7 +16,7 @@ def pandas_options():
 # if not mt.initialize():
 #     print("initialize() failed, error code =", mt.last_error())
 #     quit()
- 
+
 # get account currency
 account_currency=mt.account_info().currency
 print("Account currency:",account_currency)
@@ -57,10 +57,10 @@ if __name__ == '__main__':
         'BTCUSD', 'USDCAD', 'AUDNZD', 'EURJPY', 'XAGAUD', 'EURUSD', 'NZDCAD',
         'XAGUSD', 'USDCHF', 'GBPJPY', 'GBPUSD', 'EURGBP', 'USDPLN', 'XAUUSD', 'XTIUSD', 'XAUAUD', 'XAUJPY'
         ]
-    
+
     # symbols = ['AUDCAD', 'USDJPY', 'AUDUSD', 'BTCUSD', 'USDCAD', 'AUDNZD', 'EURJPY', 'EURUSD', 'NZDCAD',
     #             'USDCHF', 'GBPJPY', 'GBPUSD', 'EURGBP', 'USDPLN']
-            
+
     symbols = list(set(symbols))
 
     pandas_options()
@@ -81,4 +81,4 @@ if __name__ == '__main__':
     print("All good by bot tp killer: ", round(number_*2, 2))
     print(f"Propose start account balance: {round(number_*4, 2)}")
 
-    
+

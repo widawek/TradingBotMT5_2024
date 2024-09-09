@@ -7,7 +7,7 @@ def close_request(symbol):
         positions_ = mt.positions_get()
     else:
         positions_ = mt.positions_get(symbol=symbol)
-    for i in positions_ : 
+    for i in positions_ :
         request = {"action": mt.TRADE_ACTION_DEAL,
                     "symbol": i.symbol,
                     "volume": float(i.volume),
@@ -46,8 +46,6 @@ def close_pendings(symbol, positions=True):
             else:
                 print(f"Usunięto zlecenie oczekujące: {order}\n\n")
                 counter += 1
-
-
     print(f"Usunięto łącznie {counter} zleceń na symbolu {symbol}")
 
 
