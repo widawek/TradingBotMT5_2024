@@ -15,6 +15,7 @@ pandas_options()
 
 def get_raw_close_postions_data(from_when: int, to_when: int = -1):
     from_date = dt.today().date() - timedelta(days=from_when)
+    print(from_date)
     to_date = dt.today().date() - timedelta(days=to_when)
     print(f"Data from {from_date.strftime('%A')} {from_date} to {to_date.strftime('%A')} {to_date}")
     from_date = dt(from_date.year, from_date.month, from_date.day)
@@ -38,18 +39,21 @@ def get_raw_close_postions_data(from_when: int, to_when: int = -1):
     df['hour_open'] = df['time_open'].dt.hour
     df['hour_close'] = df['time_close'].dt.hour
     df['weekday'] = df['time_close'].dt.day_name()
-    df['interval'] = df['comment'].str.split('_').str[2]
-    df['factor'] = df['comment'].str.split('_').str[4]
-    df['learing_rate'] = df['comment'].str.split('_').str[0]
-    df['training_set'] = df['comment'].str.split('_').str[1]
+    # df['interval'] = df['comment'].str.split('_').str[2]
+    # df['factor'] = df['comment'].str.split('_').str[4]
+    # df['learing_rate'] = df['comment'].str.split('_').str[0]
+    # df['training_set'] = df['comment'].str.split('_').str[1]
     df.reset_index(drop=True, inplace=True)
-    print(df.columns)
+    #print(df.columns)
     return df
 
 
-def plot_results(from_when: int, to_when: int=-1,
-                 by_: str='symbol', profitable_only: bool=False,
-                 percent_of_balance_for_po: float=0, plot: bool=True,
+def plot_results(from_when: int,
+                 to_when: int=-1,
+                 by_: str='symbol',
+                 profitable_only: bool=False,
+                 percent_of_balance_for_po: float=0,
+                 plot: bool=True,
                  non_profitable_only: bool=False):
     """
     Generates a bar plot for profits grouped by a given category within a
@@ -104,5 +108,5 @@ def plot_results(from_when: int, to_when: int=-1,
 
 if __name__ == "__main__":
     # by_ 'symbol', 'comment', 'interval', 'factor', 'learing_rate', 'training_set'
-    x1 = plot_results(2, -2, 'symbol', False, -10, True, False)
+    x1 = plot_results(0, -2)
     print(x1)

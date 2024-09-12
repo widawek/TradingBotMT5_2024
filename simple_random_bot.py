@@ -467,12 +467,13 @@ class Bot:
 
     @class_errors
     def volume_calc(self, max_pos_margin, min_volume):
+        leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
         # if min_volume:
         #     return symbol_info["volume_min"]
         price = mt.symbol_info_tick(self.symbol)._asdict()
         margin_min = round(((symbol_info["volume_min"] *
-                        symbol_info["trade_contract_size"])/100) *
+                        symbol_info["trade_contract_size"])/leverage) *
                         price["bid"], 2)
         account = mt.account_info()._asdict()
         self.avg_daily_vol_()
@@ -780,7 +781,7 @@ class Bot:
         # Przykładowe użycie:
         stance_values = []
         for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
-            df = get_data_for_model(self.symbol, mbuy[1].split('_')[3], 1, int(factor**2 + 100))
+            df = get_data_for_model(self.symbol, mbuy[1].split('_')[3], 1, int(factor**2 + 100)) # how_many_bars
             df = data_operations(df, factor)
             dfx = df.copy()
             dtest_buy = xgb.DMatrix(df)
@@ -810,9 +811,19 @@ class Bot:
         print('Stances: ', stance_values)
         sum_of_position = np.sum(stance_values)
         print("Sum of democratic votes: ", sum_of_position)
+
+        def longs(stance_values):
+            return round(np.sum([1 for i in stance_values if i > 0]) / len(stance_values), 2)
+
+        def longs_democratic(stance_values):
+            all_ = [abs(i) for i in stance_values]
+            return round(np.sum(stance_values) / np.sum(all_), 2)
+
+        force_of_democratic = ic(longs_democratic(stance_values))
+        print("Force of long democratic votes: ", force_of_democratic)
         try:
-            fx = round(1/(sum_of_position/len(stance_values)))
-            print("Force of democratic votes: ", fx)
+            fx = ic(longs(stance_values))
+            print("Percent of long votes: ", fx)
         except Exception:
             pass
         if sum_of_position != 0:

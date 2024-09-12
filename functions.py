@@ -201,6 +201,7 @@ def max_vol_times_price_price(df, window=30):
 
 
 def calculate_dominant(data, num_ranges=50):
+    print("Positions: ", num_ranges)
     # Obliczanie minimalnej i maksymalnej wartości w zbiorze danych
     min_val = np.min(data)
     max_val = np.max(data)
@@ -307,7 +308,10 @@ def add_comparison_columns(df, x):
     
     # Iterujemy przez każdą kolumnę z ostatnich x kolumn
     for col in last_columns.columns:
-        if list(df[col].unique()) == [0, 1]:
+        unique_list = sorted(list(df[col].unique()))
+        if (unique_list == [0, 1] or unique_list == [-1, 1] or
+            len(unique_list) == 1 or "_comp" in col or
+            col in ['mean_close', 'pos_volume', 'neg_volume', 'total_volume']):
             continue
         diff = np.diff(last_columns[col], prepend=np.nan)
         # Tworzymy nową kolumnę z wartościami 1 lub 0

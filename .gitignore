@@ -3,3 +3,7 @@ class_errors.txt
 symbols.py
 **/models/
 old_code.txt
+help.py
+clean_pending_orders.py
+symbols_rank.py
+result_report.py

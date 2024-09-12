@@ -6,6 +6,7 @@ from sklearn.metrics import (
     confusion_matrix, classification_report, accuracy_score,
     f1_score, precision_score, recall_score
     )
+import icecream as ic
 import MetaTrader5 as mt
 import pandas_ta as ta
 import matplotlib.pyplot as plt
@@ -18,83 +19,8 @@ warnings.filterwarnings("ignore")
 mt.initialize()
 import os
 catalog = os.path.dirname(__file__)
+from parameters import *
 #from scipy.signal import argrelextrema
-
-
-morning_hour = 10
-evening_hour = 23
-min_factor = 6
-max_factor = 23
-probability_edge = 0.25 #0.63
-range_ = 1
-sharpe_limit = 3#5
-kk_limit = 3#5.5
-omega_limit = 1
-
-
-def smoothness_criterion(returns: pd.Series, leverage: int) -> float:
-    returns = returns/leverage
-    """
-    Oblicza Kryterium Łagodne (Smoothness Criterion) na podstawie danych stóp zwrotu.
-    
-    :param returns: pd.Series - seria danych ze stopami zwrotu
-    :return: float - wartość Kryterium Łagodności
-    """
-    # Logarytmiczne stopy zwrotu
-    log_returns = np.log(1 + returns)
-
-    # Oczekiwana wartość (średnia logarytmicznych stóp zwrotu)
-    expected_log_return = np.mean(log_returns)
-
-    # Wariancja logarytmicznych stóp zwrotu
-    variance_log_return = np.var(log_returns)
-
-    # Kryterium Łagodne (smoothness criterion)
-    smoothness = expected_log_return / np.sqrt(variance_log_return)
-    
-    return smoothness
-
-
-def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage):
-    status = "NO"
-    annotation = "clean position"
-    df['cross'] = np.where(df['stance'] != df['stance'].shift(1), 1, 0)
-    density = round((df['cross'].sum()/len(df))*100, 2)
-    returns, _, _ = get_returns(df, symbol)
-    strategy_result = (1 + returns).cumprod() - 1
-
-    sharpe = sharpe_multiplier * returns.mean()/returns.std()
-    sorotino = sharpe_multiplier * sortino_ratio(returns.to_list())
-    omega = omega_ratio(returns.to_list())
-    dom_ret = calculate_dominant(returns.to_list(), num_ranges=10)
-    mean_return = sharpe_multiplier * np.mean(returns.to_list())
-    drawdown = max_drawdown(returns)
-    kk = kelly_criterion(returns)
-    result = round(sharpe * omega * 100, 2)
-    smooth = smoothness_criterion(returns, leverage)
-
-    if print_:
-        print()
-        print(f"Signals density {annotation}:      ", density)
-        print(f"Final result {annotation}:         ", round(df['strategy'].mean() +
-                                             df['strategy'].iloc[-1], 2))
-        print(f"Sharpe ratio {annotation}:         ", round(sharpe, 2))
-        print(f"Smooth       {annotation}:         ", round(smooth))
-        print(f"Sorotino ratio {annotation}:       ", round(sorotino, 2))
-        print(f"Omega ratio {annotation}:          ", round(omega, 4))
-        print(f"Kelly ratio {annotation}:          ", round(kk, 4))
-        print(f"Max drawdown {annotation}:         ", round(drawdown, 4))
-        print(f"Dominant return [%] {annotation}:  ", round(dom_ret*100, 5))
-        print(f"Mean return [%] {annotation}:      ", round(mean_return, 2))
-        print(f"Median return [%] {annotation}:    ", round(
-            sharpe_multiplier * np.median(df['return'].dropna().to_list()), 2))
-        # print(f"Growing factor {annotation}:       ", how_it_grow)
-
-    if (omega > omega_limit and sharpe > sharpe_limit and kk > kk_limit):
-        status = "YES"
-        print(f"OK {annotation} "*30)
-        print(f"""#### RESULT: {result} ####""")
-    return status, strategy_result, drawdown
 
 
 def data_operations(df, factor):
@@ -114,8 +40,8 @@ def data_operations(df, factor):
     df['high_square'] = np.sin(np.log(df['high']**2))
     df['low_square'] = np.sin(np.log(df['low']**2))
     df['close_square'] = np.sin(np.log(df['close']**2))
-    df['high_close'] = df['high'] - df['close']
-    df['low_close'] = df['low'] - df['close']
+    # df['high_close'] = df['high'] - df['close']
+    # df['low_close'] = df['low'] - df['close']
     df['high_log'] = np.log(df.high/df.high.shift(1))
     df['low_log'] = np.log(df.low/df.low.shift(1))
     df['close_log'] = np.log(df.close/df.close.shift(1))
@@ -136,20 +62,32 @@ def data_operations(df, factor):
     df['volume_std'] = df['volume'].rolling(factor).std()
     df['volatility_mean'] = df['volatility_'].rolling(factor).mean()
     df['volatility_std'] = df['volatility_'].rolling(factor).std()
+    df['close_std'] = df['close'].rolling(factor).std()
+    df['low_std'] = df['low'].rolling(factor).std()
+    df['high_std'] = df['high'].rolling(factor).std()
+    df['adj_std'] = df['adj'].rolling(factor).std()
+    df['volume_pdiff'] = df['volume'].pct_change(periods=factor) * 100
+    df['close_pdiff'] = df['close'].pct_change(periods=factor) * 100
+    df['low_pdiff'] = df['low'].pct_change(periods=factor) * 100
+    df['high_pdiff'] = df['high'].pct_change(periods=factor) * 100
+    df['adj_pdiff'] = df['adj'].pct_change(periods=factor) * 100
 
     library = (
     dir(ta.trend) +
-    dir(ta.momentum)# +
-    #dir(ta.overlap)
-    # dir(ta.volume) +
-    # dir(ta.statistics)
+    dir(ta.momentum) +
+    dir(ta.overlap) +
+    dir(ta.volume) +
+    dir(ta.statistics)
            )
 
     not_add = [
         'alma', 'ma', 'mcgd', 'kama', 'jma', 'vidya', 'hilo', 'vwap',
-        'ichimoku', 'supertrend', 'hma', 'ssf', 'wma', 'sinwma', 'linreg',
+        # 'ichimoku',
+        #'supertrend',
+        #'squeeze_pro'
+        'hma', 'ssf', 'wma', 'sinwma', 'linreg',
         'td_seq', 'qqe', 'inertia', 'coppock', 'cti', 'stc', 'psar', 'dpo',
-        'tos_stdevall'
+        'tos_stdevall', 'mean_close', 'pos_volume', 'neg_volume', 'total_volume'
         ]
 
     try:
@@ -176,7 +114,80 @@ def data_operations(df, factor):
     df.fillna(method='ffill', inplace=True)
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
+    df.drop(columns=['mean_close', 'pos_volume', 'neg_volume', 'total_volume'], axis=1, inplace=True)
+    # print("Number of columns: ", len(df.columns))
+    # print("Df length: ", len(df))
+    # print(*df.columns)
+    # df.to_excel('df_excel.xlsx')
+    # print("DONE")
+    # input()
     return df
+
+
+def smoothness_criterion(returns: pd.Series, leverage: int) -> float:
+    """
+    Oblicza Kryterium Łagodne (Smoothness Criterion) na podstawie danych stóp zwrotu.
+    
+    :param returns: pd.Series - seria danych ze stopami zwrotu
+    :return: float - wartość Kryterium Łagodności
+    """
+    # Logarytmiczne stopy zwrotu
+    returns = returns/leverage
+    log_returns = np.log(1 + returns)
+
+    # Oczekiwana wartość (średnia logarytmicznych stóp zwrotu)
+    expected_log_return = np.mean(log_returns)
+
+    # Wariancja logarytmicznych stóp zwrotu
+    variance_log_return = np.var(log_returns)
+
+    # Kryterium Łagodne (smoothness criterion)
+    smoothness = expected_log_return / np.sqrt(variance_log_return)
+    
+    return smoothness
+
+
+def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage):
+    status = "NO"
+    annotation = "clean position"
+    df['cross'] = np.where(df['stance'] != df['stance'].shift(1), 1, 0)
+    density = round((df['cross'].sum()/len(df))*100, 2)
+    returns, _, _ = get_returns(df, symbol)
+    strategy_result = (1 + returns).cumprod() - 1
+
+    returns_list = returns.to_list()
+    sharpe = sharpe_multiplier * returns.mean()/returns.std()
+    sorotino = sharpe_multiplier * sortino_ratio(returns_list)
+    omega = omega_ratio(returns_list)
+    dom_ret = calculate_dominant(returns_list, num_ranges=len(returns_list))
+    mean_return = sharpe_multiplier * np.mean(returns_list)
+    drawdown = max_drawdown(returns)
+    kk = kelly_criterion(returns)
+    result = round(sharpe * omega * 100, 2)
+    smooth = smoothness_criterion(returns, leverage)
+
+    if print_:
+        print()
+        print(f"Signals density {annotation}:      ", density)
+        print(f"Final result {annotation}:         ", round(df['strategy'].mean() +
+                                             df['strategy'].iloc[-1], 2))
+        print(f"Sharpe ratio {annotation}:         ", round(sharpe, 2))
+        print(f"Smooth       {annotation}:         ", round(smooth))
+        print(f"Sorotino ratio {annotation}:       ", round(sorotino, 2))
+        print(f"Omega ratio {annotation}:          ", round(omega, 4))
+        print(f"Kelly ratio {annotation}:          ", round(kk, 4))
+        print(f"Max drawdown {annotation}:         ", round(drawdown, 4))
+        print(f"Dominant return [%] {annotation}:  ", round(dom_ret*100, 5))
+        print(f"Mean return [%] {annotation}:      ", round(mean_return, 2))
+        print(f"Median return [%] {annotation}:    ", round(
+            sharpe_multiplier * np.median(df['return'].dropna().to_list()), 2))
+        # print(f"Growing factor {annotation}:       ", how_it_grow)
+
+    if (omega > omega_limit and sharpe > sharpe_limit and kk > kk_limit and dom_ret > 0):
+        status = "YES"
+        print(f"OK {annotation} "*30)
+        print(f"""#### RESULT: {result} ####""")
+    return status, strategy_result, drawdown
 
 
 def interval_time_sharpe(interval):
@@ -239,6 +250,7 @@ def train_dataset(df, direction, parameters, factor, n_estimators, function, t_s
     recalls = []
     f1_scores = []
 
+    models = []
     for train_index, test_index in tscv.split(X):
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
@@ -260,7 +272,7 @@ def train_dataset(df, direction, parameters, factor, n_estimators, function, t_s
             early_stopping_rounds=33,
             verbose_eval=False
         )
-
+        models.append(model)
         if show_results:
             # Predictions
             predictions2 = model.predict(Test)
@@ -297,7 +309,7 @@ def train_dataset(df, direction, parameters, factor, n_estimators, function, t_s
         print(f'Average F1 Score: {round(avg_f1, 3)}')
     
 
-    return model, goal_density
+    return models, goal_density
 
 
 def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
@@ -411,11 +423,7 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
     return result, summary_status, density, 1, sqrt_error, final
 
 
-n_estimators = 4000
 function = ma_shift5
-lr_list = [0.05, 0.15, 0.3]#, 0.55]
-ts_list = [0.3]
-factors = [_ for _ in range(min_factor, max_factor, range_)]
 
 def generate_my_models(
         symbols: list, intervals: list, leverage: int, delete_old_models: bool,
@@ -433,7 +441,7 @@ def generate_my_models(
     for interval in tqdm(intervals):
         finals = []
         for symbol in symbols:
-            df_raw = get_data_for_model(symbol, interval, 1, 65000)
+            df_raw = get_data_for_model(symbol, interval, 1, bars)
             for factor in factors:
                 for t_set in ts_list:
                     #df = my_test
@@ -451,7 +459,9 @@ def generate_my_models(
                             'subsample': 0.91,
                             'random_state': 42,
                             'eval_metric': 'auc',
-                            'tree_method': 'hist',
+                            #'tree_method': 'hist',
+                            'tree_method': 'gpu_hist',
+                            'device': 'cuda',
                             'objective': 'binary:logistic',
                             'gamma': 1,
                             'alpha': 0.2,
@@ -460,29 +470,40 @@ def generate_my_models(
                         start = time.time()
                         try:
                             print(f"\nSymbol: {symbol}; Interval: {interval}; Factor: {factor}")
-                            dfx = testset.copy()
-                            model_buy, d_buy = train_dataset(dataset, 'buy', parameters, factor,
-                                                    n_estimators, function, t_set, show_results=show_results_on_graph)
-                            model_sell, d_sell = train_dataset(dataset, 'sell', parameters, factor,
-                                                    n_estimators, function, t_set, show_results=show_results_on_graph)
-                            buy = model_buy.predict(xgb.DMatrix(testset))
-                            sell = model_sell.predict(xgb.DMatrix(testset))
-                            buy = np.where(buy > probability_edge, 1, 0)
-                            sell = np.where(sell > probability_edge, -1, 0)
-                            dfx['time2'] = pd.to_datetime(dfx['time'], unit='s')
-                            dfx['stance'] = buy + sell
-                            dfx['stance'] = dfx['stance'].replace(0, np.NaN)
-                            dfx['stance'] = dfx['stance'].ffill()
-                            dfx['stance'] = np.where((dfx['time2'].dt.hour > morning_hour) & (dfx['time2'].dt.hour < evening_hour), dfx['stance'], 0)
-                            dfx = dfx[dfx['stance'] != 0]
-                            dfx.reset_index(drop=True, inplace=True)
-                            result, status, density, how_it_grow, sqrt_error, final = strategy_with_chart_(d_buy, d_sell,
-                                dfx, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
-                                )
-                            results.append((symbol, interval, leverage, factor, result, density,
-                                            how_it_grow, sqrt_error, final, status))
+                            #test_set_divider = len(testset) - int(len(testset)/n_splits)
+                            #dfx.reset_index(drop=True, inplace=True)
+                            models_buy, d_buy = train_dataset(dataset, 'buy', parameters, factor,
+                                                    n_estimators, function, t_set, show_results=show_results_on_graph,
+                                                    n_splits=n_splits)
+                            models_sell, d_sell = train_dataset(dataset, 'sell', parameters, factor,
+                                                    n_estimators, function, t_set, show_results=show_results_on_graph,
+                                                    n_splits=n_splits)
+                            
+                            
+                            statuses = []
+                            for m in range(len(models_buy)):
+                                dfx = testset.copy()
+                                buy = models_buy[m].predict(xgb.DMatrix(testset))
+                                sell = models_sell[m].predict(xgb.DMatrix(testset))
+                                buy = np.where(buy > probability_edge, 1, 0)
+                                sell = np.where(sell > probability_edge, -1, 0)
+                                dfx['time2'] = pd.to_datetime(dfx['time'], unit='s')
+                                dfx['stance'] = buy + sell
+                                dfx['stance'] = dfx['stance'].replace(0, np.NaN)
+                                dfx['stance'] = dfx['stance'].ffill()
+                                dfx['stance'] = np.where((dfx['time2'].dt.hour > morning_hour) & (dfx['time2'].dt.hour < evening_hour), dfx['stance'], 0)
+                                dfx = dfx[dfx['stance'] != 0]
+                                dfx.reset_index(drop=True, inplace=True)
+                                result, status, density, how_it_grow, sqrt_error, final = strategy_with_chart_(d_buy, d_sell,
+                                    dfx, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
+                                    )
+                                results.append((symbol, interval, leverage, factor, result, density,
+                                                how_it_grow, sqrt_error, final, status))
+                                statuses.append(status)
+
+                            statuses = [status=="YES" for status in statuses]
                             if generate_model:
-                                if status == "YES":
+                                if all(statuses):
                                     if final in finals:
                                         continue
                                     # name_ {-7}_{-6}-{-5}_{-4}_{-3}_{-2}_
@@ -490,8 +511,8 @@ def generate_my_models(
                                     _ts_name = str(t_set).split('.')[-1]
                                     name_ = f'{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
                                     finals.append(final)
-                                    model_buy.save_model(f"{catalog}\\models\\{name_}_buy.model")
-                                    model_sell.save_model(f"{catalog}\\models\\{name_}_sell.model")
+                                    models_buy[-1].save_model(f"{catalog}\\models\\{name_}_buy.model")
+                                    models_sell[-1].save_model(f"{catalog}\\models\\{name_}_sell.model")
                         except Exception as e:
                             print(e)
                             i += 1

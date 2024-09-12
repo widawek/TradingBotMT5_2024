@@ -53,13 +53,11 @@ def symbol_stats(symbol, volume, kill_multiplier):
 
 if __name__ == '__main__':
     symbols = [
-        'JP225', 'USTEC', 'UK100', 'DE40', 'US30', 'AUDCAD', 'USDJPY', 'AUDUSD',
-        'BTCUSD', 'USDCAD', 'AUDNZD', 'EURJPY', 'XAGAUD', 'EURUSD', 'NZDCAD',
-        'XAGUSD', 'USDCHF', 'GBPJPY', 'GBPUSD', 'EURGBP', 'USDPLN', 'XAUUSD', 'XTIUSD', 'XAUAUD', 'XAUJPY'
+        'JP225', 'USTEC', 'UK100', 'DE40', 'US30', 'AUDCAD', 'USDJPY',
+        'AUDUSD', 'BTCUSD', 'USDCAD', 'AUDNZD', 'EURJPY', 'XAGAUD',
+        'EURUSD', 'NZDCAD', 'XAGUSD', 'USDCHF', 'GBPJPY', 'GBPUSD',
+        'EURGBP', 'GBPCHF', 'USDPLN', 'XAUUSD', 'XTIUSD', 'XAUAUD', 'XAUJPY'
         ]
-
-    # symbols = ['AUDCAD', 'USDJPY', 'AUDUSD', 'BTCUSD', 'USDCAD', 'AUDNZD', 'EURJPY', 'EURUSD', 'NZDCAD',
-    #             'USDCHF', 'GBPJPY', 'GBPUSD', 'EURGBP', 'USDPLN']
 
     symbols = list(set(symbols))
 
@@ -71,7 +69,7 @@ if __name__ == '__main__':
         symbols_list.append((symbol, margin_open, margin_close, real_spread_to_volatility))
     df = pd.DataFrame(symbols_list, columns=['symbol', 'margin_open', 'margin_close', 'real_spread_to_volatility'])
     df['result'] = round(df['margin_open']*df['margin_close']*df['real_spread_to_volatility'],4)
-    df = df.sort_values(by='result')
+    df = df.sort_values(by='real_spread_to_volatility')
     df.reset_index(drop=True, inplace=True)
     print(df)
     print(df['symbol'].to_list())
