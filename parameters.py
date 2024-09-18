@@ -3,8 +3,14 @@ from functions import reduce_values
 
 intervals = ['M20']
 symbols = [
-    'EURUSD', 'EURGBP',
-    'USDCHF', 'GBPCHF'
+    'EURUSD',
+    'USDPLN',
+    'USDCHF',
+    'GBPUSD',
+    'US30',
+    'USDJPY',
+    'CHFJPY',
+    'USDCAD'
     ]
 leverage = 46
 delete_old_models = True
@@ -28,7 +34,7 @@ sharpe_limit = 5
 kk_limit = 3
 omega_limit = 1.2
 n_estimators = 4000
-lr_list = [0.05, 0.15, 0.3]#, 0.55]
+lr_list = [0.05, 0.15, 0.30]#, 0.55]
 ts_list = [0.3]
 factors = [_ for _ in range(min_factor, max_factor, range_)]
 n_splits = 2

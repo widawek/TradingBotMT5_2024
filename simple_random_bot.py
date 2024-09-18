@@ -28,7 +28,7 @@ class Bot:
     position_size = 6       # percent of balance
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
-    time_limit_multiplier = 4
+    time_limit_multiplier = 3
     system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
     master_interval = intervals[0]
     factor_to_delete = 24
@@ -52,6 +52,7 @@ class Bot:
         self.tp = 0.0
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
+        self.trigger = 'model' # 'model' 'moving_averages'
         #self.reverse_mechanism = CheckOpenPositions(symbol, Bot.master_interval, self.kill_position_profit)
         if not 'democracy' in Bot.system:
             self.load_models(catalog)  # initialize few class variables
@@ -64,124 +65,19 @@ class Bot:
         print("Target == ", self.tp_miner, " USD")
         print("Killer == ", -self.kill_position_profit, " USD")
 
-
     @class_errors
-    def MDV_(self):
-        """Returns mean daily volatility"""
-        df = get_data(self.symbol, "D1", 1, 30)
-        df['mean_vol'] = (df.high - df.low)
-        return df['mean_vol'].mean()
-
-    @class_errors
-    def prices_list(self, posType, price_open=None):
-
-        def price_(posType, symbol_info, i, price_open):
-            if posType == 0:
-                if price_open is None:
-                    return round(symbol_info.bid + self.mdv * i, self.round_number)
-                else:
-                    return round(price_open + self.mdv * i, self.round_number)
-            else:
-                if price_open is None:
-                    return round(symbol_info.bid + self.mdv * i, self.round_number)
-                else:
-                    return round(price_open + self.mdv * i, self.round_number)
-
-        symbol_info = mt.symbol_info(self.symbol)
-        if posType == 0:
-            stops_range = [z for z in range(1, self.symmetrical_positions+1)]
-            limits_range = [z for z in range(-2, -self.symmetrical_positions-2, -1)]
-        else:
-            stops_range = [z for z in [-i for i in range(1, self.symmetrical_positions+1)]]
-            limits_range = [z for z in [-i for i in range(-2, -self.symmetrical_positions-2, -1)]]
-
-        stops = [price_(posType, symbol_info, i, price_open) for i in stops_range]
-        limits = [price_(posType, symbol_info, i, price_open) for i in limits_range]
-        if posType == 0:
-            limits.sort(reverse=True)
-        else:
-            limits.sort()
-
-        print("STOPS: ", stops)
-        print("LIMITS: ", limits)
-        return stops, limits
-
-    @class_errors
-    def pos_creator(self):
+    def check_trigger(self):
         try:
-            return self.pos_type
-        except NameError:
-            return random.randint(0, 1)
-
-    @class_errors
-    def tp_giver(self):
-        if self.number_of_positions < self.symmetrical_positions:
+            profit = sum([i[-4] for i in self.positions])
+            print(f"Check trigger profit = {profit}")
+            print(f"Change value = {round(-self.kill_position_profit/30, 2)}")
+            print(f"Actual trigger = {self.trigger}")
+            if profit < -self.kill_position_profit/10: #8
+                self.trigger = 'moving_averages' if self.trigger == 'model' else 'model'
+                print('Model of position making was changed')
+        except Exception:
+            print("no positions")
             pass
-        else:
-            act_price = mt.symbol_info(self.symbol).bid
-            last_position_open_time = pd.to_datetime(self.positions[-1].time, unit='s')
-            df = get_data(self.symbol, 'M1', 0, 1440)
-            df = df[df['time'] > last_position_open_time]
-            if self.pos_type == 0:
-                highest_price = df.high.max()
-                if act_price < (highest_price - self.mdv * Bot.sl_mdv_multiplier / 3):
-                    new_tp = round(highest_price + self.mdv * Bot.tp_mdv_multiplier,
-                                   self.round_number)
-                    self.tp = new_tp if new_tp > self.barrier_price else self.tp
-            elif self.pos_type == 1:
-                lowest_price = df.low.min()
-                if act_price > (lowest_price + self.mdv * Bot.sl_mdv_multiplier / 3):
-                    new_tp = round(lowest_price - self.mdv * Bot.tp_mdv_multiplier,
-                                   self.round_number)
-                    self.tp = new_tp if new_tp < self.barrier_price else self.tp
-            print("Actual TP == {}".format(self.tp))
-
-    @class_errors
-    def clean_sl(self):
-        act_price = mt.symbol_info(self.symbol).bid
-        if self.sl == 0.0:
-            if self.pos_type == 0:
-                if act_price > self.barrier_price:
-                    self.sl = round(
-                        self.zero_point + (0.1*self.mdv), self.round_number)
-                    self.sl_positions = self.number_of_positions
-            elif self.pos_type == 1:
-                if act_price < self.barrier_price:
-                    self.sl = round(
-                        self.zero_point - (0.1*self.mdv), self.round_number)
-                    self.sl_positions = self.number_of_positions
-        elif self.sl_positions != self.number_of_positions:
-            if self.pos_type == 0:
-                if act_price > (self.barrier_price+self.zero_point)/2:
-                    self.sl = round(
-                        self.zero_point + (0.1*self.mdv), self.round_number)
-                    self.sl_positions = self.number_of_positions
-            elif self.pos_type == 1:
-                if act_price < (self.barrier_price+self.zero_point)/2:
-                    self.sl = round(
-                        self.zero_point - (0.1*self.mdv), self.round_number)
-                    self.sl_positions = self.number_of_positions
-        return act_price
-
-    @class_errors
-    def sl_giver(self):
-        if self.number_of_positions >= self.symmetrical_positions:
-            act_price = self.clean_sl()
-            if self.pos_type == 0:
-                new_sl = round(
-                    act_price - self.mdv * Bot.sl_mdv_multiplier, self.round_number
-                    )
-                if new_sl > self.sl:
-                    self.sl = new_sl
-                    self.sl_positions = self.number_of_positions
-            elif self.pos_type == 1:
-                new_sl = round(
-                    act_price + self.mdv * Bot.sl_mdv_multiplier, self.round_number
-                    )
-                if new_sl < self.sl:
-                    self.sl = new_sl
-                    self.sl_positions = self.number_of_positions
-        print("Actual sl == {}".format(self.sl))
 
     @class_errors
     def positions_test(self):
@@ -260,51 +156,6 @@ class Bot:
                 self.request(actions['pending'], posType, i)
 
         self.positions_()
-
-    @class_errors
-    def request(self, action, posType, price=None):
-        if action == actions['deal']:
-            print("YES")
-            price = mt.symbol_info(self.symbol).bid
-        else:
-            if posType == 0:
-                posType = pendings["long_stop"]
-            else:
-                posType = pendings["short_stop"]
-
-        request = {
-            "action": action,
-            "symbol": self.symbol,
-            "volume": self.volume,
-            "type": posType,
-            "price": float(price),
-            "deviation": 20,
-            "magic": self.magic,
-            "tp": self.tp,
-            "sl": self.sl,
-            "comment": self.comment,
-            "type_time": mt.ORDER_TIME_GTC,
-            "type_filling": mt.ORDER_FILLING_IOC,
-            }
-
-        order_result = mt.order_send(request)
-        print(order_result)
-
-    @class_errors
-    def change_tp_sl(self):
-        pos_ = [i for i in self.positions if i.comment == self.comment]
-        for i in pos_:
-            if (i.sl != self.sl or i.tp != self.tp) and (self.sl != 0.0 or self.tp != 0.0):
-                request = {
-                "action": mt.TRADE_ACTION_SLTP,
-                "symbol": self.symbol,
-                "position": i.ticket,
-                "magic": self.magic,
-                "tp": self.tp,
-                "sl": self.sl,
-                "comment": self.comment
-                }
-                order_result = mt.order_send(request)
 
     @class_errors
     def report(self):
@@ -389,35 +240,6 @@ class Bot:
         elif profit > self.tp_miner:
             print('The profit is nice. I want it on our accout.')
             self.clean_orders()
-
-    @class_errors
-    def active_session(self):
-        #from model_generator import morning_hour
-        df = get_data(self.symbol, 'D1', 0, 1)
-        today_date_tuple = time.localtime()
-        formatted_date = time.strftime("%Y-%m-%d", today_date_tuple)
-        if str(df.time[0].date()) == formatted_date:
-            pass
-        else:
-            print(f"Session on {self.symbol} is not active")
-            input()
-            sys.exit(1)
-
-    @class_errors
-    def close_request(self):
-        positions_ = mt.positions_get(symbol=self.symbol)
-        for i in positions_:
-            request = {"action": mt.TRADE_ACTION_DEAL,
-                        "symbol": i.symbol,
-                        "volume": float(i.volume),
-                        "type": 1 if (i.type == 0) else 0,
-                        "position": i.ticket,
-                        "magic": i.magic,
-                        'deviation': 20,
-                        "type_time": mt.ORDER_TIME_GTC,
-                        "type_filling": mt.ORDER_FILLING_IOC
-                        }
-            order_result = mt.order_send(request)
 
     @class_errors
     def reset_bot(self):
@@ -578,8 +400,10 @@ class Bot:
         for filename in os.listdir(directory):
             if self.symbol in filename:
                 matching_files.append(filename[:-6].split('_')[:-1])
-        df = pd.DataFrame(matching_files, columns=[
+        df = pd.DataFrame(matching_files, columns=['ma_fast', 'ma_slow',
             'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result'])
+        df['ma_fast'] = df['ma_fast'].astype(int)
+        df['ma_slow'] = df['ma_slow'].astype(int)
         df['factor'] = df['factor'].astype(int)
         df['result'] = df['result'].astype(int)
         df = df.sort_values(by='result', ascending=False)[::2]
@@ -594,17 +418,21 @@ class Bot:
             input("Wciśnij cokolwek żeby wyjść.")
             sys.exit(1)
         if Bot.system == 'absolute':
+            ma_fast = df['ma_fast'].iloc[0]
+            ma_slow = df['ma_slow'].iloc[0]
             learning_rate = df['learning_rate'].iloc[0]
             training_set = df['training_set'].iloc[0]
             interval = df['interval'].iloc[0]
             factor = df['factor'].iloc[0]
             result = df['result'].iloc[0]
-            name = f'{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
+            name = f'{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
             return name
         else:
             names = []
             create_df = []
             for i in range(0, len(df)):
+                ma_fast = df['ma_fast'].iloc[i]
+                ma_slow = df['ma_slow'].iloc[i]
                 learning_rate = df['learning_rate'].iloc[i]
                 training_set = df['training_set'].iloc[i]
                 interval = df['interval'].iloc[i]
@@ -614,14 +442,14 @@ class Bot:
                     rank = df['rank'].iloc[i]
                 else:
                     rank = df['rank'].iloc[len(df)-i-1]
-                name = f'{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
+                name = f'{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
                 names.append([name, rank]) # change tuple to list
                 create_df.append(f'{name}'.split('_'))
             print(names)
 
             if Bot.system == 'weighted_democracy':
                 print(names)
-                df_result_filter = pd.DataFrame(create_df, columns=[
+                df_result_filter = pd.DataFrame(create_df, columns=['ma_fast', 'ma_slow',
                         'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result']
                         )
                 print(df_result_filter)
@@ -665,9 +493,11 @@ class Bot:
         # class return
         self.time_stp = dt.now()
         _string_data = mod_buy[1].split('_')
-        self.interval = _string_data[-4]
+        #self.interval = _string_data[-4]
         self.factor = _string_data[-3]
         self.ts = _string_data[-6]
+        # self.ma_factor_fast = _string_data[-9]
+        # self.ma_factor_slow = _string_data[-8]
         if len(self.ts) < 2:
             self.ts = self.ts + '0'
         self.lr = _string_data[-7][-2:]
@@ -708,14 +538,260 @@ class Bot:
         return position
 
     @class_errors
-    def check_new_bar(self):
-        bar = mt.copy_rates_from_pos(
-            self.symbol, timeframe_(self.interval), 0, 1) # change self.interval to 'M1'
-        if self.barOpen == bar[0][0]:
-            return False
+    def load_models_democracy(self, directory):
+        model_names = self.find_files(directory)
+        print(model_names)
+        # buy
+        self.buy_models = []
+        self.sell_models = []
+        self.factors = []
+        ma_list = []
+        for model_name in model_names:
+            print(model_name)
+            model_path_buy = os.path.join(directory, f'{model_name[0]}_buy.model')
+            model_path_sell = os.path.join(directory, f'{model_name[0]}_sell.model')
+            model_buy = xgb.Booster()
+            model_sell = xgb.Booster()
+            model_buy.load_model(model_path_buy)
+            model_sell.load_model(model_path_sell)
+            self.buy_models.append((model_buy, f'{model_name[0]}_{model_name[1]}'))
+            self.sell_models.append((model_sell, f'{model_name[0]}_{model_name[1]}'))
+            self.factors.append(int(model_name[0].split('_')[-2])) # factor
+            ma_list.append((int(model_name[0].split('_')[-8]), int(model_name[0].split('_')[-7])))
+        assert len(self.buy_models) == len(self.sell_models)
+        # class return
+        most_common_ma = most_common_value(ma_list)
+        self.ma_factor_fast = most_common_ma[0]
+        self.ma_factor_slow = most_common_ma[1]
+        self.interval = Bot.master_interval
+        self.limit_time = interval_time(self.interval) * Bot.time_limit_multiplier
+        self.daily_volatility_reducer()
+        y_ = Bot.system.split('_')[1][:4]
+        self.comment = f'{Bot.system[0]+y_}_{self.daily_volatility_reduce}'
+        self.magic = magic_(self.symbol, self.comment)
+        self.mdv = self.MDV_() / self.daily_volatility_reduce
+        print(f"MA values: fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
+        print('comment: ', self.comment)
+        print('Democracy')
+
+    @class_errors
+    def actual_position_democracy(self):
+        # if self.reverse_mechanism.reverse_or_not():
+        #     if self.reverse == 'normal':
+        #         self.reverse = 'reverse'
+        #         print(f"Reverse mode is changed to {self.reverse}")
+        #     elif self.reverse == 'reverse':
+        #         self.reverse = 'normal'
+        #         print(f"Reverse mode is changed to {self.reverse}")
+        #     else:
+        #         pass
+        self.check_trigger()
+        if self.trigger == 'model':
+            stance_values = []
+            for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
+                df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 100)) # how_many_bars
+                df = data_operations(df, factor)
+                dfx = df.copy()
+                dtest_buy = xgb.DMatrix(df)
+                dtest_sell = xgb.DMatrix(df)
+                buy = mbuy[0].predict(dtest_buy)
+                sell = msell[0].predict(dtest_sell)
+                buy = np.where(buy > probability_edge, 1, 0)
+                sell = np.where(sell > probability_edge, -1, 0)
+                dfx['stance'] = buy + sell
+                dfx['stance'] = dfx['stance'].replace(0, np.NaN)
+                dfx['stance'] = dfx['stance'].ffill()
+
+                if Bot.system == 'just_democracy':
+                    position_ = dfx['stance'].iloc[-1]
+                elif Bot.system =='weighted_democracy':
+                    position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
+                elif Bot.system == 'ranked_democracy':
+                    position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
+                elif Bot.system == 'invertedrank_democracy':
+                    position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
+                try:
+                    _ = int(position_)
+                except Exception:
+                    continue
+                stance_values.append(int(position_))
+
+            print('Stances: ', stance_values)
+            sum_of_position = np.sum(stance_values)
+            print("Sum of democratic votes: ", sum_of_position)
+
+            def longs(stance_values):
+                return round(np.sum([1 for i in stance_values if i > 0]) / len(stance_values), 2)
+
+            def longs_democratic(stance_values):
+                all_ = [abs(i) for i in stance_values]
+                return round(np.sum(stance_values) / np.sum(all_), 2)
+
+            force_of_democratic = ic(longs_democratic(stance_values))
+            print("Force of long democratic votes: ", force_of_democratic)
+            try:
+                fx = ic(longs(stance_values))
+                print("Percent of long votes: ", fx)
+            except Exception:
+                pass
+            if sum_of_position != 0:
+                position = 0 if sum_of_position > 0 else 1
+            else:
+                try:
+                    position = self.pos_type
+                except Exception as e:
+                    print(e)
+                    self.pos_type = self.pos_creator()
+            if self.reverse == 'normal':
+                pass
+            elif self.reverse == 'reverse':
+                position = 0 if position == 1 else 1
+            elif self.reverse == 'normal_mix':
+                time_ = dt.now()
+                if time_.hour >= 14:
+                    position = 0 if position == 1 else 1
         else:
-            self.barOpen == bar[0][0]
-            return True
+            print(f'Position from moving averages fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
+            dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
+            ma1 = dfx.ta.sma(length=self.ma_factor_fast)
+            ma2 = dfx.ta.sma(length=self.ma_factor_slow)
+            dfx['stance'] = np.where(ma1>=ma2, 1, 0)
+            dfx['stance'] = np.where(ma1<ma2, -1, dfx['stance'])
+            position = 0 if dfx.stance.iloc[-1] == 1 else 1
+            print("MA position: ", position)
+
+
+        return position
+
+    @class_errors
+    def rename_files_in_directory(self, old_phrase, new_phrase):
+        # Iterate over all files in the specified directory
+        for filename in os.listdir(catalog):
+            # Check if the old phrase is in the filename
+            if old_phrase in filename:
+                # Create the new filename by replacing the old phrase with the new one
+                new_filename = filename.replace(old_phrase, new_phrase)
+                # Construct the full old and new file paths
+                old_file_path = os.path.join(catalog, filename)
+                new_file_path = os.path.join(catalog, new_filename)
+                # Rename the file
+                os.rename(old_file_path, new_file_path)
+                print(f'Renamed: {old_file_path} -> {new_file_path}')
+
+    @class_errors
+    def tp_giver(self):
+        if self.number_of_positions < self.symmetrical_positions:
+            pass
+        else:
+            act_price = mt.symbol_info(self.symbol).bid
+            last_position_open_time = pd.to_datetime(self.positions[-1].time, unit='s')
+            df = get_data(self.symbol, 'M1', 0, 1440)
+            df = df[df['time'] > last_position_open_time]
+            if self.pos_type == 0:
+                highest_price = df.high.max()
+                if act_price < (highest_price - self.mdv * Bot.sl_mdv_multiplier / 3):
+                    new_tp = round(highest_price + self.mdv * Bot.tp_mdv_multiplier,
+                                   self.round_number)
+                    self.tp = new_tp if new_tp > self.barrier_price else self.tp
+            elif self.pos_type == 1:
+                lowest_price = df.low.min()
+                if act_price > (lowest_price + self.mdv * Bot.sl_mdv_multiplier / 3):
+                    new_tp = round(lowest_price - self.mdv * Bot.tp_mdv_multiplier,
+                                   self.round_number)
+                    self.tp = new_tp if new_tp < self.barrier_price else self.tp
+            print("Actual TP == {}".format(self.tp))
+
+    @class_errors
+    def clean_sl(self):
+        act_price = mt.symbol_info(self.symbol).bid
+        if self.sl == 0.0:
+            if self.pos_type == 0:
+                if act_price > self.barrier_price:
+                    self.sl = round(
+                        self.zero_point + (0.1*self.mdv), self.round_number)
+                    self.sl_positions = self.number_of_positions
+            elif self.pos_type == 1:
+                if act_price < self.barrier_price:
+                    self.sl = round(
+                        self.zero_point - (0.1*self.mdv), self.round_number)
+                    self.sl_positions = self.number_of_positions
+        elif self.sl_positions != self.number_of_positions:
+            if self.pos_type == 0:
+                if act_price > (self.barrier_price+self.zero_point)/2:
+                    self.sl = round(
+                        self.zero_point + (0.1*self.mdv), self.round_number)
+                    self.sl_positions = self.number_of_positions
+            elif self.pos_type == 1:
+                if act_price < (self.barrier_price+self.zero_point)/2:
+                    self.sl = round(
+                        self.zero_point - (0.1*self.mdv), self.round_number)
+                    self.sl_positions = self.number_of_positions
+        return act_price
+
+    @class_errors
+    def sl_giver(self):
+        if self.number_of_positions >= self.symmetrical_positions:
+            act_price = self.clean_sl()
+            if self.pos_type == 0:
+                new_sl = round(
+                    act_price - self.mdv * Bot.sl_mdv_multiplier, self.round_number
+                    )
+                if new_sl > self.sl:
+                    self.sl = new_sl
+                    self.sl_positions = self.number_of_positions
+            elif self.pos_type == 1:
+                new_sl = round(
+                    act_price + self.mdv * Bot.sl_mdv_multiplier, self.round_number
+                    )
+                if new_sl < self.sl:
+                    self.sl = new_sl
+                    self.sl_positions = self.number_of_positions
+        print("Actual sl == {}".format(self.sl))
+
+    @class_errors
+    def request(self, action, posType, price=None):
+        if action == actions['deal']:
+            print("YES")
+            price = mt.symbol_info(self.symbol).bid
+        else:
+            if posType == 0:
+                posType = pendings["long_stop"]
+            else:
+                posType = pendings["short_stop"]
+
+        request = {
+            "action": action,
+            "symbol": self.symbol,
+            "volume": self.volume,
+            "type": posType,
+            "price": float(price),
+            "deviation": 20,
+            "magic": self.magic,
+            "tp": self.tp,
+            "sl": self.sl,
+            "comment": self.comment,
+            "type_time": mt.ORDER_TIME_GTC,
+            "type_filling": mt.ORDER_FILLING_IOC,
+            }
+
+        order_result = mt.order_send(request)
+        print(order_result)
+
+    @class_errors
+    def change_tp_sl(self):
+        pos_ = [i for i in self.positions if i.comment == self.comment]
+        for i in pos_:
+            if (i.sl != self.sl or i.tp != self.tp) and (self.sl != 0.0 or self.tp != 0.0):
+                request = {
+                "action": mt.TRADE_ACTION_SLTP,
+                "symbol": self.symbol,
+                "position": i.ticket,
+                "magic": self.magic,
+                "tp": self.tp,
+                "sl": self.sl,
+                "comment": self.comment
+                }
+                order_result = mt.order_send(request)
 
     @class_errors
     def delete_model(self):
@@ -736,129 +812,91 @@ class Bot:
         print("New model reduce:", self.daily_volatility_reduce)
 
     @class_errors
-    def load_models_democracy(self, directory):
-        model_names = self.find_files(directory)
-        print(model_names)
-        # buy
-        self.buy_models = []
-        self.sell_models = []
-        self.factors = []
-        for model_name in model_names:
-            print(model_name)
-            model_path_buy = os.path.join(directory, f'{model_name[0]}_buy.model')
-            model_path_sell = os.path.join(directory, f'{model_name[0]}_sell.model')
-            model_buy = xgb.Booster()
-            model_sell = xgb.Booster()
-            model_buy.load_model(model_path_buy)
-            model_sell.load_model(model_path_sell)
-            self.buy_models.append((model_buy, f'{model_name[0]}_{model_name[1]}'))
-            self.sell_models.append((model_sell, f'{model_name[0]}_{model_name[1]}'))
-            self.factors.append(int(model_name[0].split('_')[-2])) # factor
-        assert len(self.buy_models) == len(self.sell_models)
-        # class return
-        self.interval = Bot.master_interval
-        self.limit_time = interval_time(self.interval) * Bot.time_limit_multiplier
-        self.daily_volatility_reducer()
-        y_ = Bot.system.split('_')[1][:4]
-        self.comment = f'{Bot.system[0]+y_}_{self.daily_volatility_reduce}'
-        self.magic = magic_(self.symbol, self.comment)
-        self.mdv = self.MDV_() / self.daily_volatility_reduce
-        print('comment: ', self.comment)
-        print('Democracy')
-
-    @class_errors
-    def actual_position_democracy(self):
-        # if self.reverse_mechanism.reverse_or_not():
-        #     if self.reverse == 'normal':
-        #         self.reverse = 'reverse'
-        #         print(f"Reverse mode is changed to {self.reverse}")
-        #     elif self.reverse == 'reverse':
-        #         self.reverse = 'normal'
-        #         print(f"Reverse mode is changed to {self.reverse}")
-        #     else:
-        #         pass
-
-        # Przykładowe użycie:
-        stance_values = []
-        for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
-            df = get_data_for_model(self.symbol, mbuy[1].split('_')[3], 1, int(factor**2 + 100)) # how_many_bars
-            df = data_operations(df, factor)
-            dfx = df.copy()
-            dtest_buy = xgb.DMatrix(df)
-            dtest_sell = xgb.DMatrix(df)
-            buy = mbuy[0].predict(dtest_buy)
-            sell = msell[0].predict(dtest_sell)
-            buy = np.where(buy > probability_edge, 1, 0)
-            sell = np.where(sell > probability_edge, -1, 0)
-            dfx['stance'] = buy + sell
-            dfx['stance'] = dfx['stance'].replace(0, np.NaN)
-            dfx['stance'] = dfx['stance'].ffill()
-
-            if Bot.system == 'just_democracy':
-                position_ = dfx['stance'].iloc[-1]
-            elif Bot.system =='weighted_democracy':
-                position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
-            elif Bot.system == 'ranked_democracy':
-                position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
-            elif Bot.system == 'invertedrank_democracy':
-                position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
-            try:
-                _ = int(position_)
-            except Exception:
-                continue
-            stance_values.append(int(position_))
-
-        print('Stances: ', stance_values)
-        sum_of_position = np.sum(stance_values)
-        print("Sum of democratic votes: ", sum_of_position)
-
-        def longs(stance_values):
-            return round(np.sum([1 for i in stance_values if i > 0]) / len(stance_values), 2)
-
-        def longs_democratic(stance_values):
-            all_ = [abs(i) for i in stance_values]
-            return round(np.sum(stance_values) / np.sum(all_), 2)
-
-        force_of_democratic = ic(longs_democratic(stance_values))
-        print("Force of long democratic votes: ", force_of_democratic)
-        try:
-            fx = ic(longs(stance_values))
-            print("Percent of long votes: ", fx)
-        except Exception:
-            pass
-        if sum_of_position != 0:
-            position = 0 if sum_of_position > 0 else 1
+    def check_new_bar(self):
+        bar = mt.copy_rates_from_pos(
+            self.symbol, timeframe_(self.interval), 0, 1) # change self.interval to 'M1'
+        if self.barOpen == bar[0][0]:
+            return False
         else:
-            try:
-                position = self.pos_type
-            except Exception as e:
-                print(e)
-                self.pos_type = self.pos_creator()
-
-        if self.reverse == 'normal':
-            pass
-        elif self.reverse == 'reverse':
-            position = 0 if position == 1 else 1
-        elif self.reverse == 'normal_mix':
-            time_ = dt.now()
-            if time_.hour >= 14:
-                position = 0 if position == 1 else 1
-        return position
+            self.barOpen == bar[0][0]
+            return True
 
     @class_errors
-    def rename_files_in_directory(self, old_phrase, new_phrase):
-        # Iterate over all files in the specified directory
-        for filename in os.listdir(catalog):
-            # Check if the old phrase is in the filename
-            if old_phrase in filename:
-                # Create the new filename by replacing the old phrase with the new one
-                new_filename = filename.replace(old_phrase, new_phrase)
-                # Construct the full old and new file paths
-                old_file_path = os.path.join(catalog, filename)
-                new_file_path = os.path.join(catalog, new_filename)
-                # Rename the file
-                os.rename(old_file_path, new_file_path)
-                print(f'Renamed: {old_file_path} -> {new_file_path}')
+    def MDV_(self):
+        """Returns mean daily volatility"""
+        df = get_data(self.symbol, "D1", 1, 30)
+        df['mean_vol'] = (df.high - df.low)
+        return df['mean_vol'].mean()
+
+    @class_errors
+    def prices_list(self, posType, price_open=None):
+
+        def price_(posType, symbol_info, i, price_open):
+            if posType == 0:
+                if price_open is None:
+                    return round(symbol_info.bid + self.mdv * i, self.round_number)
+                else:
+                    return round(price_open + self.mdv * i, self.round_number)
+            else:
+                if price_open is None:
+                    return round(symbol_info.bid + self.mdv * i, self.round_number)
+                else:
+                    return round(price_open + self.mdv * i, self.round_number)
+
+        symbol_info = mt.symbol_info(self.symbol)
+        if posType == 0:
+            stops_range = [z for z in range(1, self.symmetrical_positions+1)]
+            limits_range = [z for z in range(-2, -self.symmetrical_positions-2, -1)]
+        else:
+            stops_range = [z for z in [-i for i in range(1, self.symmetrical_positions+1)]]
+            limits_range = [z for z in [-i for i in range(-2, -self.symmetrical_positions-2, -1)]]
+
+        stops = [price_(posType, symbol_info, i, price_open) for i in stops_range]
+        limits = [price_(posType, symbol_info, i, price_open) for i in limits_range]
+        if posType == 0:
+            limits.sort(reverse=True)
+        else:
+            limits.sort()
+
+        print("STOPS: ", stops)
+        print("LIMITS: ", limits)
+        return stops, limits
+
+    @class_errors
+    def active_session(self):
+        #from model_generator import morning_hour
+        df = get_data(self.symbol, 'D1', 0, 1)
+        today_date_tuple = time.localtime()
+        formatted_date = time.strftime("%Y-%m-%d", today_date_tuple)
+        if str(df.time[0].date()) == formatted_date:
+            pass
+        else:
+            print(f"Session on {self.symbol} is not active")
+            input()
+            sys.exit(1)
+
+    @class_errors
+    def close_request(self):
+        positions_ = mt.positions_get(symbol=self.symbol)
+        for i in positions_:
+            request = {"action": mt.TRADE_ACTION_DEAL,
+                        "symbol": i.symbol,
+                        "volume": float(i.volume),
+                        "type": 1 if (i.type == 0) else 0,
+                        "position": i.ticket,
+                        "magic": i.magic,
+                        'deviation': 20,
+                        "type_time": mt.ORDER_TIME_GTC,
+                        "type_filling": mt.ORDER_FILLING_IOC
+                        }
+            order_result = mt.order_send(request)
+
+    @class_errors
+    def pos_creator(self):
+        try:
+            return self.pos_type
+        except NameError:
+            return random.randint(0, 1)
 
 
 if __name__ == '__main__':

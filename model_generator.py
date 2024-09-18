@@ -11,6 +11,7 @@ import MetaTrader5 as mt
 import pandas_ta as ta
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from tqdm import trange
 import time
 from itertools import product
 from functions import *
@@ -40,8 +41,6 @@ def data_operations(df, factor):
     df['high_square'] = np.sin(np.log(df['high']**2))
     df['low_square'] = np.sin(np.log(df['low']**2))
     df['close_square'] = np.sin(np.log(df['close']**2))
-    # df['high_close'] = df['high'] - df['close']
-    # df['low_close'] = df['low'] - df['close']
     df['high_log'] = np.log(df.high/df.high.shift(1))
     df['low_log'] = np.log(df.low/df.low.shift(1))
     df['close_log'] = np.log(df.close/df.close.shift(1))
@@ -127,7 +126,7 @@ def data_operations(df, factor):
 def smoothness_criterion(returns: pd.Series, leverage: int) -> float:
     """
     Oblicza Kryterium Łagodne (Smoothness Criterion) na podstawie danych stóp zwrotu.
-    
+
     :param returns: pd.Series - seria danych ze stopami zwrotu
     :return: float - wartość Kryterium Łagodności
     """
@@ -143,7 +142,7 @@ def smoothness_criterion(returns: pd.Series, leverage: int) -> float:
 
     # Kryterium Łagodne (smoothness criterion)
     smoothness = expected_log_return / np.sqrt(variance_log_return)
-    
+
     return smoothness
 
 
@@ -201,6 +200,7 @@ def interval_time_sharpe(interval):
 
 def ma_shift5(df, direction, factor):
     ma = ta.t3(df['close'], length=int(factor), a=0.8)
+    #ma = ta.alma(df['adj'], length=int(factor))
     ma = ma.shift(-int(factor/3))
     col1 = df['close']
     col2 = ma
@@ -307,7 +307,7 @@ def train_dataset(df, direction, parameters, factor, n_estimators, function, t_s
         print(f'Average Precision: {round(avg_precision, 3)}')
         print(f'Average Recall: {round(avg_recall, 3)}')
         print(f'Average F1 Score: {round(avg_f1, 3)}')
-    
+
 
     return models, goal_density
 
@@ -325,11 +325,11 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
     #print(df['cross'].sum()/len(df))
     df['mkt_move'] = np.log(df.close/df.close.shift(1))
     df['return'] = np.where(df['time2'].dt.date == df['time2'].dt.date.shift(1),
-                            df.mkt_move * df.stance.shift(1) * leverage -\
-                                (df.cross *(df.spread/divider)/df.open), 0)
+                            (df.mkt_move * df.stance.shift(1) -\
+                                (df.cross *(df.spread/divider)/df.open))*leverage, 0)
     df['strategy'] = (1+df['return']).cumprod() - 1
     df['max_price'] = df.apply(lambda row: max_vol_times_price_price(df.loc[:row.name]), axis=1)
-    dominant = calculate_dominant(df['close'].to_list(), num_ranges=10)
+    dominant = calculate_dominant(df['close'].to_list(), num_ranges=len(df['return']))
     just_line = np.linspace(df['strategy'].dropna().iloc[0], df['strategy'].dropna().iloc[-1], num=len(df['strategy'].dropna()))
     df.loc[df.index[-1] - len(df.strategy.dropna()) + 1:df.index[-1] , 'just_line'] = just_line
 
@@ -342,7 +342,7 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
     mean_return = sharpe_multiplier * np.mean(df['return'].dropna().to_list())
     #result = round((((sharpe + sorotino)/2) * omega * mean_return) * 100, 2)
     result = round(sharpe * omega * 100, 2)
-    smooth = smoothness_criterion(df['return'].dropna(), leverage)
+    #smooth = smoothness_criterion(df['return'].dropna(), leverage)
 
     #try:
     final = int(result * (1-sqrt_error))
@@ -356,7 +356,7 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
         print("Signals density:     ", density)
         print("Final result:        ", round(df['strategy'].mean() +
                                              df['strategy'].iloc[-1], 2))
-        print("Smooth:              ", round(smooth))
+        #print("Smooth:              ", round(smooth))
         print("Sharpe ratio:        ", round(sharpe, 2))
         print("Sorotino ratio:      ", round(sorotino, 2))
         print("Omega ratio:         ", round(omega, 4))
@@ -371,7 +371,7 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
 
     density_status = True if (density_factor <= 1.2 and density_factor >= 0.8) else False
     if (not density_status) or (sharpe<sharpe_limit): #or (final < 0) :
-        return 0, "NO", density, 1, sqrt_error, final
+        return 0, "NO", density, 1, sqrt_error, final, 0, 0
 
     if (omega > 1 and sharpe > sharpe_limit):
         status = "YES"
@@ -419,8 +419,40 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
 
     final = int(final + (1+drawdown))
     summary_status = "YES" if (status == "YES" and status2 == "YES" and density_status) else "NO"
+
+    def trend_backtest(df, spread_mean, leverage):
+        range2 = 50
+        a = list(range(2, range2))
+        b = list(range(8, range2))
+        z = list(product(a, b))
+        z = [i for i in z if i[0] < i[1]]
+        results = []
+        for a, b in tqdm(z):
+            dfx = df.copy()
+            ma1 = dfx.ta.sma(length=a)
+            ma2 = dfx.ta.sma(length=b)
+            dfx['stance2'] = np.where(ma1>=ma2, 1, 0)
+            dfx['stance2'] = np.where(ma1<ma2, -1, dfx['stance2'])
+            dfx['return2'] = np.where(#(dfx['time2'].dt.date == dfx['time2'].dt.date.shift(1)) &
+                                      (dfx['return'] < 0), (dfx.mkt_move * dfx.stance2.shift(1) -\
+                                        (dfx.cross *(spread_mean)/dfx.open))*leverage, 0)
+            dfx['strategy2'] = (1+dfx['return2']).cumprod() - 1
+            sharpe = sharpe_multiplier * dfx['return2'].mean()/dfx['return2'].std()
+            omega = omega_ratio(dfx['return2'].dropna().to_list())
+            mean_return = sharpe_multiplier * np.mean(dfx['return2'].dropna().to_list())
+            result_ = round(((dfx['strategy2'].iloc[-1] + mean_return) / 2)*sharpe*omega, 2)
+            results.append((a, b, result_))
+        f_result = sorted(results, key=lambda x: x[2], reverse=True)[0]
+        print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
+        return f_result[0], f_result[1]
+
+    ma_factor1 = 0
+    ma_factor2 = 0
+    if summary_status == "YES":
+        ma_factor1, ma_factor2 = trend_backtest(df, spread_mean, leverage)
+
     #return result, summary_status, density, how_it_grow, sqrt_error, final
-    return result, summary_status, density, 1, sqrt_error, final
+    return result, summary_status, density, 1, sqrt_error, final, ma_factor1, ma_factor2
 
 
 function = ma_shift5
@@ -478,8 +510,6 @@ def generate_my_models(
                             models_sell, d_sell = train_dataset(dataset, 'sell', parameters, factor,
                                                     n_estimators, function, t_set, show_results=show_results_on_graph,
                                                     n_splits=n_splits)
-                            
-                            
                             statuses = []
                             for m in range(len(models_buy)):
                                 dfx = testset.copy()
@@ -494,9 +524,10 @@ def generate_my_models(
                                 dfx['stance'] = np.where((dfx['time2'].dt.hour > morning_hour) & (dfx['time2'].dt.hour < evening_hour), dfx['stance'], 0)
                                 dfx = dfx[dfx['stance'] != 0]
                                 dfx.reset_index(drop=True, inplace=True)
-                                result, status, density, how_it_grow, sqrt_error, final = strategy_with_chart_(d_buy, d_sell,
-                                    dfx, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
-                                    )
+                                result, status, density, how_it_grow, sqrt_error, final, ma_factor1, ma_factor2 = \
+                                    strategy_with_chart_(
+                                        d_buy, d_sell, dfx, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
+                                                         )
                                 results.append((symbol, interval, leverage, factor, result, density,
                                                 how_it_grow, sqrt_error, final, status))
                                 statuses.append(status)
@@ -510,6 +541,7 @@ def generate_my_models(
                                     _lr_name = str(learning_rate).split('.')[-1]
                                     _ts_name = str(t_set).split('.')[-1]
                                     name_ = f'{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
+                                    name_ = f'{ma_factor1}_{ma_factor2}_{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
                                     finals.append(final)
                                     models_buy[-1].save_model(f"{catalog}\\models\\{name_}_buy.model")
                                     models_sell[-1].save_model(f"{catalog}\\models\\{name_}_sell.model")
@@ -529,4 +561,4 @@ def generate_my_models(
 
 if __name__ == '__main__':
     from parameters import symbols
-    generate_my_models(symbols, ['M20'], 46, True, True)
+    generate_my_models(symbols, intervals, leverage, False, True)

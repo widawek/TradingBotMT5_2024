@@ -6,6 +6,7 @@ import hashlib
 import numpy as np
 import pandas_ta as ta
 import os
+from collections import Counter
 # from itertools import product
 # import builtins
 from time import sleep
@@ -198,6 +199,11 @@ def max_vol_times_price_price(df, window=30):
     # Usuwamy tymczasowe kolumny
     df.drop(['vol_times_price', 'sum_vol_times_price'], axis=1, inplace=True)
     return max_price
+
+
+def most_common_value(tuples):
+    licznik = Counter(tuples)
+    return licznik.most_common(1)[0][0]
 
 
 def calculate_dominant(data, num_ranges=50):
