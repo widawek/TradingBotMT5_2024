@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime as dt
 from datetime import timedelta
 import matplotlib.pyplot as plt
+import numpy as np
 mt.initialize()
 
 
@@ -39,12 +40,12 @@ def get_raw_close_postions_data(from_when: int, to_when: int = -1):
     df['hour_open'] = df['time_open'].dt.hour
     df['hour_close'] = df['time_close'].dt.hour
     df['weekday'] = df['time_close'].dt.day_name()
-    # df['interval'] = df['comment'].str.split('_').str[2]
-    # df['factor'] = df['comment'].str.split('_').str[4]
-    # df['learing_rate'] = df['comment'].str.split('_').str[0]
-    # df['training_set'] = df['comment'].str.split('_').str[1]
+    df['plus'] = df['profit'] > 0
+    df['minus'] = df['profit'] < 0
+    df['plus'] = df['plus'].astype(int)
+    df['minus'] = df['minus'].astype(int)
     df.reset_index(drop=True, inplace=True)
-    #print(df.columns)
+    #print(df)
     return df
 
 
@@ -73,8 +74,10 @@ def plot_results(from_when: int,
         df = get_raw_close_postions_data(from_when, to_when)
     except IndexError:
         return []
+    #df = df[df['symbol'] != 'EURGBP']
     margin = mt.account_info().balance
     print(f"Actual balance: {margin}")
+    print("RR: ", round(df['plus'].sum()/df['minus'].sum(), 2))
     df = df.groupby(by_)['profit'].sum().reset_index()
     if profitable_only:
         df = df[df['profit'] > margin*percent_of_balance_for_po/100]
@@ -103,10 +106,11 @@ def plot_results(from_when: int,
     if by_ == 'symbol':
         x1 = sorted(df.symbol.to_list())
         print(x1, f'\nNumber of symbols: {len(x1)}')
+        print(df['profit'].sum())
         return x1
     return []
 
 if __name__ == "__main__":
     # by_ 'symbol', 'comment', 'interval', 'factor', 'learing_rate', 'training_set'
-    x1 = plot_results(7, -2)
+    x1 = plot_results(0, -2)
     print(x1)

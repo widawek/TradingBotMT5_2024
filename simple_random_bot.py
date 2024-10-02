@@ -22,7 +22,7 @@ catalog = f'{catalog}\\models'
 
 
 class Bot:
-
+    trigger_mode = 'on'
     sl_mdv_multiplier = 1.5 # mdv multiplier for sl
     tp_mdv_multiplier = 2   # mdv multiplier for tp
     position_size = 6       # percent of balance
@@ -34,10 +34,12 @@ class Bot:
     factor_to_delete = 24
 
     def __init__(self, symbol, _, symmetrical_positions, daily_volatility_reduce):
+        print(dt.now())
         mt.initialize()
         self.reverse = reverse_
         self.symbol = symbol
-        self.active_session()
+        self.df_d1 = get_data(symbol, "D1", 1, 30)
+        self.avg_daily_vol_()
         self.round_number = round_number_(self.symbol)
         self.symmetrical_positions = symmetrical_positions
         self.daily_volatility_reduce_values = daily_volatility_reduce[0]
@@ -50,8 +52,6 @@ class Bot:
         self.sl_positions = None
         self.sl = 0.0
         self.tp = 0.0
-        _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
-        self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
         self.trigger = 'model' # 'model' 'moving_averages'
         #self.reverse_mechanism = CheckOpenPositions(symbol, Bot.master_interval, self.kill_position_profit)
         if not 'democracy' in Bot.system:
@@ -64,20 +64,83 @@ class Bot:
             self.barOpen = mt.copy_rates_from_pos(self.symbol, timeframe_(self.interval), 0, 1)[0][0]
         print("Target == ", self.tp_miner, " USD")
         print("Killer == ", -self.kill_position_profit, " USD")
+        self.active_session()
 
     @class_errors
-    def check_trigger(self):
-        try:
-            profit = sum([i[-4] for i in self.positions])
-            print(f"Check trigger profit = {profit}")
-            print(f"Change value = {round(-self.kill_position_profit/30, 2)}")
-            print(f"Actual trigger = {self.trigger}")
-            if profit < -self.kill_position_profit/10: #8
-                self.trigger = 'moving_averages' if self.trigger == 'model' else 'model'
-                print('Model of position making was changed')
-        except Exception:
-            print("no positions")
+    def change_trigger_or_reverse(self, what):
+        if what == 'trigger':
+            self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
+            print(f'Model of position making is {self.trigger}')
+        elif what == 'reverse':
+            self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
+            print(f'Model positioning system is {self.reverse}')
+        elif what == 'both':
+            self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
+            print(f'Model of position making is {self.trigger}')
+            self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
+            print(f'Model positioning system is {self.reverse}')
+
+    @class_errors
+    def check_trigger(self, trigger_mode='on'):
+        if trigger_mode == 'on':
+            print("Trigger check!!!")
+            trigger_model_divider = 20
+            profit_ = round(self.tp_miner/trigger_model_divider, 2)
+            profit_factor = 1.8
+            try:
+                #self.check_volume_condition = True
+                print("Volume-volatility condition: ", self.check_volume_condition)
+                profit = sum([i[-4] for i in self.positions])
+                print(f"Check trigger profit = {round(profit, 2)} USD")
+                print(f"Change value = {round(profit_, 2)} USD")
+                print(f"Actual trigger = {self.trigger}")
+
+                if profit < -profit_ and self.reverse == 'normal' and self.trigger == 'model' and self.check_volume_condition:
+                    self.change_trigger_or_reverse('trigger')
+                elif profit < -profit_ and self.reverse == 'normal' and self.trigger == 'moving_averages' and not self.check_volume_condition:
+                    self.change_trigger_or_reverse('trigger')
+
+            except Exception as e:
+                print("no positions", e)
+                pass
+        else:
             pass
+
+    # @class_errors
+    # def check_trigger(self, trigger_mode='on'):
+    #     if trigger_mode == 'on':
+    #         print("Trigger check!!!")
+    #         trigger_model_divider = 24
+    #         profit_ = round(self.tp_miner/trigger_model_divider, 2)
+    #         profit_factor = 1.8
+    #         try:
+    #             profit = sum([i[-4] for i in self.positions])
+    #             print(f"Check trigger profit = {round(profit, 2)} USD")
+    #             print(f"Change value = {round(profit_, 2)} USD")
+    #             print(f"Actual trigger = {self.trigger}")
+
+    #             if profit > profit_ * profit_factor and self.reverse == 'normal' and self.trigger == 'model':
+    #                 self.change_trigger_or_reverse('trigger')
+    #             elif profit > profit_ * profit_factor and self.reverse == 'normal' and self.trigger == 'moving_averages':
+    #                 self.change_trigger_or_reverse('reverse')
+    #             elif profit > profit_ * profit_factor and self.reverse == 'reverse' and self.trigger == 'model':
+    #                 self.change_trigger_or_reverse('both')
+    #             elif profit > profit_ * profit_factor and self.reverse == 'reverse' and self.trigger == 'moving_averages':
+    #                 self.change_trigger_or_reverse('both')
+    #             elif profit < -profit_ and self.reverse == 'normal' and self.trigger == 'model':
+    #                 self.change_trigger_or_reverse('reverse')
+    #             elif profit < -profit_ and self.reverse == 'normal' and self.trigger == 'moving_averages':
+    #                 self.change_trigger_or_reverse('trigger')
+    #             elif profit < -profit_ and self.reverse == 'reverse' and self.trigger == 'model':
+    #                 self.change_trigger_or_reverse('both')
+    #             elif profit < -profit_ and self.reverse == 'reverse' and self.trigger == 'moving_averages':
+    #                 self.change_trigger_or_reverse('both')
+
+    #         except Exception as e:
+    #             print("no positions", e)
+    #             pass
+    #     else:
+    #         pass
 
     @class_errors
     def positions_test(self):
@@ -168,7 +231,7 @@ class Bot:
         self.positions_()
         while True:
             now_ = dt.now()
-            if now_.hour >= evening_hour-2:# and now_.minute >= 45:
+            if now_.hour >= evening_hour-1:# and now_.minute >= 45:
                 self.clean_orders()
                 sys.exit()
             self.request_get()
@@ -283,22 +346,19 @@ class Bot:
 
     @class_errors
     def avg_daily_vol_(self):
-        df = get_data(self.symbol, "D1", 1, 30)
+        df = self.df_d1
         df['avg_daily'] = (df.high - df.low) / df.open
         self.avg_vol = df['avg_daily'].mean()
 
     @class_errors
-    def volume_calc(self, max_pos_margin, min_volume):
+    def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
-        # if min_volume:
-        #     return symbol_info["volume_min"]
         price = mt.symbol_info_tick(self.symbol)._asdict()
         margin_min = round(((symbol_info["volume_min"] *
                         symbol_info["trade_contract_size"])/leverage) *
                         price["bid"], 2)
         account = mt.account_info()._asdict()
-        self.avg_daily_vol_()
         max_pos_margin = round(account["balance"] * (max_pos_margin/100) /
                             (self.avg_vol * 100))
         if "JP" not in self.symbol:
@@ -316,6 +376,8 @@ class Bot:
         self.volume = volume
         if min_volume and (volume < symbol_info["volume_min"]):
             self.volume = symbol_info["volume_min"]
+        _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
+        self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
 
     @class_errors
     def check_model_(self):
@@ -400,7 +462,7 @@ class Bot:
         for filename in os.listdir(directory):
             if self.symbol in filename:
                 matching_files.append(filename[:-6].split('_')[:-1])
-        df = pd.DataFrame(matching_files, columns=['ma_fast', 'ma_slow',
+        df = pd.DataFrame(matching_files, columns=['strategy', 'ma_fast', 'ma_slow',
             'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result'])
         df['ma_fast'] = df['ma_fast'].astype(int)
         df['ma_slow'] = df['ma_slow'].astype(int)
@@ -418,6 +480,7 @@ class Bot:
             input("Wciśnij cokolwek żeby wyjść.")
             sys.exit(1)
         if Bot.system == 'absolute':
+            strategy = df['strategy'].iloc[0]
             ma_fast = df['ma_fast'].iloc[0]
             ma_slow = df['ma_slow'].iloc[0]
             learning_rate = df['learning_rate'].iloc[0]
@@ -425,12 +488,13 @@ class Bot:
             interval = df['interval'].iloc[0]
             factor = df['factor'].iloc[0]
             result = df['result'].iloc[0]
-            name = f'{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
+            name = f'{strategy}_{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
             return name
         else:
             names = []
             create_df = []
             for i in range(0, len(df)):
+                strategy = df['strategy'].iloc[i]
                 ma_fast = df['ma_fast'].iloc[i]
                 ma_slow = df['ma_slow'].iloc[i]
                 learning_rate = df['learning_rate'].iloc[i]
@@ -442,14 +506,14 @@ class Bot:
                     rank = df['rank'].iloc[i]
                 else:
                     rank = df['rank'].iloc[len(df)-i-1]
-                name = f'{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
+                name = f'{strategy}_{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
                 names.append([name, rank]) # change tuple to list
                 create_df.append(f'{name}'.split('_'))
             print(names)
 
             if Bot.system == 'weighted_democracy':
                 print(names)
-                df_result_filter = pd.DataFrame(create_df, columns=['ma_fast', 'ma_slow',
+                df_result_filter = pd.DataFrame(create_df, columns=['strategy', 'ma_fast', 'ma_slow',
                         'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result']
                         )
                 print(df_result_filter)
@@ -462,14 +526,14 @@ class Bot:
                     print("result", result_)
                     if result_ > sum_:
                         old_list = names[n][0].split('_')
-                        print("OLD: ", old_list)
+                        #print("OLD: ", old_list)
                         index_ = int(len(df_result_filter)/2)-3 if int(len(df_result_filter)/2) > 6 else int(len(df_result_filter)/2)-1
                         old_list[-1] = str(df_result_filter['result'].iloc[index_])
                         new_str = '_'.join(old_list)
                         self.rename_files_in_directory(names[n][0], new_str)
                         names[n][0] = new_str
-                        print("change names")
-                        print(names)
+                        # print("change names")#
+                        # print(names)
                     else:
                         print('break')
                         break
@@ -540,7 +604,7 @@ class Bot:
     @class_errors
     def load_models_democracy(self, directory):
         model_names = self.find_files(directory)
-        print(model_names)
+        #print(model_names)
         # buy
         self.buy_models = []
         self.sell_models = []
@@ -570,22 +634,14 @@ class Bot:
         self.comment = f'{Bot.system[0]+y_}_{self.daily_volatility_reduce}'
         self.magic = magic_(self.symbol, self.comment)
         self.mdv = self.MDV_() / self.daily_volatility_reduce
+
         print(f"MA values: fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
         print('comment: ', self.comment)
         print('Democracy')
 
     @class_errors
     def actual_position_democracy(self):
-        # if self.reverse_mechanism.reverse_or_not():
-        #     if self.reverse == 'normal':
-        #         self.reverse = 'reverse'
-        #         print(f"Reverse mode is changed to {self.reverse}")
-        #     elif self.reverse == 'reverse':
-        #         self.reverse = 'normal'
-        #         print(f"Reverse mode is changed to {self.reverse}")
-        #     else:
-        #         pass
-        self.check_trigger()
+        self.check_trigger(trigger_mode=Bot.trigger_mode)
         if self.trigger == 'model':
             stance_values = []
             for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
@@ -618,7 +674,6 @@ class Bot:
 
             print('Stances: ', stance_values)
             sum_of_position = np.sum(stance_values)
-            print("Sum of democratic votes: ", sum_of_position)
 
             def longs(stance_values):
                 return round(np.sum([1 for i in stance_values if i > 0]) / len(stance_values), 2)
@@ -642,14 +697,12 @@ class Bot:
                 except Exception as e:
                     print(e)
                     self.pos_type = self.pos_creator()
-            if self.reverse == 'normal':
-                pass
-            elif self.reverse == 'reverse':
-                position = 0 if position == 1 else 1
-            elif self.reverse == 'normal_mix':
-                time_ = dt.now()
-                if time_.hour >= 14:
-                    position = 0 if position == 1 else 1
+
+            volume_10 = ((df['high']-df['low'])*df['volume']).rolling(10).mean().iloc[-1]
+            volume_2 = ((df['high']-df['low'])*df['volume']).rolling(2).mean().iloc[-1]
+            print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
+            self.check_volume_condition = volume_2 > volume_10
+
         else:
             print(f'Position from moving averages fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
             dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
@@ -659,8 +712,19 @@ class Bot:
             dfx['stance'] = np.where(ma1<ma2, -1, dfx['stance'])
             position = 0 if dfx.stance.iloc[-1] == 1 else 1
             print("MA position: ", position)
+            volume_10 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(10).mean().iloc[-1]
+            volume_2 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(2).mean().iloc[-1]
+            print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
+            self.check_volume_condition = volume_2 > volume_10
 
-
+        if self.reverse == 'normal':
+            pass
+        elif self.reverse == 'reverse':
+            position = 0 if position == 1 else 1
+        elif self.reverse == 'normal_mix':
+            time_ = dt.now()
+            if time_.hour >= 14:
+                position = 0 if position == 1 else 1
         return position
 
     @class_errors
@@ -674,9 +738,19 @@ class Bot:
                 # Construct the full old and new file paths
                 old_file_path = os.path.join(catalog, filename)
                 new_file_path = os.path.join(catalog, new_filename)
+
+                def change_(old_file_path, new_file_path):
+                    os.rename(old_file_path, new_file_path)
+                    print(f'Renamed: {old_file_path} -> {new_file_path}')
                 # Rename the file
-                os.rename(old_file_path, new_file_path)
-                print(f'Renamed: {old_file_path} -> {new_file_path}')
+                try:
+                    change_(old_file_path, new_file_path)
+                except FileExistsError:
+                    new_file_path = new_file_path.split('_')
+                    result = int(new_file_path[-2])
+                    new_file_path[-2] = str(result + 1)
+                    new_file_path = '_'.join(new_file_path)
+                    change_(old_file_path, new_file_path)
 
     @class_errors
     def tp_giver(self):
@@ -750,6 +824,7 @@ class Bot:
 
     @class_errors
     def request(self, action, posType, price=None):
+        self.volume_calc(Bot.position_size, True)
         if action == actions['deal']:
             print("YES")
             price = mt.symbol_info(self.symbol).bid
@@ -773,7 +848,6 @@ class Bot:
             "type_time": mt.ORDER_TIME_GTC,
             "type_filling": mt.ORDER_FILLING_IOC,
             }
-
         order_result = mt.order_send(request)
         print(order_result)
 
@@ -802,12 +876,6 @@ class Bot:
 
     @class_errors
     def daily_volatility_reducer(self):
-        # numbers = np.linspace(self.max_reduce, self.min_reduce, len(self.daily_volatility_reduce_values))
-        # if Bot.system == 'absolute':
-        #     index_ = self.daily_volatility_reduce_values.index(int(self.interval[1:])*int(self.factor))
-        # else:
-        #     index_ = self.daily_volatility_reduce_values.index(int(self.interval[1:])*int(Bot.factor_to_delete))
-        # self.daily_volatility_reduce = int(numbers[index_])
         self.daily_volatility_reduce = 4
         print("New model reduce:", self.daily_volatility_reduce)
 
@@ -824,7 +892,7 @@ class Bot:
     @class_errors
     def MDV_(self):
         """Returns mean daily volatility"""
-        df = get_data(self.symbol, "D1", 1, 30)
+        df = self.df_d1.copy()
         df['mean_vol'] = (df.high - df.low)
         return df['mean_vol'].mean()
 

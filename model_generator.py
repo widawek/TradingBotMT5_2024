@@ -1,17 +1,15 @@
 import pandas as pd
 import xgboost as xgb
 import numpy as np
-from sklearn.model_selection import train_test_split, TimeSeriesSplit
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import (
     confusion_matrix, classification_report, accuracy_score,
     f1_score, precision_score, recall_score
     )
-import icecream as ic
 import MetaTrader5 as mt
 import pandas_ta as ta
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from tqdm import trange
 import time
 from itertools import product
 from functions import *
@@ -21,7 +19,6 @@ mt.initialize()
 import os
 catalog = os.path.dirname(__file__)
 from parameters import *
-#from scipy.signal import argrelextrema
 
 
 def data_operations(df, factor):
@@ -86,7 +83,7 @@ def data_operations(df, factor):
         #'squeeze_pro'
         'hma', 'ssf', 'wma', 'sinwma', 'linreg',
         'td_seq', 'qqe', 'inertia', 'coppock', 'cti', 'stc', 'psar', 'dpo',
-        'tos_stdevall', 'mean_close', 'pos_volume', 'neg_volume', 'total_volume'
+        'tos_stdevall', 'mean_close', 'pos_volume', 'neg_volume', 'total_volume',
         ]
 
     try:
@@ -196,25 +193,6 @@ def interval_time_sharpe(interval):
         return np.sqrt(252 * 24 / int(interval[1:]))
     elif interval[0] == 'M':
         return np.sqrt(252 * 24 * 60 / int(interval[1:]))
-
-
-def ma_shift5(df, direction, factor):
-    ma = ta.t3(df['close'], length=int(factor), a=0.8)
-    #ma = ta.alma(df['adj'], length=int(factor))
-    ma = ma.shift(-int(factor/3))
-    col1 = df['close']
-    col2 = ma
-    df['goal'] = np.where(col1 < col2, 1, -1)
-    if direction == 'buy':
-        df['goal'] = np.where(((col1 < col2) &
-            (col1.shift(1) > col2.shift(1))), 'yes', 'no')
-    elif direction == 'sell':
-        df['goal'] = np.where(((col1 > col2) &
-            (col1.shift(1) < col2.shift(1))), 'yes', 'no')
-    #df['goal'] = df['goal'].shift(-int(factor/2))
-    df = df.dropna()
-    df.reset_index(drop=True, inplace=True)
-    return df
 
 
 def train_dataset(df, direction, parameters, factor, n_estimators, function, t_set, show_results=True, n_splits=2):
@@ -369,11 +347,11 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
         print("Density equality:    ", density_factor)
         print("Final:               ", final)
 
-    density_status = True if (density_factor <= 1.2 and density_factor >= 0.8) else False
+    density_status = True if (density_factor <= 2 and density_factor >= 0.7) else False
     if (not density_status) or (sharpe<sharpe_limit): #or (final < 0) :
         return 0, "NO", density, 1, sqrt_error, final, 0, 0
 
-    if (omega > 1 and sharpe > sharpe_limit):
+    if (omega > omega_limit and sharpe > sharpe_limit and final > 0):
         status = "YES"
         print("OK "*30)
         print(f"""#### RESULT: {result} ####""")
@@ -455,13 +433,121 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
     return result, summary_status, density, 1, sqrt_error, final, ma_factor1, ma_factor2
 
 
-function = ma_shift5
+def primal(df, direction, factor):
+    factor = factor - 3
+    up = (df.close < df.close.shift(-1)) & \
+        (df.close < df.close.shift(-round(factor/2))) & \
+        (df.close < df.close.shift(-factor))
+    down = (df.close > df.close.shift(-1)) & \
+        (df.close > df.close.shift(-round(factor/2))) & \
+        (df.close > df.close.shift(-factor))
+    df['goal'] = np.where(up, 1, np.NaN)
+    df['goal'] = np.where(down, -1, df['goal'])
+    df['goal'] = df['goal'].ffill()
+    if direction == 'buy':
+        df['goal'] = np.where(df['goal'] > df['goal'].shift(1), 'yes', 'no')
+    elif direction == 'sell':
+        df['goal'] = np.where(df['goal'] < df['goal'].shift(1), 'yes', 'no')
+    df = df.dropna()
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+def linreg_alma(df, direction, factor):
+    col1 = df.ta.linreg(length=round(factor/4))
+    col2 = df.ta.alma(length=round(factor))
+    col2 = col2.shift(-round(factor))
+    df['goal'] = np.where(col1 < col2, 1, -1)
+    if direction == 'buy':
+        df['goal'] = np.where(((col1 < col2) &
+            (col1.shift(1) > col2.shift(1))), 'yes', 'no')
+    elif direction == 'sell':
+        df['goal'] = np.where(((col1 > col2) &
+            (col1.shift(1) < col2.shift(1))), 'yes', 'no')
+    df = df.dropna()
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+def alma_solo(df, direction, factor):
+    ma = ta.alma(df['adj'], length=int(factor))
+    ma = ma.shift(-int(factor))
+    col1 = df['close']
+    col2 = ma
+    df['goal'] = np.where(col1 < col2, 1, -1)
+    if direction == 'buy':
+        df['goal'] = np.where(((col1 < col2) &
+                    (col1.shift(1) > col2.shift(1))), 'yes', 'no')
+    elif direction == 'sell':
+        df['goal'] = np.where(((col1 > col2) &
+                    (col1.shift(1) < col2.shift(1))), 'yes', 'no')
+    df = df.dropna()
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+def t3_shift(df, direction, factor):
+    ma = ta.t3(df['close'], length=int(factor), a=0.8)
+    ma = ma.shift(-int(factor/3))
+    col1 = df['close']
+    col2 = ma
+    df['goal'] = np.where(col1 < col2, 1, -1)
+    if direction == 'buy':
+        df['goal'] = np.where(((col1 < col2) &
+                    (col1.shift(1) > col2.shift(1))), 'yes', 'no')
+    elif direction == 'sell':
+        df['goal'] = np.where(((col1 > col2) &
+                    (col1.shift(1) < col2.shift(1))), 'yes', 'no')
+    df = df.dropna()
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+def macd_solo(df, direction, factor):
+    fast = df.ta.sma(length=round(factor/3))
+    slow = df.ta.sma(length=round(factor))
+    signal = fast - slow
+    macd = ta.sma(signal, length=int(factor/4))
+    signal = signal.shift(-round(factor/3))
+    col1 = macd
+    col2 = signal
+    df['goal'] = np.where(signal > macd, 1, -1)
+    if direction == 'buy':
+        df['goal'] = np.where(((col1 < col2) &
+            (col1.shift(1) > col2.shift(1))), 'yes', 'no')
+    elif direction == 'sell':
+        df['goal'] = np.where(((col1 > col2) &
+            (col1.shift(1) < col2.shift(1))), 'yes', 'no')
+    df = df.dropna()
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+# def false_stoch(df, direction, factor):
+#     cofak = int(factor/6)
+#     cofak = 2 if cofak < 2 else cofak
+#     stoch = df.ta.stoch(k=factor)
+#     df['k_'] = stoch.iloc[:, 0]
+#     #df['d_'] = stoch.iloc[:, 1].shift(-cofak)
+#     df['d_'] = ta.linreg()
+#     col1 = df['k_']
+#     col2 = df['d_']
+#     df['goal'] = np.where(col1 < col2, 1, -1)
+#     if direction == 'buy':
+#         df['goal'] = np.where(((col1 < col2) &
+#             (col1.shift(1) > col2.shift(1))), 'yes', 'no')
+#     elif direction == 'sell':
+#         df['goal'] = np.where(((col1 > col2) &
+#             (col1.shift(1) < col2.shift(1))), 'yes', 'no')
+#     #df['goal'] = df['goal'].shift(-int(factor/2))
+#     df = df.drop(['k_', 'd_'], axis=1)
+#     df = df.dropna()
+#     df.reset_index(drop=True, inplace=True)
+#     return df
+
+
+functions = [t3_shift, alma_solo, primal, macd_solo]
 
 def generate_my_models(
         symbols: list, intervals: list, leverage: int, delete_old_models: bool,
         show_results_on_graph: bool=False, print_: bool=True, generate_model:bool=True) -> None:
 
-    combinations = list(product(intervals, symbols, lr_list, ts_list, factors))
+    combinations = list(product(intervals, symbols, lr_list, ts_list, factors, functions))
     number_of_combinations = len(combinations)
     i = 0
     times = []
@@ -475,89 +561,90 @@ def generate_my_models(
         for symbol in symbols:
             df_raw = get_data_for_model(symbol, interval, 1, bars)
             for factor in factors:
-                for t_set in ts_list:
-                    #df = my_test
-                    print("DF length: ", len(df_raw))
-                    df = data_operations(df_raw.copy(), factor)
-                    train_length = 0.99
-                    dataset = df.copy()[:int(train_length*len(df))]
-                    testset = df.copy()[int(train_length*len(df)):]
-                    for learning_rate in lr_list:
-                        parameters = {
-                            'learning_rate': learning_rate,
-                            'max_depth': 2*len(dataset.columns),
-                            'colsample_by*': 0.9,
-                            'min_child_weight': int(len(dataset.columns)/17),
-                            'subsample': 0.91,
-                            'random_state': 42,
-                            'eval_metric': 'auc',
-                            #'tree_method': 'hist',
-                            'tree_method': 'gpu_hist',
-                            'device': 'cuda',
-                            'objective': 'binary:logistic',
-                            'gamma': 1,
-                            'alpha': 0.2,
-                            'lambda': 0.01,
-                        }
-                        start = time.time()
-                        try:
-                            print(f"\nSymbol: {symbol}; Interval: {interval}; Factor: {factor}")
-                            #test_set_divider = len(testset) - int(len(testset)/n_splits)
-                            #dfx.reset_index(drop=True, inplace=True)
-                            models_buy, d_buy = train_dataset(dataset, 'buy', parameters, factor,
-                                                    n_estimators, function, t_set, show_results=show_results_on_graph,
-                                                    n_splits=n_splits)
-                            models_sell, d_sell = train_dataset(dataset, 'sell', parameters, factor,
-                                                    n_estimators, function, t_set, show_results=show_results_on_graph,
-                                                    n_splits=n_splits)
-                            statuses = []
-                            for m in range(len(models_buy)):
-                                dfx = testset.copy()
-                                buy = models_buy[m].predict(xgb.DMatrix(testset))
-                                sell = models_sell[m].predict(xgb.DMatrix(testset))
-                                buy = np.where(buy > probability_edge, 1, 0)
-                                sell = np.where(sell > probability_edge, -1, 0)
-                                dfx['time2'] = pd.to_datetime(dfx['time'], unit='s')
-                                dfx['stance'] = buy + sell
-                                dfx['stance'] = dfx['stance'].replace(0, np.NaN)
-                                dfx['stance'] = dfx['stance'].ffill()
-                                dfx['stance'] = np.where((dfx['time2'].dt.hour > morning_hour) & (dfx['time2'].dt.hour < evening_hour), dfx['stance'], 0)
-                                dfx = dfx[dfx['stance'] != 0]
-                                dfx.reset_index(drop=True, inplace=True)
-                                result, status, density, how_it_grow, sqrt_error, final, ma_factor1, ma_factor2 = \
-                                    strategy_with_chart_(
-                                        d_buy, d_sell, dfx, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
-                                                         )
-                                results.append((symbol, interval, leverage, factor, result, density,
-                                                how_it_grow, sqrt_error, final, status))
-                                statuses.append(status)
+                #df = my_test
+                print("DF length: ", len(df_raw))
+                df = data_operations(df_raw.copy(), factor)
+                for function in functions: 
+                    for t_set in ts_list:
+                        train_length = 0.99
+                        dataset = df.copy()[:int(train_length*len(df))]
+                        testset = df.copy()[int(train_length*len(df)):]
+                        for learning_rate in lr_list:
+                            parameters = {
+                                'learning_rate': learning_rate,
+                                'max_depth': 2*len(dataset.columns),
+                                'colsample_by*': 0.9,
+                                'min_child_weight': int(len(dataset.columns)/17),
+                                'subsample': 0.7,
+                                'random_state': 42,
+                                'eval_metric': 'auc',
+                                'tree_method': 'gpu_hist',
+                                'device': 'cuda',
+                                'objective': 'binary:logistic',
+                                'gamma': 1,
+                                'alpha': 0.2,
+                                'lambda': 0.01,
+                            }
+                            start = time.time()
+                            try:
+                                print(f"\nSymbol: {symbol}; Interval: {interval}; Factor: {factor}")
+                                print(f"Function: {function.__name__}")
+                                #test_set_divider = len(testset) - int(len(testset)/n_splits)
+                                #dfx.reset_index(drop=True, inplace=True)
+                                models_buy, d_buy = train_dataset(dataset, 'buy', parameters, factor,
+                                                        n_estimators, function, t_set, show_results=show_results_on_graph,
+                                                        n_splits=n_splits)
+                                models_sell, d_sell = train_dataset(dataset, 'sell', parameters, factor,
+                                                        n_estimators, function, t_set, show_results=show_results_on_graph,
+                                                        n_splits=n_splits)
+                                # statuses = []
+                                for m in range(len(models_buy)):
+                                    dfx = testset.copy()
+                                    buy = models_buy[m].predict(xgb.DMatrix(testset))
+                                    sell = models_sell[m].predict(xgb.DMatrix(testset))
+                                    buy = np.where(buy > probability_edge, 1, 0)
+                                    sell = np.where(sell > probability_edge, -1, 0)
+                                    dfx['time2'] = pd.to_datetime(dfx['time'], unit='s')
+                                    dfx['stance'] = buy + sell
+                                    dfx['stance'] = dfx['stance'].replace(0, np.NaN)
+                                    dfx['stance'] = dfx['stance'].ffill()
+                                    dfx['stance'] = np.where((dfx['time2'].dt.hour > morning_hour) & (dfx['time2'].dt.hour < evening_hour), dfx['stance'], 0)
+                                    dfx = dfx[dfx['stance'] != 0]
+                                    dfx.reset_index(drop=True, inplace=True)
+                                    result, status, density, how_it_grow, sqrt_error, final, ma_factor1, ma_factor2 = \
+                                        strategy_with_chart_(
+                                            d_buy, d_sell, dfx, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
+                                                            )
+                                    results.append((symbol, interval, leverage, factor, result, density,
+                                                    how_it_grow, sqrt_error, final, status))
+                                    # statuses.append(status)
 
-                            statuses = [status=="YES" for status in statuses]
-                            if generate_model:
-                                if all(statuses):
-                                    if final in finals:
-                                        continue
-                                    # name_ {-7}_{-6}-{-5}_{-4}_{-3}_{-2}_
-                                    _lr_name = str(learning_rate).split('.')[-1]
-                                    _ts_name = str(t_set).split('.')[-1]
-                                    name_ = f'{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
-                                    name_ = f'{ma_factor1}_{ma_factor2}_{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
-                                    finals.append(final)
-                                    models_buy[-1].save_model(f"{catalog}\\models\\{name_}_buy.model")
-                                    models_sell[-1].save_model(f"{catalog}\\models\\{name_}_sell.model")
-                        except Exception as e:
-                            print(e)
+                                    # statuses = [status=="YES" for status in statuses]
+                                    if generate_model and ma_factor1 != 0:
+                                        # if all(statuses): # all(statuses)
+                                        if final in finals:
+                                            continue
+                                        # name_ {-7}_{-6}-{-5}_{-4}_{-3}_{-2}_
+                                        _lr_name = str(learning_rate).split('.')[-1]
+                                        _ts_name = str(t_set).split('.')[-1]
+                                        name_ = f'{function.__name__[0]}_{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
+                                        name_ = f'{function.__name__[0]}_{ma_factor1}_{ma_factor2}_{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
+                                        finals.append(final)
+                                        models_buy[m].save_model(f"{catalog}\\models\\{name_}_buy.model") # models_buy[-1]
+                                        models_sell[m].save_model(f"{catalog}\\models\\{name_}_sell.model") # models_sell[-1]
+                            except Exception as e:
+                                print(e)
+                                i += 1
+                                continue
+                            end = time.time()
+                            times.append(end-start)
                             i += 1
-                            continue
-                        end = time.time()
-                        times.append(end-start)
-                        i += 1
-                        time_remaining = round((number_of_combinations - i) * np.mean(times), 2)
-                        hours = int(time_remaining // 3600)
-                        minutes = int((time_remaining % 3600) // 60)
-                        seconds = int((time_remaining % 3600) % 60)
-                        time_info = f'Time remaining {hours:02}:{minutes:02}:{seconds:02}'
-                        print(time_info)
+                            time_remaining = round((number_of_combinations - i) * np.mean(times), 2)
+                            hours = int(time_remaining // 3600)
+                            minutes = int((time_remaining % 3600) // 60)
+                            seconds = int((time_remaining % 3600) % 60)
+                            time_info = f'Time remaining {hours:02}:{minutes:02}:{seconds:02}'
+                            print(time_info)
 
 if __name__ == '__main__':
     from parameters import symbols
