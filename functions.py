@@ -332,3 +332,8 @@ def get_timezone_difference():
     time_mt5 = dt.fromtimestamp(df_time[0][0], timezone).hour
     now_ = dt.now(timezone).hour
     return now_ - time_mt5
+
+def want_to_delete_old_models():
+    delete_old_models = bool(int(input("0 if you don't want to delete old models or something else if yes: ")))
+    print(delete_old_models)
+    return delete_old_models
