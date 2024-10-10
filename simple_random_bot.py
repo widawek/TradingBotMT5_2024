@@ -14,14 +14,16 @@ import xgboost as xgb
 from symbols_rank import symbol_stats
 from functions import *
 from model_generator import data_operations, evening_hour, probability_edge
-from parameters import intervals, game_system, reverse_
+from parameters import intervals, game_system, reverse_, tz_diff
 from dataclasses import dataclass
+import random
 
 catalog = os.path.dirname(__file__)
 catalog = f'{catalog}\\models'
 
 
 class Bot:
+    tz_diff = tz_diff
     trigger_mode = 'on'
     sl_mdv_multiplier = 1.5 # mdv multiplier for sl
     tp_mdv_multiplier = 2   # mdv multiplier for tp
@@ -34,6 +36,8 @@ class Bot:
     factor_to_delete = 24
 
     def __init__(self, symbol, _, symmetrical_positions, daily_volatility_reduce):
+        self.change = 0
+        self.tiktok = 0
         print(dt.now())
         mt.initialize()
         self.reverse = reverse_
@@ -67,18 +71,26 @@ class Bot:
         self.active_session()
 
     @class_errors
+    def position_time(self):
+        dt_from_timestamp = dt.fromtimestamp(mt.positions_get(symbol=self.symbol)[0][1])
+        return int((dt.now() - dt_from_timestamp - timedelta(hours=Bot.tz_diff)).seconds/60)
+
+    @class_errors
     def change_trigger_or_reverse(self, what):
         if what == 'trigger':
             self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
             print(f'Model of position making is {self.trigger}')
+            self.change = 1
         elif what == 'reverse':
             self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
             print(f'Model positioning system is {self.reverse}')
+            self.change = 1
         elif what == 'both':
             self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
             print(f'Model of position making is {self.trigger}')
             self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
             print(f'Model positioning system is {self.reverse}')
+            self.change = 1
 
     @class_errors
     def check_trigger(self, trigger_mode='on'):
@@ -86,7 +98,9 @@ class Bot:
             print("Trigger check!!!")
             trigger_model_divider = 20
             profit_ = round(self.tp_miner/trigger_model_divider, 2)
-            profit_factor = 1.8
+            profit_factor = 1.5
+            minutes = interval_time(Bot.master_interval)
+            position_time = self.position_time()
             try:
                 #self.check_volume_condition = True
                 print("Volume-volatility condition: ", self.check_volume_condition)
@@ -95,52 +109,25 @@ class Bot:
                 print(f"Change value = {round(profit_, 2)} USD")
                 print(f"Actual trigger = {self.trigger}")
 
-                if profit < -profit_ and self.reverse == 'normal' and self.trigger == 'model' and self.check_volume_condition:
+                if profit > profit_ and self.tiktok <= 3:
                     self.change_trigger_or_reverse('trigger')
-                elif profit < -profit_ and self.reverse == 'normal' and self.trigger == 'moving_averages' and not self.check_volume_condition:
+                    self.tiktok += 1
+                elif profit > profit_ and self.tiktok > 3:
+                    self.change_trigger_or_reverse('both')
+                    self.tiktok = 0
+                elif profit < -profit_ * profit_factor and self.tiktok <= 3 and position_time > minutes:
                     self.change_trigger_or_reverse('trigger')
+                    self.tiktok += 1
+                elif profit < -profit_ * profit_factor and self.tiktok > 3 and position_time > minutes:
+                    self.change_trigger_or_reverse('both')
+                    self.tiktok = 0
+                print("TIKTOK: ", self.tiktok)
 
             except Exception as e:
                 print("no positions", e)
                 pass
         else:
             pass
-
-    # @class_errors
-    # def check_trigger(self, trigger_mode='on'):
-    #     if trigger_mode == 'on':
-    #         print("Trigger check!!!")
-    #         trigger_model_divider = 24
-    #         profit_ = round(self.tp_miner/trigger_model_divider, 2)
-    #         profit_factor = 1.8
-    #         try:
-    #             profit = sum([i[-4] for i in self.positions])
-    #             print(f"Check trigger profit = {round(profit, 2)} USD")
-    #             print(f"Change value = {round(profit_, 2)} USD")
-    #             print(f"Actual trigger = {self.trigger}")
-
-    #             if profit > profit_ * profit_factor and self.reverse == 'normal' and self.trigger == 'model':
-    #                 self.change_trigger_or_reverse('trigger')
-    #             elif profit > profit_ * profit_factor and self.reverse == 'normal' and self.trigger == 'moving_averages':
-    #                 self.change_trigger_or_reverse('reverse')
-    #             elif profit > profit_ * profit_factor and self.reverse == 'reverse' and self.trigger == 'model':
-    #                 self.change_trigger_or_reverse('both')
-    #             elif profit > profit_ * profit_factor and self.reverse == 'reverse' and self.trigger == 'moving_averages':
-    #                 self.change_trigger_or_reverse('both')
-    #             elif profit < -profit_ and self.reverse == 'normal' and self.trigger == 'model':
-    #                 self.change_trigger_or_reverse('reverse')
-    #             elif profit < -profit_ and self.reverse == 'normal' and self.trigger == 'moving_averages':
-    #                 self.change_trigger_or_reverse('trigger')
-    #             elif profit < -profit_ and self.reverse == 'reverse' and self.trigger == 'model':
-    #                 self.change_trigger_or_reverse('both')
-    #             elif profit < -profit_ and self.reverse == 'reverse' and self.trigger == 'moving_averages':
-    #                 self.change_trigger_or_reverse('both')
-
-    #         except Exception as e:
-    #             print("no positions", e)
-    #             pass
-    #     else:
-    #         pass
 
     @class_errors
     def positions_test(self):
@@ -229,6 +216,7 @@ class Bot:
             time_sleep = 10
             self.pos_type = self.actual_position_democracy()
         self.positions_()
+        # vvv key component vvv
         while True:
             now_ = dt.now()
             if now_.hour >= evening_hour-1:# and now_.minute >= 45:
@@ -236,6 +224,7 @@ class Bot:
                 sys.exit()
             self.request_get()
             print("Czas:", time.strftime("%H:%M:%S"))
+            self.check_trigger(trigger_mode=Bot.trigger_mode)
             self.data()
             time.sleep(time_sleep)
             print()
@@ -545,7 +534,6 @@ class Bot:
     def load_models(self, directory):
         model_name = self.find_files(directory)
         print(model_name)
-        # buy
         model_path_buy = os.path.join(directory, f'{model_name}_buy.model')
         model_path_sell = os.path.join(directory, f'{model_name}_sell.model')
         model_buy = xgb.Booster()
@@ -554,14 +542,10 @@ class Bot:
         model_sell.load_model(model_path_sell)
         mod_buy = [model_buy, model_path_buy]
         mod_sell = [model_sell, model_path_sell]
-        # class return
         self.time_stp = dt.now()
         _string_data = mod_buy[1].split('_')
-        #self.interval = _string_data[-4]
         self.factor = _string_data[-3]
         self.ts = _string_data[-6]
-        # self.ma_factor_fast = _string_data[-9]
-        # self.ma_factor_slow = _string_data[-8]
         if len(self.ts) < 2:
             self.ts = self.ts + '0'
         self.lr = _string_data[-7][-2:]
@@ -641,11 +625,11 @@ class Bot:
 
     @class_errors
     def actual_position_democracy(self):
-        self.check_trigger(trigger_mode=Bot.trigger_mode)
+
         if self.trigger == 'model':
             stance_values = []
             for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
-                df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 100)) # how_many_bars
+                df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 500)) # how_many_bars
                 df = data_operations(df, factor)
                 dfx = df.copy()
                 dtest_buy = xgb.DMatrix(df)
@@ -698,7 +682,7 @@ class Bot:
                     print(e)
                     self.pos_type = self.pos_creator()
 
-            volume_10 = ((df['high']-df['low'])*df['volume']).rolling(10).mean().iloc[-1]
+            volume_10 = ((df['high']-df['low'])*df['volume']).rolling(8).mean().iloc[-1]
             volume_2 = ((df['high']-df['low'])*df['volume']).rolling(2).mean().iloc[-1]
             print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
             self.check_volume_condition = volume_2 > volume_10
@@ -706,13 +690,14 @@ class Bot:
         else:
             print(f'Position from moving averages fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
             dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
+            dfx['adj'] = (dfx['close'] + dfx['high'] + dfx['low']) / 3
             ma1 = dfx.ta.sma(length=self.ma_factor_fast)
-            ma2 = dfx.ta.sma(length=self.ma_factor_slow)
+            ma2 = ta.sma(dfx['adj'], length=self.ma_factor_slow)
             dfx['stance'] = np.where(ma1>=ma2, 1, 0)
             dfx['stance'] = np.where(ma1<ma2, -1, dfx['stance'])
             position = 0 if dfx.stance.iloc[-1] == 1 else 1
             print("MA position: ", position)
-            volume_10 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(10).mean().iloc[-1]
+            volume_10 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(8).mean().iloc[-1]
             volume_2 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(2).mean().iloc[-1]
             print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
             self.check_volume_condition = volume_2 > volume_10
@@ -881,12 +866,16 @@ class Bot:
 
     @class_errors
     def check_new_bar(self):
-        bar = mt.copy_rates_from_pos(
-            self.symbol, timeframe_(self.interval), 0, 1) # change self.interval to 'M1'
-        if self.barOpen == bar[0][0]:
-            return False
+        if self.change == 0:
+            bar = mt.copy_rates_from_pos(
+                self.symbol, timeframe_(self.interval), 0, 1) # change self.interval to 'M1'
+            if self.barOpen == bar[0][0]:
+                return False
+            else:
+                self.barOpen = bar[0][0]
+                return True
         else:
-            self.barOpen == bar[0][0]
+            self.change = 0
             return True
 
     @class_errors
@@ -965,6 +954,7 @@ class Bot:
             return self.pos_type
         except NameError:
             return random.randint(0, 1)
+
 
 
 if __name__ == '__main__':

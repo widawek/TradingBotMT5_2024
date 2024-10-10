@@ -3,8 +3,9 @@ from functions import timer
 from model_generator import generate_my_models
 from parameters import *
 
-
-generate_my_models(symbols, intervals, leverage, delete_old_models)
+# delete_old_models = bool(int(input("0 if you don't want to delete old models or something else if yes: ")))
+# print(delete_old_models)
+# generate_my_models(symbols, intervals, leverage, delete_old_models)
 timer(7)
 symbols = [(symbol, 0) for symbol in symbols]
 positions_values = [positions_number for _ in range(len(symbols))]  # Lista wartości symmetrical_positions dla każdego symbolu

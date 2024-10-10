@@ -1,16 +1,16 @@
-from functions import reduce_values
+from functions import reduce_values, get_timezone_difference
 
-intervals = ['H1']
+intervals = ['M30']
 symbols = [
     'EURUSD',
     'GBPUSD',
     'USDCAD',
     'USDCHF',
-    'EURGBP',
     'USDJPY',
     'USDPLN',
     'US30',
-    'XAUUSD'
+    'XAUUSD',
+    'EURJPY'
     ]
 
 leverage = 46
@@ -38,4 +38,5 @@ lr_list = [0.05, 0.15, 0.30]
 ts_list = [0.3]
 factors = [_ for _ in range(min_factor, max_factor, range_)]
 n_splits = 2
-bars = 30000
+bars = 60000
+tz_diff = get_timezone_difference()

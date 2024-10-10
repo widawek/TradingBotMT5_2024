@@ -20,9 +20,9 @@ def pandas_options():
     pd.set_option('display.max_colwidth', None)
 
 
-def interval_time(time):
-    h = time[0]
-    t = int(time[1:])
+def interval_time(interval_string):
+    h = interval_string[0]
+    t = int(interval_string[1:])
     x = {"M": 1, "H": 60, "D": 1440, "W": 10800}
     return int(t * x[h])
 
@@ -324,3 +324,11 @@ def add_comparison_columns(df, x):
         df[f'{col}_comp'] = np.where(diff > 0, 1, 0)
         
     return df
+
+def get_timezone_difference():
+    import pytz
+    timezone = pytz.timezone('Europe/Warsaw')
+    df_time = mt.copy_rates_from_pos('BTCUSD', mt.TIMEFRAME_M1, 0, 1)
+    time_mt5 = dt.fromtimestamp(df_time[0][0], timezone).hour
+    now_ = dt.now(timezone).hour
+    return now_ - time_mt5

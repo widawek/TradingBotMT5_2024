@@ -29,6 +29,7 @@ def get_raw_close_postions_data(from_when: int, to_when: int = -1):
     df['reason'] = df['reason'].shift(1)
     df = df.drop(columns=['time_msc', 'commission', 'external_id', 'swap'])
     df = df[df['time'].dt.date >= from_date.date()]
+    df = df[df.groupby('position_id')['position_id'].transform('count') == 2]
     df = df.sort_values(by=['position_id', 'time'])
     df.reset_index(drop=True, inplace=True)
     df['profit'] = df['profit'].shift(-1)
@@ -40,6 +41,7 @@ def get_raw_close_postions_data(from_when: int, to_when: int = -1):
     df['hour_open'] = df['time_open'].dt.hour
     df['hour_close'] = df['time_close'].dt.hour
     df['weekday'] = df['time_close'].dt.day_name()
+    df['duration'] = round((df['time_close'] - df['time_open']).dt.seconds/60,1)
     df['plus'] = df['profit'] > 0
     df['minus'] = df['profit'] < 0
     df['plus'] = df['plus'].astype(int)
@@ -72,13 +74,25 @@ def plot_results(from_when: int,
     """
     try:
         df = get_raw_close_postions_data(from_when, to_when)
+        print(df)
     except IndexError:
         return []
+    
+    mean_profit_duration = round(df[df['profit'] > 0]['duration'].mean(), 1)
+    mean_loss_duration = round(df[df['profit'] < 0]['duration'].mean(), 1)
+
+    print(f"Mean profit duration= {mean_profit_duration} minutes")
+    print(f"Mean loss duration= {mean_loss_duration} minutes")
+
     #df = df[df['symbol'] != 'EURGBP']
     margin = mt.account_info().balance
     print(f"Actual balance: {margin}")
     print("RR: ", round(df['plus'].sum()/df['minus'].sum(), 2))
-    df = df.groupby(by_)['profit'].sum().reset_index()
+    #df = df.groupby(by_)['profit'].sum().reset_index()
+    df = df.groupby(by_).agg(
+            profit=('profit', 'sum'),
+            count_sum=('profit', 'size')
+        ).reset_index()
     if profitable_only:
         df = df[df['profit'] > margin*percent_of_balance_for_po/100]
     elif non_profitable_only:

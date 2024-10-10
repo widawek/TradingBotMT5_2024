@@ -408,7 +408,7 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
         for a, b in tqdm(z):
             dfx = df.copy()
             ma1 = dfx.ta.sma(length=a)
-            ma2 = dfx.ta.sma(length=b)
+            ma2 = ta.sma(df['adj'], length=b)
             dfx['stance2'] = np.where(ma1>=ma2, 1, 0)
             dfx['stance2'] = np.where(ma1<ma2, -1, dfx['stance2'])
             dfx['return2'] = np.where(#(dfx['time2'].dt.date == dfx['time2'].dt.date.shift(1)) &
@@ -517,28 +517,6 @@ def macd_solo(df, direction, factor):
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
     return df
-
-# def false_stoch(df, direction, factor):
-#     cofak = int(factor/6)
-#     cofak = 2 if cofak < 2 else cofak
-#     stoch = df.ta.stoch(k=factor)
-#     df['k_'] = stoch.iloc[:, 0]
-#     #df['d_'] = stoch.iloc[:, 1].shift(-cofak)
-#     df['d_'] = ta.linreg()
-#     col1 = df['k_']
-#     col2 = df['d_']
-#     df['goal'] = np.where(col1 < col2, 1, -1)
-#     if direction == 'buy':
-#         df['goal'] = np.where(((col1 < col2) &
-#             (col1.shift(1) > col2.shift(1))), 'yes', 'no')
-#     elif direction == 'sell':
-#         df['goal'] = np.where(((col1 > col2) &
-#             (col1.shift(1) < col2.shift(1))), 'yes', 'no')
-#     #df['goal'] = df['goal'].shift(-int(factor/2))
-#     df = df.drop(['k_', 'd_'], axis=1)
-#     df = df.dropna()
-#     df.reset_index(drop=True, inplace=True)
-#     return df
 
 
 functions = [t3_shift, alma_solo, primal, macd_solo]
