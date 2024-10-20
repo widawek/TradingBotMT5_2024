@@ -15,6 +15,8 @@ from functions import *
 from model_generator import data_operations, evening_hour, probability_edge
 from parameters import intervals, game_system, reverse_, tz_diff
 import random
+from database_class import TradingProcessor
+processor = TradingProcessor()
 mt.initialize()
 
 catalog = os.path.dirname(__file__)
@@ -22,18 +24,17 @@ catalog = f'{catalog}\\models'
 
 
 class Bot:
-    reverse_it_all_in_the_pizdu = False
+    weekday = dt.now().weekday()
     tz_diff = tz_diff
     trigger_mode = 'on'
-    sl_mdv_multiplier = 1.5 # mdv multiplier for sl
-    tp_mdv_multiplier = 2   # mdv multiplier for tp
+    trigger_model_divider = 12
+    profit_factor = 2
     position_size = 6       # percent of balance
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
-    time_limit_multiplier = 3
     system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
     master_interval = intervals[0]
-    factor_to_delete = 24
+    decline_factor = 0.7
 
     def __init__(self, symbol):
         print(dt.now())
@@ -42,13 +43,17 @@ class Bot:
         self.number_of_positions = 0
         self.reverse = reverse_
         self.symbol = symbol
+        self.profits = []
+        self.profit0 = None
+        self.profit_max = 0
         self.df_d1 = get_data(symbol, "D1", 1, 30)
         self.avg_daily_vol_()
         self.round_number = round_number_(self.symbol)
         self.volume_calc(Bot.position_size, True)
+        self.pos_time = interval_time(Bot.master_interval)
         self.positions_()
         self.trigger = 'model' # 'model' 'moving_averages'
-        self.load_models_democracy(catalog)  # initialize few class variables
+        self.load_models_democracy(catalog)
         self.start_pos = self.pos_type = self.actual_position_democracy()
         self.barOpen = mt.copy_rates_from_pos(self.symbol, timeframe_(self.interval), 0, 1)[0][0]
         print("Target == ", self.tp_miner, " USD")
@@ -78,51 +83,59 @@ class Bot:
             self.change = 1
 
     @class_errors
+    def if_tiktok(self, profit_=False):
+        if self.tiktok <= 2:
+            self.change_trigger_or_reverse('trigger')
+            if profit_:
+                self.tiktok -= 1
+            else:
+                self.tiktok += 1
+        else:
+            self.change_trigger_or_reverse('reverse')
+            self.tiktok = 0
+
+    @class_errors
     def check_trigger(self, trigger_mode='on'):
         if trigger_mode == 'on':
             print("Trigger check!!!")
-            trigger_model_divider = 20
-            profit_needed = round(self.tp_miner/trigger_model_divider, 2)
-            profit_factor = 1.5
-            minutes = interval_time(Bot.master_interval)
             position_time = self.position_time()
             try:
                 #self.check_volume_condition = True
                 print("Volume-volatility condition: ", self.check_volume_condition)
                 profit = sum([i[-4] for i in self.positions])
+                if self.profit0 is None:
+                    self.profit0 = profit
+                self.profits.append(profit+self.profit0)
+                self.profit_max = max(self.profits)
+                mean_profits = np.mean(self.profits)
                 print(f"Check trigger profit = {round(profit, 2)} USD")
-                print(f"Change value = {round(profit_needed, 2)} USD")
+                print(f"Change value = {round(self.profit_needed, 2)} USD")
                 print(f"Actual trigger = {self.trigger}")
+                print(f"Max profit = {self.profit_max}")
+                print(f"Profit zero aka spread: {self.profit0}")
+                print(f"Mean position profit minus spread: {round(mean_profits-self.profit0, 2)}")
 
-                if Bot.reverse_it_all_in_the_pizdu:
-                    if profit < -profit_needed and self.tiktok <= 3:
-                        self.change_trigger_or_reverse('trigger')
-                        self.tiktok += 1
-                    elif profit < -profit_needed and self.tiktok > 3:
-                        self.change_trigger_or_reverse('both')
-                        self.tiktok = 0
-                    elif profit > profit_needed * profit_factor and self.tiktok <= 3 and position_time > minutes:
-                        self.change_trigger_or_reverse('trigger')
-                        self.tiktok += 1
-                    elif profit > profit_needed * profit_factor and self.tiktok > 3 and position_time > minutes:
-                        self.change_trigger_or_reverse('both')
-                        self.tiktok = 0
-                    print("TIKTOK: ", self.tiktok)
+                # Jeżeli strata mniejsza od straty granicznej
+                if profit < -self.profit_needed:
+                    self.if_tiktok()
 
-                else:
-                    if profit > profit_needed and self.tiktok <= 3:
-                        self.change_trigger_or_reverse('trigger')
-                        self.tiktok += 1
-                    elif profit > profit_needed and self.tiktok > 3:
-                        self.change_trigger_or_reverse('both')
-                        self.tiktok = 0
-                    elif profit < -profit_needed * profit_factor and self.tiktok <= 3 and position_time > minutes:
-                        self.change_trigger_or_reverse('trigger')
-                        self.tiktok += 1
-                    elif profit < -profit_needed * profit_factor and self.tiktok > 3 and position_time > minutes:
-                        self.change_trigger_or_reverse('both')
-                        self.tiktok = 0
-                    print("TIKTOK: ", self.tiktok)
+                # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
+                elif profit < (-self.profit_needed/Bot.profit_factor) and position_time > self.pos_time and mean_profits < (-self.profit_needed/Bot.profit_factor):
+                    self.if_tiktok()
+
+                # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz zysk mniejszy niż zysk maksymalny pomnożony przez współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
+                elif profit > self.profit_needed * Bot.profit_factor and profit < self.profit_max*Bot.decline_factor:
+                    self.if_tiktok(True)
+
+                # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz przez 1.5 oraz zysk mniejszy niż zysk maksymalny pomnożony przez powiększony współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
+                elif profit > self.profit_needed * Bot.profit_factor*1.5 and profit < self.profit_max*(((1-Bot.decline_factor)/2)+Bot.decline_factor):
+                    self.if_tiktok(True)
+
+                # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
+                elif profit > self.profit_needed and position_time > self.pos_time and profit < self.profit_max*Bot.decline_factor:
+                    self.if_tiktok(True)
+
+                print("TIKTOK: ", self.tiktok)
 
             except Exception as e:
                 print("no positions", e)
@@ -142,11 +155,8 @@ class Bot:
     @class_errors
     def request_get(self):
         if not self.positions:
-        #     posType = self.positions[0].type
-        # else:
             posType = self.actual_position_democracy()
             self.request(actions['deal'], posType)
-
         self.positions_()
 
     @class_errors
@@ -170,7 +180,7 @@ class Bot:
     @class_errors
     def data(self, report=True):
         if self.check_new_bar():
-            print(Bot.system)
+            # print(Bot.system)
             self.pos_type = self.actual_position_democracy()
         try:
             act_pos = self.positions[0].type
@@ -182,24 +192,64 @@ class Bot:
 
         self.number_of_positions = len(self.positions)
         account = mt.account_info()
-        act_price = mt.symbol_info(self.symbol).bid
+        sym_inf = mt.symbol_info(self.symbol)
+        act_price = sym_inf.bid
+        act_price2 = sym_inf.ask
         profit = sum([i.profit for i in self.positions if
                       ((i.comment == self.comment) and i.magic == self.magic)])
-        spread = real_spread(self.symbol) #*self.number_of_positions*2
+        spread = abs(act_price-act_price2)#real_spread(self.symbol) #*self.number_of_positions*2
         profit_to_margin = round((profit/account.margin)*100, 2)
+        profit_to_balance = round((profit/account.balance)*100, 2)
 
         if report:
-            print(f"MDV:                                              {round(self.mdv, self.round_number)}")
-            print(f"RMR Strategy for symbol {str(self.symbol).ljust(6)} profit:            {round(profit, 2)} $")
-            print(f"number of positions:                              {self.number_of_positions}")
+            #print(f"MDV:                                              {round(self.mdv, self.round_number)}")
+            print(f"{self.symbol} profit:                             {round(profit, 2)} $")
+            #print(f"number of positions:                              {self.number_of_positions}")
             print(f"Account balance:                                  {account.balance} $")
             print(f"Account free margin:                              {account.margin_free} $")
             print(f"Profit to margin:                                 {profit_to_margin} %")
-            print(f"Actual price:                                     {act_price}")
-            print(f"Spread:                                           {spread}")
+            print(f"Profit to balance:                                {profit_to_balance} %")
+            #print(f"Actual price:                                     {act_price}")
+            #print(f"Spread:                                           {spread}")
             print(f"Actual position from model:                       {self.pos_type}")
             print(f"Mode:                                             {self.reverse}")
             print()
+
+        # write data to database
+        try:
+            processor.process_new_position(
+                ticket=self.positions[0].ticket,
+                symbol=self.symbol,
+                pos_type=self.positions[0].type,
+                open_time=self.positions[0].time,
+                volume=self.positions[0].volume,
+                price_open=self.positions[0].price_open,
+                comment=self.positions[0].comment,
+                reverse_mode=self.reverse,
+                trigger=self.trigger,
+                trigger_divider=Bot.trigger_model_divider,
+                decline_factor=Bot.decline_factor,
+                profit_factor=Bot.profit_factor,
+                calculated_profit=self.profit_needed,
+                minutes=self.pos_time,
+                weekday=Bot.weekday
+            )
+
+            mean_profit = np.mean(self.profits)
+            mean_profit = 0 if mean_profit == np.NaN else mean_profit
+            # Dodawanie profitu do istniejącej pozycji
+            processor.process_profit(
+                ticket=self.positions[0].ticket,
+                profit=profit,
+                profit_max=self.profit_max,
+                profit0=self.profit0,
+                mean_profit=mean_profit,
+                spread=spread,
+                volume_condition=self.check_volume_condition
+            )
+        except Exception as e:
+            print(e)
+            pass
 
         if profit < -self.kill_position_profit:
             print('Loss is to high. I have to kill it!')
@@ -212,6 +262,9 @@ class Bot:
     def reset_bot(self):
         self.pos_type = None
         self.positions = None
+        self.profits = []
+        self.profit0 = None
+        self.profit_max = 0
 
     @class_errors
     def clean_orders(self):
@@ -278,6 +331,7 @@ class Bot:
             self.volume = symbol_info["volume_min"]
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
+        self.profit_needed = round(self.kill_position_profit/Bot.trigger_model_divider, 2)
 
     @class_errors
     def find_files(self, directory):
@@ -307,69 +361,56 @@ class Bot:
         _ = df['rank'].to_list()
         _.reverse()
         df['rank'] = _
-        print(df)
+        # print(df)
+        print(f"Ilość modeli: {len(df)}")
         if len(df) < 5:
             print(f"Za mało modeli --> ({len(df)})")
             input("Wciśnij cokolwek żeby wyjść.")
             sys.exit(1)
-        if Bot.system == 'absolute':
-            strategy = df['strategy'].iloc[0]
-            ma_fast = df['ma_fast'].iloc[0]
-            ma_slow = df['ma_slow'].iloc[0]
-            learning_rate = df['learning_rate'].iloc[0]
-            training_set = df['training_set'].iloc[0]
-            interval = df['interval'].iloc[0]
-            factor = df['factor'].iloc[0]
-            result = df['result'].iloc[0]
+        names = []
+        create_df = []
+        for i in range(0, len(df)):
+            strategy = df['strategy'].iloc[i]
+            ma_fast = df['ma_fast'].iloc[i]
+            ma_slow = df['ma_slow'].iloc[i]
+            learning_rate = df['learning_rate'].iloc[i]
+            training_set = df['training_set'].iloc[i]
+            interval = df['interval'].iloc[i]
+            factor = df['factor'].iloc[i]
+            result = df['result'].iloc[i]
+            if Bot.system != 'invertedrank_democracy':
+                rank = df['rank'].iloc[i]
+            else:
+                rank = df['rank'].iloc[len(df)-i-1]
             name = f'{strategy}_{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
-            return name
-        else:
-            names = []
-            create_df = []
-            for i in range(0, len(df)):
-                strategy = df['strategy'].iloc[i]
-                ma_fast = df['ma_fast'].iloc[i]
-                ma_slow = df['ma_slow'].iloc[i]
-                learning_rate = df['learning_rate'].iloc[i]
-                training_set = df['training_set'].iloc[i]
-                interval = df['interval'].iloc[i]
-                factor = df['factor'].iloc[i]
-                result = df['result'].iloc[i]
-                if Bot.system != 'invertedrank_democracy':
-                    rank = df['rank'].iloc[i]
+            names.append([name, rank]) # change tuple to list
+            create_df.append(f'{name}'.split('_'))
+
+        if Bot.system == 'weighted_democracy':
+            df_result_filter = pd.DataFrame(create_df, columns=['strategy', 'ma_fast', 'ma_slow',
+                    'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result']
+                    )
+            #print(df_result_filter)
+            df_result_filter['result'] = df_result_filter['result'].astype(int)
+            range_ = len(create_df)
+            for n in range(range_):
+                sum_ = int(df_result_filter.copy().drop(range(n, len(df_result_filter)))['result'].sum()/2)
+                result_ = df_result_filter['result'].iloc[n]
+                # print("sum", sum_)
+                # print("result", result_)
+                if result_ > sum_:
+                    old_list = names[n][0].split('_')
+                    index_ = int(len(df_result_filter)/2)-3 if int(len(df_result_filter)/2) > 6 else int(len(df_result_filter)/2)-1
+                    old_list[-1] = str(df_result_filter['result'].iloc[index_])
+                    new_str = '_'.join(old_list)
+                    self.rename_files_in_directory(names[n][0], new_str)
+                    names[n][0] = new_str
                 else:
-                    rank = df['rank'].iloc[len(df)-i-1]
-                name = f'{strategy}_{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
-                names.append([name, rank]) # change tuple to list
-                create_df.append(f'{name}'.split('_'))
-            print(names)
+                    #print('break')
+                    break
 
-            if Bot.system == 'weighted_democracy':
-                print(names)
-                df_result_filter = pd.DataFrame(create_df, columns=['strategy', 'ma_fast', 'ma_slow',
-                        'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result']
-                        )
-                print(df_result_filter)
-                df_result_filter['result'] = df_result_filter['result'].astype(int)
-                range_ = len(create_df)
-                for n in range(range_):
-                    sum_ = int(df_result_filter.copy().drop(range(n, len(df_result_filter)))['result'].sum()/2)
-                    result_ = df_result_filter['result'].iloc[n]
-                    print("sum", sum_)
-                    print("result", result_)
-                    if result_ > sum_:
-                        old_list = names[n][0].split('_')
-                        index_ = int(len(df_result_filter)/2)-3 if int(len(df_result_filter)/2) > 6 else int(len(df_result_filter)/2)-1
-                        old_list[-1] = str(df_result_filter['result'].iloc[index_])
-                        new_str = '_'.join(old_list)
-                        self.rename_files_in_directory(names[n][0], new_str)
-                        names[n][0] = new_str
-                    else:
-                        print('break')
-                        break
-
-            print(names)
-            return names
+        # print(names)
+        return names
 
     @class_errors
     def load_models_democracy(self, directory):
@@ -381,7 +422,7 @@ class Bot:
         self.factors = []
         ma_list = []
         for model_name in model_names:
-            print(model_name)
+            #print(model_name)
             model_path_buy = os.path.join(directory, f'{model_name[0]}_buy.model')
             model_path_sell = os.path.join(directory, f'{model_name[0]}_sell.model')
             model_buy = xgb.Booster()
@@ -398,7 +439,6 @@ class Bot:
         self.ma_factor_fast = most_common_ma[0]
         self.ma_factor_slow = most_common_ma[1]
         self.interval = Bot.master_interval
-        self.limit_time = interval_time(self.interval) * Bot.time_limit_multiplier
         self.comment = 'wdemo_4'
         self.magic = magic_(self.symbol, self.comment)
         self.mdv = self.MDV_() / 4
@@ -411,8 +451,9 @@ class Bot:
     def actual_position_democracy(self):
         if self.trigger == 'model':
             stance_values = []
+            i = 0
             for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
-                df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 500)) # how_many_bars
+                df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 250)) # how_many_bars
                 df = data_operations(df, factor)
                 dfx = df.copy()
                 dtest_buy = xgb.DMatrix(df)
@@ -425,19 +466,22 @@ class Bot:
                 dfx['stance'] = dfx['stance'].replace(0, np.NaN)
                 dfx['stance'] = dfx['stance'].ffill()
 
-                if Bot.system == 'just_democracy':
-                    position_ = dfx['stance'].iloc[-1]
-                elif Bot.system =='weighted_democracy':
-                    position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
-                elif Bot.system == 'ranked_democracy':
-                    position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
-                elif Bot.system == 'invertedrank_democracy':
-                    position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
+                # if Bot.system == 'just_democracy':
+                #     position_ = dfx['stance'].iloc[-1]
+                # elif Bot.system =='weighted_democracy':
+                position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
+                # elif Bot.system == 'ranked_democracy':
+                #     position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
+                # elif Bot.system == 'invertedrank_democracy':
+                #     position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
                 try:
                     _ = int(position_)
                 except Exception:
                     continue
                 stance_values.append(int(position_))
+                i+=1
+                if i >= 60:
+                    break
 
             print('Stances: ', stance_values)
             sum_of_position = np.sum(stance_values)
@@ -494,9 +538,6 @@ class Bot:
             if time_.hour >= 14:
                 position = 0 if position == 1 else 1
 
-        if Bot.reverse_it_all_in_the_pizdu:
-            position = 0 if position == 1 else 1
-
         return position
 
     @class_errors
@@ -513,7 +554,7 @@ class Bot:
 
                 def change_(old_file_path, new_file_path):
                     os.rename(old_file_path, new_file_path)
-                    print(f'Renamed: {old_file_path} -> {new_file_path}')
+                    #print(f'Renamed: {old_file_path} -> {new_file_path}')
                 # Rename the file
                 try:
                     change_(old_file_path, new_file_path)

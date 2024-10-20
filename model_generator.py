@@ -21,6 +21,14 @@ catalog = os.path.dirname(__file__)
 from parameters import *
 
 
+def time_info(time_data, time_info):
+    hours = int(time_data // 3600)
+    minutes = int((time_data % 3600) // 60)
+    seconds = int((time_data % 3600) % 60)
+    time_info = f'{time_info} - {hours:02}:{minutes:02}:{seconds:02}'
+    print(time_info)
+
+
 def data_operations(df, factor):
     df['adj'] = (df.high + df.low + df.close) / 3
     df['adj_higher1'] = np.where(df['adj'] > df['adj'].shift(1), 1, 0)
@@ -525,6 +533,7 @@ def generate_my_models(
         symbols: list, intervals: list, leverage: int, delete_old_models: bool,
         show_results_on_graph: bool=False, print_: bool=True, generate_model:bool=True) -> None:
 
+    super_start_time = time.time()
     combinations = list(product(intervals, symbols, lr_list, ts_list, factors, functions))
     number_of_combinations = len(combinations)
     i = 0
@@ -567,15 +576,12 @@ def generate_my_models(
                             try:
                                 print(f"\nSymbol: {symbol}; Interval: {interval}; Factor: {factor}")
                                 print(f"Function: {function.__name__}")
-                                #test_set_divider = len(testset) - int(len(testset)/n_splits)
-                                #dfx.reset_index(drop=True, inplace=True)
                                 models_buy, d_buy = train_dataset(dataset, 'buy', parameters, factor,
                                                         n_estimators, function, t_set, show_results=show_results_on_graph,
                                                         n_splits=n_splits)
                                 models_sell, d_sell = train_dataset(dataset, 'sell', parameters, factor,
                                                         n_estimators, function, t_set, show_results=show_results_on_graph,
                                                         n_splits=n_splits)
-                                # statuses = []
                                 for m in range(len(models_buy)):
                                     dfx = testset.copy()
                                     buy = models_buy[m].predict(xgb.DMatrix(testset))
@@ -595,14 +601,9 @@ def generate_my_models(
                                                             )
                                     results.append((symbol, interval, leverage, factor, result, density,
                                                     how_it_grow, sqrt_error, final, status))
-                                    # statuses.append(status)
-
-                                    # statuses = [status=="YES" for status in statuses]
                                     if generate_model and ma_factor1 != 0:
-                                        # if all(statuses): # all(statuses)
                                         if final in finals:
                                             continue
-                                        # name_ {-7}_{-6}-{-5}_{-4}_{-3}_{-2}_
                                         _lr_name = str(learning_rate).split('.')[-1]
                                         _ts_name = str(t_set).split('.')[-1]
                                         name_ = f'{function.__name__[0]}_{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
@@ -618,11 +619,12 @@ def generate_my_models(
                             times.append(end-start)
                             i += 1
                             time_remaining = round((number_of_combinations - i) * np.mean(times), 2)
-                            hours = int(time_remaining // 3600)
-                            minutes = int((time_remaining % 3600) // 60)
-                            seconds = int((time_remaining % 3600) % 60)
-                            time_info = f'Time remaining {hours:02}:{minutes:02}:{seconds:02}'
-                            print(time_info)
+                            time_info(time_remaining, 'Time remaining')
+
+    super_end_time = time.time()
+    total_duration = super_start_time - super_end_time
+    time_info(total_duration, 'Total duration')
+
 
 if __name__ == '__main__':
     from parameters import symbols

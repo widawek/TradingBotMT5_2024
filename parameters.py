@@ -13,7 +13,7 @@ symbols = [
     'EURJPY'
     ]
 
-leverage = 46
+leverage = 10 #46
 delete_old_models = True
 # max_reducer = 12
 # min_reducer = 6
@@ -27,9 +27,9 @@ game_system = 'weighted_democracy'
 reverse_ = 'normal' # 'normal' 'reverse' 'normal_mix'
 
 morning_hour = 7
-evening_hour = 23
+evening_hour = 24
 probability_edge = 0.25
-sharpe_limit = 5
+sharpe_limit = 2 #5
 kk_limit = 1.5
 omega_limit = 1.1
 n_estimators = 4000

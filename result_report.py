@@ -14,7 +14,7 @@ def pandas_options():
 
 pandas_options()
 
-def get_raw_close_postions_data(from_when: int, to_when: int = -1):
+def get_raw_close_positions_data(from_when: int, to_when: int = -1):
     from_date = dt.today().date() - timedelta(days=from_when)
     print(from_date)
     to_date = dt.today().date() - timedelta(days=to_when)
@@ -47,7 +47,6 @@ def get_raw_close_postions_data(from_when: int, to_when: int = -1):
     df['plus'] = df['plus'].astype(int)
     df['minus'] = df['minus'].astype(int)
     df.reset_index(drop=True, inplace=True)
-    #print(df)
     return df
 
 
@@ -73,8 +72,7 @@ def plot_results(from_when: int,
     None
     """
     try:
-        df = get_raw_close_postions_data(from_when, to_when)
-        print(df)
+        df = get_raw_close_positions_data(from_when, to_when)
     except IndexError:
         return []
     
@@ -83,12 +81,9 @@ def plot_results(from_when: int,
 
     print(f"Mean profit duration= {mean_profit_duration} minutes")
     print(f"Mean loss duration= {mean_loss_duration} minutes")
-
-    #df = df[df['symbol'] != 'EURGBP']
     margin = mt.account_info().balance
     print(f"Actual balance: {margin}")
     print("RR: ", round(df['plus'].sum()/df['minus'].sum(), 2))
-    #df = df.groupby(by_)['profit'].sum().reset_index()
     df = df.groupby(by_).agg(
             profit=('profit', 'sum'),
             count_sum=('profit', 'size')
@@ -102,7 +97,6 @@ def plot_results(from_when: int,
         sort_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
         df['weekday'] = pd.Categorical(df['weekday'], categories=sort_order, ordered=True)
         df = df.sort_values('weekday')
-    print(df)
     if plot:
         plt.figure(figsize=(10, 6))
         plt.bar(df[by_], df['profit'], color='skyblue')
@@ -119,12 +113,10 @@ def plot_results(from_when: int,
 
     if by_ == 'symbol':
         x1 = sorted(df.symbol.to_list())
-        print(x1, f'\nNumber of symbols: {len(x1)}')
         print(df['profit'].sum())
         return x1
     return []
 
 if __name__ == "__main__":
     # by_ 'symbol', 'comment', 'interval', 'factor', 'learing_rate', 'training_set'
-    x1 = plot_results(0, -2)
-    print(x1)
+    x1 = plot_results(4, -2)

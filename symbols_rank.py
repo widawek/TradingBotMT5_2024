@@ -28,6 +28,32 @@ def avg_daily_vol_(symbol):
     return df['avg_daily'].mean()
 
 
+def volume_calc(symbol: str, max_pos_margin: int, min_volume: int) -> None:
+    leverage = mt.account_info().leverage
+    symbol_info = mt.symbol_info(symbol)._asdict()
+    price = mt.symbol_info_tick(symbol)._asdict()
+    margin_min = round(((symbol_info["volume_min"] *
+                    symbol_info["trade_contract_size"])/leverage) *
+                    price["bid"], 2)
+    account = mt.account_info()._asdict()
+    max_pos_margin = round(account["balance"] * (max_pos_margin/100) /
+                        (avg_daily_vol_(symbol) * 100))
+    if "JP" not in symbol:
+        volume = round((max_pos_margin / margin_min)) *\
+                        symbol_info["volume_min"]
+        print('Volume form: ', (max_pos_margin / margin_min))
+    else:
+        volume = round((max_pos_margin * 100 / margin_min)) *\
+                        symbol_info["volume_min"]
+        print('Volume form: ', (max_pos_margin * 100 / margin_min))
+    if volume > symbol_info["volume_max"]:
+        volume = float(symbol_info["volume_max"])
+    print('Min volume: ', min_volume)
+    print('Calculated volume: ', volume)
+    if min_volume and (volume < symbol_info["volume_min"]):
+        volume = symbol_info["volume_min"]
+    return volume / symbol_info["volume_min"]
+
 def avg_daily_vol_points(symbol):
     df = get_data(symbol, "D1", 1, 30)
     df['avg_daily'] = (df.high - df.low)
@@ -52,11 +78,21 @@ def symbol_stats(symbol, volume, kill_multiplier):
 
 
 if __name__ == '__main__':
+
+    trigger_model_divider = 9.5
+    profit_factor = 1.5
+    balance = mt.account_info().balance
+
     symbols = [
-        'JP225', 'USTEC', 'UK100', 'DE40', 'US30', 'AUDCAD', 'USDJPY',
-        'AUDUSD', 'BTCUSD', 'USDCAD', 'AUDNZD', 'EURJPY', 'XAGAUD',
-        'EURUSD', 'NZDCAD', 'XAGUSD', 'USDCHF', 'GBPJPY', 'GBPUSD',
-        'EURGBP', 'GBPCHF', 'USDPLN', 'XAUUSD', 'XTIUSD', 'XAUAUD', 'XAUJPY'
+        'EURUSD',
+        'GBPUSD',
+        'USDCAD',
+        'USDCHF',
+        'USDJPY',
+        'USDPLN',
+        'US30',
+        'XAUUSD',
+        'EURJPY',
         ]
 
     symbols = list(set(symbols))
@@ -68,10 +104,16 @@ if __name__ == '__main__':
         margin_open, margin_close, real_spread_to_volatility = symbol_stats(symbol, volume_min, 1.5)
         symbols_list.append((symbol, margin_open, margin_close, real_spread_to_volatility))
     df = pd.DataFrame(symbols_list, columns=['symbol', 'margin_open', 'margin_close', 'real_spread_to_volatility'])
+    vectorized = np.vectorize(volume_calc)
+    df['volume'] = vectorized(df['symbol'], 6, True)
+    df['profit_by_trigger'] = round(df['margin_close'] * df['volume'] / trigger_model_divider, 2)
+    df['profit_by_trigger_%'] = round((df['profit_by_trigger'] *100 / balance), 2)
+    df['loss_by_trigger'] = round(df['profit_by_trigger'] * profit_factor, 2)
     df['result'] = round(df['margin_open']*df['margin_close']*df['real_spread_to_volatility'],4)
     df = df.sort_values(by='real_spread_to_volatility')
     df.reset_index(drop=True, inplace=True)
     print(df)
+    print("Mean profit %: ", round(df['profit_by_trigger_%'].mean(), 2))
     print(df['symbol'].to_list())
     number_ = df.margin_close.sum()
     print("All by min vol sum: ", round(df.margin_open.sum(), 2))
