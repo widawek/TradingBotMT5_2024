@@ -7,4 +7,4 @@ help.py
 clean_pending_orders.py
 symbols_rank.py
 result_report.py
-position.history.db
+position_history.db
