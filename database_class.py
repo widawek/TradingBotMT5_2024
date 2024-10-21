@@ -147,10 +147,10 @@ class ReadDatabase:
     def __init__(self, db_url='sqlite:///position_history.db'):
         # Tworzymy silnik
         self.engine = create_engine(db_url)
-        
+
         # Tworzymy sesję
         self.Session = sessionmaker(bind=self.engine)
-        
+
     def read_positions_to_df(self):
         """Odczytuje dane z tabeli 'Position' i konwertuje je do pandas DataFrame."""
         query = "SELECT * FROM positions"  # SQL zapytanie do odczytu danych z tabeli 'Position'
@@ -218,6 +218,10 @@ if __name__=='__main__':
     def plot_profits(df, symbol, days_to_past, condition=""):
         df['time'] = pd.to_datetime(df['time'])
         df = df[df['time'].dt.date >= dt.now().date() - timedelta(days=days_to_past)]
+        groups = df.groupby('ticket')
+        print(groups)
+
+        #df_positions = df_positions[df_positions['ticket'].isin()]
         if symbol == 'all':
             tickets=df_positions['ticket'].to_list()
             calc_profs=df_positions['calculated_profit'].to_list()
@@ -226,14 +230,13 @@ if __name__=='__main__':
             tickets=df_positions[df_positions['symbol']==symbol]['ticket'].to_list()
             calc_profs=df_positions[df_positions['symbol']==symbol]['calculated_profit'].to_list()
             #close_profits=df_positions[df_positions['symbol']==symbol]['close_profit'].to_list()
-        groups = df.groupby('ticket')
-        print(groups)
         # Tworzenie wykresu
         plt.figure(figsize=(30, 30))
         i = 0
         spreads = []
         lists = []
         for name, group in groups:
+            #by_what = group['mean_profit']
             by_what = calc_profs[i]
             #by_what =  group['profit_max'].iloc[-1]
             what = group['profit']/by_what
@@ -244,7 +247,7 @@ if __name__=='__main__':
                         line, = plt.plot(range(len(group['profit'])), what, label=name, linewidth=0.5)
                         plt.plot(len(group['profit'])-1, what1, marker='*', color=line.get_color(), markersize=10)
                         spreads.append(group['profit'].iloc[0])
-                        x = group['profit']/calc_profs[i]
+                        x = group['profit']/by_what
                         lists.append(x.to_list())
                     i+=1
                 elif condition=='<':
@@ -252,18 +255,18 @@ if __name__=='__main__':
                         line, = plt.plot(range(len(group['profit'])), what, label=name, linewidth=0.5)
                         plt.plot(len(group['profit'])-1, what1, marker='*', color=line.get_color(), markersize=10)
                         spreads.append(group['profit'].iloc[0])
-                        x = group['profit']/calc_profs[i]
+                        x = group['profit']/by_what
                         lists.append(x.to_list())
                     i+=1
                 else:
                     line, = plt.plot(range(len(group['profit'])), what, label=name, linewidth=0.5)
                     plt.plot(len(group['profit'])-1, what1, marker='*', color=line.get_color(), markersize=10)
-                    x = group['profit']/calc_profs[i]
+                    x = group['profit']/by_what
                     lists.append(x.to_list())
                     i+=1
                     spreads.append(group['profit'].iloc[0])
-                    
-                 
+
+
         max_len = max(len(sublist) for sublist in lists)
         # Tworzymy nową listę, w której każdy indeks to średnia z odpowiednich indeksów
         averages = []
@@ -279,7 +282,7 @@ if __name__=='__main__':
         plt.show()
 
     # group_profit_by(['reverse_mode', 'trigger'])
-    group_profit_by('symbol')
-    plot_profits(df_profits, 'all', 5, condition='')
+    #group_profit_by('symbol')
+    plot_profits(df_profits, 'all', 0, condition='>')
 
 

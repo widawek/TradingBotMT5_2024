@@ -2,18 +2,19 @@ from functions import reduce_values, get_timezone_difference
 
 intervals = ['M30']
 symbols = [
-    'EURUSD',
+    # 'EURUSD',
     'GBPUSD',
-    'USDCAD',
-    'USDCHF',
-    'USDJPY',
-    'USDPLN',
-    'US30',
-    'XAUUSD',
-    'EURJPY'
+    # 'USDCAD',
+    # 'USDCHF',
+    # 'USDJPY',
+    # 'USDPLN',
+    # 'US30',
+    # 'XAUUSD',
+    # 'EURJPY',
+    # 'BTCUSD'
     ]
 
-leverage = 10 #46
+leverage = 30
 delete_old_models = True
 # max_reducer = 12
 # min_reducer = 6
@@ -29,7 +30,7 @@ reverse_ = 'normal' # 'normal' 'reverse' 'normal_mix'
 morning_hour = 7
 evening_hour = 24
 probability_edge = 0.25
-sharpe_limit = 2 #5
+sharpe_limit = 5
 kk_limit = 1.5
 omega_limit = 1.1
 n_estimators = 4000

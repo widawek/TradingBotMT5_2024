@@ -27,7 +27,7 @@ class Bot:
     weekday = dt.now().weekday()
     tz_diff = tz_diff
     trigger_mode = 'on'
-    trigger_model_divider = 12
+    trigger_model_divider = 14
     profit_factor = 2
     position_size = 6       # percent of balance
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
@@ -56,8 +56,8 @@ class Bot:
         self.load_models_democracy(catalog)
         self.start_pos = self.pos_type = self.actual_position_democracy()
         self.barOpen = mt.copy_rates_from_pos(self.symbol, timeframe_(self.interval), 0, 1)[0][0]
-        print("Target == ", self.tp_miner, " USD")
-        print("Killer == ", -self.kill_position_profit, " USD")
+        printer("Target:", f"{self.tp_miner} $")
+        printer("Killer:", f"{-self.kill_position_profit} $")
         self.active_session()
 
     @class_errors
@@ -67,19 +67,20 @@ class Bot:
 
     @class_errors
     def change_trigger_or_reverse(self, what):
+        text_ = 'Model of position making is'
         if what == 'trigger':
             self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
-            print(f'Model of position making is {self.trigger}')
+            printer(text_, self.trigger)
             self.change = 1
         elif what == 'reverse':
             self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
-            print(f'Model positioning system is {self.reverse}')
+            printer(text_, self.reverse)
             self.change = 1
         elif what == 'both':
             self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
-            print(f'Model of position making is {self.trigger}')
+            printer(text_, self.trigger)
             self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
-            print(f'Model positioning system is {self.reverse}')
+            printer(text_, self.reverse)
             self.change = 1
 
     @class_errors
@@ -93,34 +94,34 @@ class Bot:
         else:
             self.change_trigger_or_reverse('reverse')
             self.tiktok = 0
+        
+        self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
     @class_errors
     def check_trigger(self, trigger_mode='on'):
         if trigger_mode == 'on':
-            print("Trigger check!!!")
             position_time = self.position_time()
             try:
                 #self.check_volume_condition = True
-                print("Volume-volatility condition: ", self.check_volume_condition)
                 profit = sum([i[-4] for i in self.positions])
                 if self.profit0 is None:
                     self.profit0 = profit
                 self.profits.append(profit+self.profit0)
                 self.profit_max = max(self.profits)
                 mean_profits = np.mean(self.profits)
-                print(f"Check trigger profit = {round(profit, 2)} USD")
-                print(f"Change value = {round(self.profit_needed, 2)} USD")
-                print(f"Actual trigger = {self.trigger}")
-                print(f"Max profit = {self.profit_max}")
-                print(f"Profit zero aka spread: {self.profit0}")
-                print(f"Mean position profit minus spread: {round(mean_profits-self.profit0, 2)}")
+                printer("Volume-volatility condition:", self.check_volume_condition)
+                printer("Change value:", f"{round(self.profit_needed, 2)} USD")
+                printer("Actual trigger:", self.trigger)
+                printer("Max profit:", f"{self.profit_max} $")
+                printer("Profit zero aka spread:", f"{self.profit0} $")
+                printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2)} $")
 
                 # Jeżeli strata mniejsza od straty granicznej
                 if profit < -self.profit_needed:
                     self.if_tiktok()
 
                 # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
-                elif profit < (-self.profit_needed/Bot.profit_factor) and position_time > self.pos_time and mean_profits < (-self.profit_needed/Bot.profit_factor):
+                elif profit < (-self.profit_needed/Bot.profit_factor) and position_time > self.pos_time/Bot.profit_factor and mean_profits < (-self.profit_needed/Bot.profit_factor):
                     self.if_tiktok()
 
                 # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz zysk mniejszy niż zysk maksymalny pomnożony przez współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
@@ -135,7 +136,7 @@ class Bot:
                 elif profit > self.profit_needed and position_time > self.pos_time and profit < self.profit_max*Bot.decline_factor:
                     self.if_tiktok(True)
 
-                print("TIKTOK: ", self.tiktok)
+                printer("TIKTOK:", self.tiktok)
 
             except Exception as e:
                 print("no positions", e)
@@ -171,7 +172,7 @@ class Bot:
                 self.clean_orders()
                 sys.exit()
             self.request_get()
-            print("Czas:", time.strftime("%H:%M:%S"))
+            printer("Czas:", time.strftime("%H:%M:%S"))
             self.check_trigger(trigger_mode=Bot.trigger_mode)
             self.data()
             time.sleep(time_sleep)
@@ -202,17 +203,13 @@ class Bot:
         profit_to_balance = round((profit/account.balance)*100, 2)
 
         if report:
-            #print(f"MDV:                                              {round(self.mdv, self.round_number)}")
-            print(f"{self.symbol} profit:                             {round(profit, 2)} $")
-            #print(f"number of positions:                              {self.number_of_positions}")
-            print(f"Account balance:                                  {account.balance} $")
-            print(f"Account free margin:                              {account.margin_free} $")
-            print(f"Profit to margin:                                 {profit_to_margin} %")
-            print(f"Profit to balance:                                {profit_to_balance} %")
-            #print(f"Actual price:                                     {act_price}")
-            #print(f"Spread:                                           {spread}")
-            print(f"Actual position from model:                       {self.pos_type}")
-            print(f"Mode:                                             {self.reverse}")
+            printer(f"{self.symbol} profit:", f"{round(profit, 2)} $")
+            printer("Account balance:", f"{account.balance} $")
+            printer("Account free margin:", f"{account.margin_free} $")
+            printer("Profit to margin:", f"{profit_to_margin} %")
+            printer("Profit to balance:", f"{profit_to_balance} %")
+            printer("Actual position from model:", f"{self.pos_type}")
+            printer("Mode:", f"{self.reverse}")
             print()
 
         # write data to database
@@ -317,15 +314,15 @@ class Bot:
         if "JP" not in self.symbol:
             volume = round((max_pos_margin / margin_min)) *\
                             symbol_info["volume_min"]
-            print('Volume form: ', (max_pos_margin / margin_min))
+            printer('Volume from value:', round((max_pos_margin / margin_min), 2))
         else:
             volume = round((max_pos_margin * 100 / margin_min)) *\
                             symbol_info["volume_min"]
-            print('Volume form: ', (max_pos_margin * 100 / margin_min))
+            printer('Volume from value:', round((max_pos_margin * 100 / margin_min), 2))
         if volume > symbol_info["volume_max"]:
             volume = float(symbol_info["volume_max"])
-        print('Min volume: ', min_volume)
-        print('Calculated volume: ', volume)
+        printer('Min volume:', min_volume)
+        printer('Calculated volume:', volume)
         self.volume = volume
         if min_volume and (volume < symbol_info["volume_min"]):
             self.volume = symbol_info["volume_min"]
@@ -362,7 +359,7 @@ class Bot:
         _.reverse()
         df['rank'] = _
         # print(df)
-        print(f"Ilość modeli: {len(df)}")
+        printer("Ilość modeli:", {len(df)})
         if len(df) < 5:
             print(f"Za mało modeli --> ({len(df)})")
             input("Wciśnij cokolwek żeby wyjść.")
@@ -390,14 +387,11 @@ class Bot:
             df_result_filter = pd.DataFrame(create_df, columns=['strategy', 'ma_fast', 'ma_slow',
                     'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result']
                     )
-            #print(df_result_filter)
             df_result_filter['result'] = df_result_filter['result'].astype(int)
             range_ = len(create_df)
             for n in range(range_):
                 sum_ = int(df_result_filter.copy().drop(range(n, len(df_result_filter)))['result'].sum()/2)
                 result_ = df_result_filter['result'].iloc[n]
-                # print("sum", sum_)
-                # print("result", result_)
                 if result_ > sum_:
                     old_list = names[n][0].split('_')
                     index_ = int(len(df_result_filter)/2)-3 if int(len(df_result_filter)/2) > 6 else int(len(df_result_filter)/2)-1
@@ -406,23 +400,18 @@ class Bot:
                     self.rename_files_in_directory(names[n][0], new_str)
                     names[n][0] = new_str
                 else:
-                    #print('break')
                     break
-
-        # print(names)
         return names
 
     @class_errors
     def load_models_democracy(self, directory):
         model_names = self.find_files(directory)
-        #print(model_names)
         # buy
         self.buy_models = []
         self.sell_models = []
         self.factors = []
         ma_list = []
         for model_name in model_names:
-            #print(model_name)
             model_path_buy = os.path.join(directory, f'{model_name[0]}_buy.model')
             model_path_sell = os.path.join(directory, f'{model_name[0]}_sell.model')
             model_buy = xgb.Booster()
@@ -443,9 +432,8 @@ class Bot:
         self.magic = magic_(self.symbol, self.comment)
         self.mdv = self.MDV_() / 4
 
-        print(f"MA values: fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
-        print('comment: ', self.comment)
-        print('Democracy')
+        printer("MA values:", f"fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
+        printer('comment:', self.comment)
 
     @class_errors
     def actual_position_democracy(self):
@@ -494,10 +482,10 @@ class Bot:
                 return round(np.sum(stance_values) / np.sum(all_), 2)
 
             force_of_democratic = ic(longs_democratic(stance_values))
-            print("Force of long democratic votes: ", force_of_democratic)
+            printer("Force of long democratic votes:", force_of_democratic)
             try:
                 fx = ic(longs(stance_values))
-                print("Percent of long votes: ", fx)
+                printer("Percent of long votes:", fx)
             except Exception:
                 pass
             if sum_of_position != 0:
@@ -515,7 +503,7 @@ class Bot:
             self.check_volume_condition = volume_2 > volume_10
 
         else:
-            print(f'Position from moving averages fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
+            printer('Position from moving averages:', f'fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
             dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
             dfx['adj'] = (dfx['close'] + dfx['high'] + dfx['low']) / 3
             ma1 = dfx.ta.sma(length=self.ma_factor_fast)
@@ -523,7 +511,7 @@ class Bot:
             dfx['stance'] = np.where(ma1>=ma2, 1, 0)
             dfx['stance'] = np.where(ma1<ma2, -1, dfx['stance'])
             position = 0 if dfx.stance.iloc[-1] == 1 else 1
-            print("MA position: ", position)
+            printer("MA position:", position)
             volume_10 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(8).mean().iloc[-1]
             volume_2 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(2).mean().iloc[-1]
             print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")

@@ -337,3 +337,12 @@ def want_to_delete_old_models():
     delete_old_models = bool(int(input("0 if you don't want to delete old models or something else if yes: ")))
     print(delete_old_models)
     return delete_old_models
+
+
+def printer(text, value, base_just=50):
+    text = str(text)
+    value = str(value)
+    len_text = len(text)
+    len_value = len(value)
+    space = ' ' * (base_just-len_text-len_value)
+    print(f'{text}{space}{value}')
