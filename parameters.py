@@ -2,16 +2,15 @@ from functions import reduce_values, get_timezone_difference
 
 intervals = ['M30']
 symbols = [
-    # 'EURUSD',
+    'EURUSD',
     'GBPUSD',
-    # 'USDCAD',
-    # 'USDCHF',
-    # 'USDJPY',
-    # 'USDPLN',
-    # 'US30',
-    # 'XAUUSD',
-    # 'EURJPY',
-    # 'BTCUSD'
+    'USDCAD',
+    'USDCHF',
+    'USDJPY',
+    'USDPLN',
+    'US30',
+    'XAUUSD',
+    'EURJPY'
     ]
 
 leverage = 30

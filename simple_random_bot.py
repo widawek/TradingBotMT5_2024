@@ -46,6 +46,10 @@ class Bot:
         self.profits = []
         self.profit0 = None
         self.profit_max = 0
+        self.fake_position = False
+        self.max_close = None
+        self.fake_stoploss = 0
+        self.fake_stoploss_interval = 'M5'
         self.df_d1 = get_data(symbol, "D1", 1, 30)
         self.avg_daily_vol_()
         self.round_number = round_number_(self.symbol)
@@ -86,16 +90,53 @@ class Bot:
     @class_errors
     def if_tiktok(self, profit_=False):
         if self.tiktok <= 2:
-            self.change_trigger_or_reverse('trigger')
             if profit_:
+                self.change_trigger_or_reverse('trigger')
                 self.tiktok -= 1
             else:
+                self.change_trigger_or_reverse('reverse')
                 self.tiktok += 1
         else:
-            self.change_trigger_or_reverse('reverse')
+            self.change_trigger_or_reverse('both')
             self.tiktok = 0
-        
+
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
+
+    @class_errors
+    def fake_position_robot(self):
+        print("Check fake position")
+        interval_df = get_data(self.symbol, self.fake_stoploss_interval, 1, 3)
+        close0 = interval_df['close'].iloc[0]
+        close1 = interval_df['close'].iloc[1]
+        close2 = interval_df['close'].iloc[2]
+        pos_type = self.positions[0].type
+
+        if not self.fake_position:
+            if pos_type == 0 and (close2 > close1 > close0):
+                self.fake_position = True
+                self.max_close = close2
+                self.fake_stoploss = close1
+            elif pos_type == 1 and (close2 < close1 < close0):
+                self.fake_position = True
+                self.max_close = close2
+                self.fake_stoploss = close1
+        
+        if self.fake_position and pos_type == 0:
+            self.max_close, self.fake_stoploss = (close2, close1) if (self.max_close < close2) else (self.max_close, self.fake_stoploss)
+            if close2 < self.fake_stoploss:
+                self.fake_position = False
+                self.max_close = None
+                self.fake_stoploss = None
+                return self.actual_position_democracy()
+            return pos_type
+        elif self.fake_position and pos_type == 1:
+            self.max_close, self.fake_stoploss = (close2, close1) if (self.max_close > close2) else (self.max_close, self.fake_stoploss)
+            if close2 > self.fake_stoploss:
+                self.fake_position = False
+                self.max_close = None
+                self.fake_stoploss = None
+                return self.actual_position_democracy()
+            return pos_type
 
     @class_errors
     def check_trigger(self, trigger_mode='on'):
@@ -110,31 +151,38 @@ class Bot:
                 self.profit_max = max(self.profits)
                 mean_profits = np.mean(self.profits)
                 printer("Volume-volatility condition:", self.check_volume_condition)
-                printer("Change value:", f"{round(self.profit_needed, 2)} USD")
+                printer("Change value:", f"{round(self.profit_needed, 2)} $")
                 printer("Actual trigger:", self.trigger)
                 printer("Max profit:", f"{self.profit_max} $")
                 printer("Profit zero aka spread:", f"{self.profit0} $")
                 printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2)} $")
 
+                if self.fake_position:
+                    self.fake_position_robot()
+
                 # Jeżeli strata mniejsza od straty granicznej
-                if profit < -self.profit_needed:
+                elif profit < -self.profit_needed:
                     self.if_tiktok()
 
                 # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
-                elif profit < (-self.profit_needed/Bot.profit_factor) and position_time > self.pos_time/Bot.profit_factor and mean_profits < (-self.profit_needed/Bot.profit_factor):
+                elif profit < (-self.profit_needed/Bot.profit_factor) and position_time > self.pos_time and mean_profits < (-self.profit_needed/Bot.profit_factor):
                     self.if_tiktok()
 
                 # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz zysk mniejszy niż zysk maksymalny pomnożony przez współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
-                elif profit > self.profit_needed * Bot.profit_factor and profit < self.profit_max*Bot.decline_factor:
+                elif self.profit_max > self.profit_needed * Bot.profit_factor and profit < self.profit_max*Bot.decline_factor:
                     self.if_tiktok(True)
 
                 # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz przez 1.5 oraz zysk mniejszy niż zysk maksymalny pomnożony przez powiększony współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
-                elif profit > self.profit_needed * Bot.profit_factor*1.5 and profit < self.profit_max*(((1-Bot.decline_factor)/2)+Bot.decline_factor):
+                elif self.profit_max > self.profit_needed * Bot.profit_factor*1.5 and profit < self.profit_max*(((1-Bot.decline_factor)/2)+Bot.decline_factor):
                     self.if_tiktok(True)
 
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                elif profit > self.profit_needed and position_time > self.pos_time and profit < self.profit_max*Bot.decline_factor:
+                elif self.profit_max > self.profit_needed and position_time > self.pos_time and profit < self.profit_max*Bot.decline_factor:
                     self.if_tiktok(True)
+
+                # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
+                elif profit > self.profit_needed/ (Bot.profit_factor*1.5) and position_time > self.pos_time/(Bot.profit_factor*1.5):
+                    self.fake_position_robot()
 
                 printer("TIKTOK:", self.tiktok)
 
@@ -172,6 +220,7 @@ class Bot:
                 self.clean_orders()
                 sys.exit()
             self.request_get()
+            printer("Symbol:", self.symbol)
             printer("Czas:", time.strftime("%H:%M:%S"))
             self.check_trigger(trigger_mode=Bot.trigger_mode)
             self.data()
@@ -203,13 +252,14 @@ class Bot:
         profit_to_balance = round((profit/account.balance)*100, 2)
 
         if report:
-            printer(f"{self.symbol} profit:", f"{round(profit, 2)} $")
+            printer(f"Profit:", f"{round(profit, 2)} $")
             printer("Account balance:", f"{account.balance} $")
             printer("Account free margin:", f"{account.margin_free} $")
             printer("Profit to margin:", f"{profit_to_margin} %")
             printer("Profit to balance:", f"{profit_to_balance} %")
             printer("Actual position from model:", f"{self.pos_type}")
             printer("Mode:", f"{self.reverse}")
+            printer('Fake position:', self.fake_position)
             print()
 
         # write data to database
@@ -359,7 +409,7 @@ class Bot:
         _.reverse()
         df['rank'] = _
         # print(df)
-        printer("Ilość modeli:", {len(df)})
+        printer("Ilość modeli:", len(df))
         if len(df) < 5:
             print(f"Za mało modeli --> ({len(df)})")
             input("Wciśnij cokolwek żeby wyjść.")
@@ -437,6 +487,9 @@ class Bot:
 
     @class_errors
     def actual_position_democracy(self):
+        if self.fake_position:
+            return self.fake_position_robot()
+
         if self.trigger == 'model':
             stance_values = []
             i = 0

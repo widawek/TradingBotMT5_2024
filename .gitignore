@@ -8,3 +8,4 @@ clean_pending_orders.py
 symbols_rank.py
 result_report.py
 position_history.db
+position_history-journal.db

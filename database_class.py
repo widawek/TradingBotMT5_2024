@@ -64,7 +64,8 @@ class DatabaseManager:
         existing_position = session.query(Position).filter_by(ticket=ticket).first()
 
         if existing_position:
-            print(f"Pozycja z ticketem {ticket} już istnieje. Nie dodano nowego rekordu.")
+            #print(f"Pozycja z ticketem {ticket} już istnieje. Nie dodano nowego rekordu.")
+            pass
         else:
             # Tworzenie nowej pozycji, jeśli nie ma jeszcze pozycji o danym ticket
             new_position = Position(
@@ -238,7 +239,7 @@ if __name__=='__main__':
         for name, group in groups:
             #by_what = group['mean_profit']
             by_what = calc_profs[i]
-            #by_what =  group['profit_max'].iloc[-1]
+            #by_what = group['profit_max'].iloc[-1]
             what = group['profit']/by_what
             what1 = group['profit'].iloc[-1]/by_what
             if name in tickets:
@@ -261,11 +262,10 @@ if __name__=='__main__':
                 else:
                     line, = plt.plot(range(len(group['profit'])), what, label=name, linewidth=0.5)
                     plt.plot(len(group['profit'])-1, what1, marker='*', color=line.get_color(), markersize=10)
-                    x = group['profit']/by_what
-                    lists.append(x.to_list())
+                    #x = group['profit']/by_what
+                    lists.append(what.to_list())
                     i+=1
                     spreads.append(group['profit'].iloc[0])
-
 
         max_len = max(len(sublist) for sublist in lists)
         # Tworzymy nową listę, w której każdy indeks to średnia z odpowiednich indeksów
@@ -283,6 +283,6 @@ if __name__=='__main__':
 
     # group_profit_by(['reverse_mode', 'trigger'])
     #group_profit_by('symbol')
-    plot_profits(df_profits, 'all', 0, condition='>')
+    plot_profits(df_profits, 'all', 0, condition='')
 
 
