@@ -281,7 +281,7 @@ if __name__=='__main__':
         plt.title(f"Spread on {symbol}: {round(np.mean(spreads), 2)} $")
         plt.show()
 
-    # group_profit_by(['reverse_mode', 'trigger'])
+    group_profit_by(['symbol', 'reverse_mode','trigger'])
     #group_profit_by('symbol')
     plot_profits(df_profits, 'all', 0, condition='')
 

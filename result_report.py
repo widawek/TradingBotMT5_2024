@@ -84,6 +84,13 @@ def plot_results(from_when: int,
     margin = mt.account_info().balance
     print(f"Actual balance: {margin}")
     print("RR: ", round(df['plus'].sum()/df['minus'].sum(), 2))
+    
+    mean_profit = df[df['plus']==1]['profit'].mean()
+    mean_loss = abs(df[df['minus']==1]['profit'].mean())
+    print("PL ratio: ", round(mean_profit/mean_loss, 2))
+    print("Overall profit ratio: ", round((mean_profit/mean_loss)*(df['plus'].sum()/df['minus'].sum()), 3))
+    print("Daily profit to start balance: ", round(df['profit'].sum()*100/(margin-df['profit'].sum()), 2))
+
     df = df.groupby(by_).agg(
             profit=('profit', 'sum'),
             count_sum=('profit', 'size')
