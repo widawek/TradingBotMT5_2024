@@ -27,14 +27,14 @@ class Bot:
     weekday = dt.now().weekday()
     tz_diff = tz_diff
     trigger_mode = 'on'
-    trigger_model_divider = 11
-    profit_factor = 2
+    trigger_model_divider = 9
+    profit_factor = 1.5
     position_size = 6       # percent of balance
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
     system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
     master_interval = intervals[0]
-    decline_factor = 0.7
+    decline_factor = 0.65
 
     def __init__(self, symbol):
         print(dt.now())
@@ -90,7 +90,7 @@ class Bot:
 
     @class_errors
     def if_tiktok(self, profit_=False):
-        if self.tiktok <= 2:
+        if self.tiktok <= 3:
             if profit_:
                 self.change_trigger_or_reverse('trigger')
                 self.tiktok -= 1
@@ -98,10 +98,7 @@ class Bot:
                 self.change_trigger_or_reverse('reverse')
                 self.tiktok += 1
         else:
-            if profit_:
-                self.change_trigger_or_reverse('trigger')
-            else:
-                self.change_trigger_or_reverse('both')
+            self.change_trigger_or_reverse('both')
             self.tiktok = 0
 
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok

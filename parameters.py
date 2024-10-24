@@ -24,7 +24,7 @@ range_ = 1
 # print(volatility_divider)
 # absolute, weighted_democracy, ranked_democracy, just_democracy, invertedrank_democracy
 game_system = 'weighted_democracy'
-reverse_ = 'normal' # 'normal' 'reverse' 'normal_mix'
+reverse_ = 'reverse' # 'normal' 'reverse' 'normal_mix'
 
 morning_hour = 7
 evening_hour = 24

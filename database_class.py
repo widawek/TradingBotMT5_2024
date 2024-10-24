@@ -176,7 +176,7 @@ if __name__=='__main__':
     db_manager = ReadDatabase()
 
     # Odczyt danych z tabeli 'Position' do pandas DataFrame
-    positions_profits = get_raw_close_positions_data(0, -2)
+    positions_profits = get_raw_close_positions_data(5, -2)
     def give_me_profit(ticket):
         df = positions_profits[positions_profits['position_id']==ticket]
         try:
@@ -281,8 +281,8 @@ if __name__=='__main__':
         plt.title(f"Spread on {symbol}: {round(np.mean(spreads), 2)} $")
         plt.show()
 
-    group_profit_by(['symbol', 'reverse_mode','trigger'])
+    group_profit_by(['reverse_mode','trigger'])
     #group_profit_by('symbol')
-    plot_profits(df_profits, 'all', 0, condition='')
+    plot_profits(df_profits, 'all', 5, condition='')
 
 
