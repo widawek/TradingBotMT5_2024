@@ -346,3 +346,66 @@ def printer(text, value, base_just=50):
     len_value = len(value)
     space = ' ' * (base_just-len_text-len_value)
     print(f'{text}{space}{value}')
+
+
+def vwap_std(symbol, interval, factor=1.4):
+    df = get_data(symbol, interval, 1, 255)
+    df['date'] = pd.to_datetime(df.time.dt.date)
+    df = df.reset_index()
+    dates = list(set(df.date.to_list()))
+    dates.sort()
+    opens = []
+    intraday_mean = []
+    std = []
+    for i in dates:
+        x = df.copy()[df['date'] == i]
+        x['max'] = x.high.rolling(window=len(x), min_periods=0).max()
+        x['min'] = x.low.rolling(window=len(x), min_periods=0).min()
+        x['cv'] = x['close'] * x['volume']
+        x['cv'] = x['cv'].rolling(window=len(x), min_periods=0).sum()
+        x['vol'] = x.volume.rolling(window=len(x), min_periods=0).sum()
+        x['mean'] = x['cv']/x['vol']
+        x['std_'] = x.close.rolling(window=len(x), min_periods=0).std()
+        x['highs1'] = x['high'] - x['high'].shift(1)
+        x['lows1'] = x['low'].shift(1) - x['low']
+        x['highs_'] = np.where(x['highs1']>0, x['highs1'], 0)
+        x['lows_'] = np.where(x['lows1']>0, x['lows1'], 0)
+        x['highss'] = x['highs_'].ewm(min_periods=0, alpha=1/len(x)).mean()
+        x['lowsss'] = x['lows_'].ewm(min_periods=0, alpha=1/len(x)).mean()
+        x.loc[:,'open'] = x['open'].iloc[0]
+        opens += x['open'].to_list()
+        intraday_mean += x['mean'].to_list()
+        std += x['std_'].to_list()
+    
+    df['open'] = pd.Series(opens)
+    df['daily_mean'] = pd.Series(intraday_mean)
+    df['std_'] = pd.Series(std)
+    df['boll_up'] = df['daily_mean'] + factor*df['std_']
+    df['boll_down'] = df['daily_mean'] - factor*df['std_']
+    
+    last_daily_open = df['open'].iloc[-1]
+    last_daily_mean = df['daily_mean'].iloc[-1]
+    last_daily_boll_up = df['boll_up'].iloc[-1]
+    last_daily_boll_down = df['boll_down'].iloc[-1]
+    last_daily_close = df['close'].iloc[-1]
+    if last_daily_mean > last_daily_open:
+        if last_daily_close > last_daily_boll_up:
+            trend = 'long_strong'
+        elif last_daily_close < last_daily_boll_down:
+            trend = 'long_weak'
+        else:
+            trend = 'long_normal'
+    elif last_daily_mean < last_daily_open:
+        if last_daily_close < last_daily_boll_down:
+            trend = 'short_strong'
+        elif last_daily_close > last_daily_boll_up:
+            trend = 'short_weak'
+        else:
+            trend = 'short_normal' 
+    else:
+        trend = 'neutral'
+    
+    # trend
+    # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
+
+    return trend

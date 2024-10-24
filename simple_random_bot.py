@@ -38,6 +38,7 @@ class Bot:
 
     def __init__(self, symbol):
         print(dt.now())
+        self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
         self.change = 0
         self.tiktok = 0
         self.number_of_positions = 0
@@ -230,7 +231,7 @@ class Bot:
         # vvv key component vvv
         while True:
             now_ = dt.now()
-            if now_.hour >= evening_hour-1:# and now_.minute >= 45:
+            if now_.hour >= evening_hour:# and now_.minute >= 45:
                 self.clean_orders()
                 sys.exit()
             self.request_get()
@@ -275,6 +276,7 @@ class Bot:
             printer("Mode:", f"{self.reverse}")
             printer('Fake position:', self.fake_position)
             printer('Fake counter:', self.fake_counter)
+            printer('Trend:', self.trend)
             print()
 
         # write data to database
@@ -622,8 +624,41 @@ class Bot:
                     change_(old_file_path, new_file_path)
 
     @class_errors
+    def what_trend_is_it(self, posType):
+        self.trend = vwap_std(self.symbol, Bot.master_interval)
+        if self.trend == 'neutral':
+            position_size = Bot.position_size
+        elif posType == 0:
+            if self.trend == 'long_strong':
+                position_size = int(Bot.position_size)
+            elif self.trend == 'long_normal':
+                position_size = int(Bot.position_size*1.5)
+            elif self.trend == 'long_weak':
+                position_size = int(Bot.position_size*2)
+            elif self.trend == 'short_strong':
+                position_size = int(Bot.position_size)
+            elif self.trend =='short_normal':
+                position_size = int(Bot.position_size/1.5)
+            elif self.trend == 'short_weak':
+                position_size = int(Bot.position_size/2)
+        elif posType == 1:
+            if self.trend == 'long_strong':
+                position_size = int(Bot.position_size)
+            elif self.trend == 'long_normal':
+                position_size = int(Bot.position_size/1.5)
+            elif self.trend == 'long_weak':
+                position_size = int(Bot.position_size/2)
+            elif self.trend == 'short_strong':
+                position_size = int(Bot.position_size)
+            elif self.trend =='short_normal':
+                position_size = int(Bot.position_size*1.5)
+            elif self.trend == 'short_weak':
+                position_size = int(Bot.position_size*2)
+        return position_size
+
+    @class_errors
     def request(self, action, posType, price=None):
-        self.volume_calc(Bot.position_size, True)
+
         if action == actions['deal']:
             print("YES")
             price = mt.symbol_info(self.symbol).bid
@@ -632,6 +667,10 @@ class Bot:
                 posType = pendings["long_stop"]
             else:
                 posType = pendings["short_stop"]
+
+        position_size = self.what_trend_is_it(posType)
+        self.volume_calc(position_size, True)
+        self.comment = self.trend
 
         request = {
             "action": action,
