@@ -104,6 +104,9 @@ def plot_results(from_when: int,
         sort_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
         df['weekday'] = pd.Categorical(df['weekday'], categories=sort_order, ordered=True)
         df = df.sort_values('weekday')
+
+    if by_ == 'comment':
+        df = df.sort_values('weekday')
     if plot:
         plt.figure(figsize=(10, 6))
         plt.bar(df[by_], df['profit'], color='skyblue')
@@ -126,4 +129,4 @@ def plot_results(from_when: int,
 
 if __name__ == "__main__":
     #by_ 'symbol', 'comment', 'interval', 'factor', 'learing_rate', 'training_set'
-    x1 = plot_results(5, -2)
+    x1 = plot_results(0, -2)

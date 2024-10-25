@@ -172,11 +172,12 @@ if __name__=='__main__':
     from numpy import vectorize
     import matplotlib.pyplot as plt
     import numpy as np
+    from functions import pandas_options
     # Przykład użycia
     db_manager = ReadDatabase()
 
     # Odczyt danych z tabeli 'Position' do pandas DataFrame
-    positions_profits = get_raw_close_positions_data(5, -2)
+    positions_profits = get_raw_close_positions_data(0, -2)
     def give_me_profit(ticket):
         df = positions_profits[positions_profits['position_id']==ticket]
         try:
@@ -195,7 +196,7 @@ if __name__=='__main__':
     df_profits = db_manager.read_profits_to_df()
     #df_profits = df_profits[df_profits['volume_condition']==False]
 
-    def group_profit_by(what):
+    def group_profit_by(what, to_excel=False):
         print(f'\n{what}')
         grouped_profit_max = df_profits.groupby('ticket').agg({'profit': 'max'})
         grouped_profit_min = df_profits.groupby('ticket').agg({'profit': 'min'})
@@ -214,6 +215,8 @@ if __name__=='__main__':
         a['max-min'] = a['max_profit'] + a['min_profit']
         a['close_profit'] = c['close_profit']
         a['counter'] = c['counter']
+        if to_excel:
+            a.to_excel("results.xlsx")
         print(a)
 
     def plot_profits(df, symbol, days_to_past, condition=""):
@@ -280,9 +283,9 @@ if __name__=='__main__':
         plt.plot(range(max_len), averages, linewidth=3, c='black')
         plt.title(f"Spread on {symbol}: {round(np.mean(spreads), 2)} $")
         plt.show()
-
-    group_profit_by(['reverse_mode','trigger'])
+    pandas_options()
+    group_profit_by(['reverse_mode', 'trigger'], True)
     #group_profit_by('symbol')
-    plot_profits(df_profits, 'all', 5, condition='')
+    #plot_profits(df_profits, 'all', 0, condition='')
 
 

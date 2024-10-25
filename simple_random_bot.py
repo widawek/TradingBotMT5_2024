@@ -91,7 +91,7 @@ class Bot:
 
     @class_errors
     def if_tiktok(self, profit_=False):
-        if self.tiktok <= 3:
+        if self.tiktok <= 2:
             if profit_:
                 self.change_trigger_or_reverse('trigger')
                 self.tiktok -= 1
@@ -625,35 +625,43 @@ class Bot:
 
     @class_errors
     def what_trend_is_it(self, posType):
-        self.trend = vwap_std(self.symbol, Bot.master_interval)
+        
+        smallest = int(Bot.position_size/2)
+        smaller = int(Bot.position_size/1.5)
+        normal = Bot.position_size
+        bigger = int(Bot.position_size*1.5)
+        biggest = int(Bot.position_size*2)
+
+
+        self.trend = vwap_std(self.symbol, self.fake_stoploss_interval)
         if self.trend == 'neutral':
             position_size = Bot.position_size
         elif posType == 0:
-            if self.trend == 'long_strong':
-                position_size = int(Bot.position_size)
+            if self.trend == 'long_strong': # price is high
+                position_size = normal
             elif self.trend == 'long_normal':
-                position_size = int(Bot.position_size*1.5)
-            elif self.trend == 'long_weak':
-                position_size = int(Bot.position_size*2)
-            elif self.trend == 'short_strong':
-                position_size = int(Bot.position_size)
+                position_size = bigger
+            elif self.trend == 'long_weak':  # price is low
+                position_size = biggest
+            elif self.trend == 'short_strong': # price is low
+                position_size = normal
             elif self.trend =='short_normal':
-                position_size = int(Bot.position_size/1.5)
-            elif self.trend == 'short_weak':
-                position_size = int(Bot.position_size/2)
+                position_size = smaller
+            elif self.trend == 'short_weak': # price is high
+                position_size = smallest
         elif posType == 1:
             if self.trend == 'long_strong':
-                position_size = int(Bot.position_size)
+                position_size = normal
             elif self.trend == 'long_normal':
-                position_size = int(Bot.position_size/1.5)
+                position_size = smaller
             elif self.trend == 'long_weak':
-                position_size = int(Bot.position_size/2)
+                position_size = smallest
             elif self.trend == 'short_strong':
-                position_size = int(Bot.position_size)
+                position_size = normal
             elif self.trend =='short_normal':
-                position_size = int(Bot.position_size*1.5)
+                position_size = bigger
             elif self.trend == 'short_weak':
-                position_size = int(Bot.position_size*2)
+                position_size = biggest
         return position_size
 
     @class_errors

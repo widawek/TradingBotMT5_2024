@@ -349,7 +349,7 @@ def printer(text, value, base_just=50):
 
 
 def vwap_std(symbol, interval, factor=1.4):
-    df = get_data(symbol, interval, 1, 255)
+    df = get_data(symbol, interval, 1, 450)
     df['date'] = pd.to_datetime(df.time.dt.date)
     df = df.reset_index()
     dates = list(set(df.date.to_list()))

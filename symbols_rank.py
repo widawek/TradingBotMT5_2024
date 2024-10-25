@@ -93,6 +93,7 @@ if __name__ == '__main__':
         'US30',
         'XAUUSD',
         'EURJPY',
+        'EURCAD'
         ]
 
     symbols = list(set(symbols))
