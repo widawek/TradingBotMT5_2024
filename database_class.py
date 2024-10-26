@@ -28,6 +28,7 @@ class Position(Base):
     minutes = Column(Integer, nullable=False)
     weekday = Column(Integer, nullable=False)
     trend = Column(String, nullable=False)
+    tiktok = Column(Integer, nullable=False)
 
     # Relacja do tabeli Profit
     profits = relationship("Profit", back_populates="position")
@@ -48,7 +49,6 @@ class Profit(Base):
     fake_position = Column(Boolean, nullable=False)
     fake_position_counter = Column(Integer, nullable=False)
     fake_position_stoploss = Column(Float, nullable=False)
-    tiktok = Column(Integer, nullable=False)
 
     # Relacja do tabeli Position
     position = relationship("Position", back_populates="profits")
