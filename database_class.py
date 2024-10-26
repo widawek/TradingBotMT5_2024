@@ -27,6 +27,7 @@ class Position(Base):
     calculated_profit = Column(Float, nullable=False)
     minutes = Column(Integer, nullable=False)
     weekday = Column(Integer, nullable=False)
+    trend = Column(String, nullable=False)
 
     # Relacja do tabeli Profit
     profits = relationship("Profit", back_populates="position")
@@ -44,6 +45,10 @@ class Profit(Base):
     spread = Column(Float, nullable=False)
     volume_condition = Column(Boolean, nullable=False)
     ticket = Column(Integer, ForeignKey('positions.ticket'), nullable=False)
+    fake_position = Column(Boolean, nullable=False)
+    fake_position_counter = Column(Integer, nullable=False)
+    fake_position_stoploss = Column(Float, nullable=False)
+    tiktok = Column(Integer, nullable=False)
 
     # Relacja do tabeli Position
     position = relationship("Position", back_populates="profits")
@@ -57,7 +62,7 @@ class DatabaseManager:
         self.Session = sessionmaker(bind=self.engine)
 
     def add_position(self, ticket, symbol, pos_type, open_time, volume, price_open, comment, reverse_mode, trigger, trigger_divider,
-                     decline_factor, profit_factor, calculated_profit, minutes, weekday):
+                     decline_factor, profit_factor, calculated_profit, minutes, weekday, trend, tiktok):
         session = self.Session()
 
         # Sprawdzenie, czy pozycja z danym ticket już istnieje
@@ -83,7 +88,9 @@ class DatabaseManager:
                 profit_factor=profit_factor,
                 calculated_profit=calculated_profit,
                 minutes=minutes,
-                weekday=weekday
+                weekday=weekday,
+                trend=trend,
+                tiktok=tiktok
             )
             session.add(new_position)
             session.commit()
@@ -91,7 +98,8 @@ class DatabaseManager:
 
         session.close()
 
-    def add_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread, volume_condition):
+    def add_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread, volume_condition,
+                   fake_position,fake_position_counter,fake_position_stoploss):
         session = self.Session()
         position = session.query(Position).filter_by(ticket=ticket).first()
         if position:
@@ -103,7 +111,10 @@ class DatabaseManager:
                 spread=spread,
                 ticket=ticket,
                 volume_condition=volume_condition,
-                position=position
+                position=position,
+                fake_position=fake_position,
+                fake_position_counter=fake_position_counter,
+                fake_position_stoploss=fake_position_stoploss
             )
             session.add(new_profit)
             session.commit()
@@ -116,7 +127,7 @@ class TradingProcessor:
         self.db_manager = DatabaseManager()
 
     def process_new_position(self, ticket, symbol, pos_type, open_time, volume, price_open, comment, reverse_mode, trigger,
-                             trigger_divider, decline_factor, profit_factor, calculated_profit, minutes, weekday):
+                             trigger_divider, decline_factor, profit_factor, calculated_profit, minutes, weekday, trend, tiktok):
         # Przetwarzanie danych pozycji - np. tutaj możesz dodać logikę obliczeń, walidacji itp.
         # Dodajemy pozycję do bazy danych
         self.db_manager.add_position(
@@ -134,14 +145,26 @@ class TradingProcessor:
             profit_factor=profit_factor,
             calculated_profit=calculated_profit,
             minutes=minutes,
-            weekday=weekday
+            weekday=weekday,
+            trend=trend,
+            tiktok=tiktok
         )
 
-    def process_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread, volume_condition):
+    def process_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread, volume_condition,
+                       fake_position,fake_position_counter,fake_position_stoploss):
         # Przetwarzanie profitu
         # Dodajemy profit do bazy danych
-        self.db_manager.add_profit(ticket=ticket, profit=profit, profit_max=profit_max,
-                                   profit0=profit0, mean_profit=mean_profit, spread=spread, volume_condition=volume_condition)
+        self.db_manager.add_profit(
+            ticket=ticket,
+            profit=profit,
+            profit_max=profit_max,
+            profit0=profit0,
+            mean_profit=mean_profit,
+            spread=spread,
+            volume_condition=volume_condition,
+            fake_position=fake_position,
+            fake_position_counter=fake_position_counter,
+            fake_position_stoploss=fake_position_stoploss)
 
 
 class ReadDatabase:

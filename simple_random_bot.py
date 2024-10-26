@@ -278,42 +278,8 @@ class Bot:
             printer('Fake counter:', self.fake_counter)
             printer('Trend:', self.trend)
             print()
-
-        # write data to database
-        try:
-            processor.process_new_position(
-                ticket=self.positions[0].ticket,
-                symbol=self.symbol,
-                pos_type=self.positions[0].type,
-                open_time=self.positions[0].time,
-                volume=self.positions[0].volume,
-                price_open=self.positions[0].price_open,
-                comment=self.positions[0].comment,
-                reverse_mode=self.reverse,
-                trigger=self.trigger,
-                trigger_divider=Bot.trigger_model_divider,
-                decline_factor=Bot.decline_factor,
-                profit_factor=Bot.profit_factor,
-                calculated_profit=self.profit_needed,
-                minutes=self.pos_time,
-                weekday=Bot.weekday
-            )
-
-            mean_profit = np.mean(self.profits)
-            mean_profit = 0 if mean_profit == np.NaN else mean_profit
-            # Dodawanie profitu do istniejącej pozycji
-            processor.process_profit(
-                ticket=self.positions[0].ticket,
-                profit=profit,
-                profit_max=self.profit_max,
-                profit0=self.profit0,
-                mean_profit=mean_profit,
-                spread=spread,
-                volume_condition=self.check_volume_condition
-            )
-        except Exception as e:
-            print(e)
-            pass
+        
+        self.write_to_database(profit, spread)
 
         if profit < -self.kill_position_profit:
             print('Loss is to high. I have to kill it!')
@@ -761,6 +727,48 @@ class Bot:
         except NameError:
             return random.randint(0, 1)
 
+    @class_errors
+    def write_to_database(self, profit, spread):
+        # write data to database
+        try:
+            processor.process_new_position(
+                ticket=self.positions[0].ticket,
+                symbol=self.symbol,
+                pos_type=self.positions[0].type,
+                open_time=self.positions[0].time,
+                volume=self.positions[0].volume,
+                price_open=self.positions[0].price_open,
+                comment=self.positions[0].comment,
+                reverse_mode=self.reverse,
+                trigger=self.trigger,
+                trigger_divider=Bot.trigger_model_divider,
+                decline_factor=Bot.decline_factor,
+                profit_factor=Bot.profit_factor,
+                calculated_profit=self.profit_needed,
+                minutes=self.pos_time,
+                weekday=Bot.weekday,
+                trend=self.trend,
+                tiktok=self.tiktok
+            )
+
+            mean_profit = np.mean(self.profits)
+            mean_profit = 0 if mean_profit == np.NaN else mean_profit
+            # Dodawanie profitu do istniejącej pozycji
+            processor.process_profit(
+                ticket=self.positions[0].ticket,
+                profit=profit,
+                profit_max=self.profit_max,
+                profit0=self.profit0,
+                mean_profit=mean_profit,
+                spread=spread,
+                volume_condition=self.check_volume_condition,
+                fake_position=self.fake_position,
+                fake_position_counter=self.fake_counter,
+                fake_position_stoploss=self.fake_stoploss
+            )
+        except Exception as e:
+            print(e)
+            pass
 
 if __name__ == '__main__':
     print('Yo, wtf?')
