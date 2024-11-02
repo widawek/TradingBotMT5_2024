@@ -356,8 +356,7 @@ def vwap_std(symbol, interval, factor=1.4):
     daily['date'] = pd.to_datetime(daily.time.dt.date)
     daily.dropna(inplace=True)
 
-
-    df = get_data(symbol, interval, 1, 450)
+    df = get_data(symbol, interval, 0, 450)
     df['date'] = pd.to_datetime(df.time.dt.date)
     df = df.reset_index()
     dates = list(set(df.date.to_list()))
