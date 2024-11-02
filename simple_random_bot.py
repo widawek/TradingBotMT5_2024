@@ -278,7 +278,7 @@ class Bot:
             printer('Fake counter:', self.fake_counter)
             printer('Trend:', self.trend)
             print()
-        
+
         self.write_to_database(profit, spread)
 
         if profit < -self.kill_position_profit:
@@ -591,12 +591,13 @@ class Bot:
 
     @class_errors
     def what_trend_is_it(self, posType):
-        
+
         smallest = int(Bot.position_size/2)
         smaller = int(Bot.position_size/1.5)
         normal = Bot.position_size
         bigger = int(Bot.position_size*1.5)
         biggest = int(Bot.position_size*3)
+        wow = int(Bot.position_size*5)
 
 
         self.trend = vwap_std(self.symbol, self.fake_stoploss_interval)
@@ -615,6 +616,8 @@ class Bot:
                 position_size = smaller
             elif self.trend == 'short_weak': # price is high
                 position_size = smallest
+            elif self.trend == 'long_super_weak':  # price is low
+                position_size = wow
         elif posType == 1:
             if self.trend == 'long_strong':
                 position_size = normal
@@ -628,6 +631,8 @@ class Bot:
                 position_size = smaller
             elif self.trend == 'short_weak':
                 position_size = biggest
+            elif self.trend == 'short_super_weak':
+                position_size = wow
         return position_size
 
     @class_errors

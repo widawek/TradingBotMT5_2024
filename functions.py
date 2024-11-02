@@ -349,6 +349,14 @@ def printer(text, value, base_just=50):
 
 
 def vwap_std(symbol, interval, factor=1.4):
+    daily = get_data(symbol, 'D1', 0, 10)
+    daily = daily.drop(columns=['open', 'close', 'spread', 'volume'])
+    daily['high'] = daily['high'].shift(1)
+    daily['low'] = daily['low'].shift(1)
+    daily['date'] = pd.to_datetime(daily.time.dt.date)
+    daily.dropna(inplace=True)
+
+
     df = get_data(symbol, interval, 1, 450)
     df['date'] = pd.to_datetime(df.time.dt.date)
     df = df.reset_index()
@@ -357,7 +365,13 @@ def vwap_std(symbol, interval, factor=1.4):
     opens = []
     intraday_mean = []
     std = []
+    high_ = []
+    low_ = []
     for i in dates:
+        daily_df_x = daily[daily['date'] == i]
+        high_value = float(daily_df_x['high'].iloc[-1])
+        low_value = float(daily_df_x['low'].iloc[-1])
+
         x = df.copy()[df['date'] == i]
         x['max'] = x.high.rolling(window=len(x), min_periods=0).max()
         x['min'] = x.low.rolling(window=len(x), min_periods=0).min()
@@ -373,32 +387,48 @@ def vwap_std(symbol, interval, factor=1.4):
         x['highss'] = x['highs_'].ewm(min_periods=0, alpha=1/len(x)).mean()
         x['lowsss'] = x['lows_'].ewm(min_periods=0, alpha=1/len(x)).mean()
         x.loc[:,'open'] = x['open'].iloc[0]
+        x.loc[:,'last_high'] = high_value
+        x.loc[:,'last_low'] = low_value
         opens += x['open'].to_list()
         intraday_mean += x['mean'].to_list()
         std += x['std_'].to_list()
-    
+        high_ += x['last_high'].to_list()
+        low_ += x['last_low'].to_list()
+
     df['open'] = pd.Series(opens)
     df['daily_mean'] = pd.Series(intraday_mean)
     df['std_'] = pd.Series(std)
     df['boll_up'] = df['daily_mean'] + factor*df['std_']
     df['boll_down'] = df['daily_mean'] - factor*df['std_']
+    df['last_daily_high'] = pd.Series(high_)
+    df['last_daily_low'] = pd.Series(low_)
     
-    last_daily_open = df['open'].iloc[-1]
-    last_daily_mean = df['daily_mean'].iloc[-1]
-    last_daily_boll_up = df['boll_up'].iloc[-1]
-    last_daily_boll_down = df['boll_down'].iloc[-1]
-    last_daily_close = df['close'].iloc[-1]
-    if last_daily_mean > last_daily_open:
-        if last_daily_close > last_daily_boll_up:
+    last_open = df['open'].iloc[-1]
+    last_mean = df['daily_mean'].iloc[-1]
+    last_boll_up = df['boll_up'].iloc[-1]
+    last_boll_down = df['boll_down'].iloc[-1]
+    last_close = df['close'].iloc[-1]
+    last_high = df['last_daily_high'].iloc[-1]
+    last_low = df['last_daily_low'].iloc[-1]
+
+    last_min = df['low'][-3:-1].min()
+    last_max = df['high'][-3:-1].max()
+
+    if last_mean > last_open:
+        if last_close > last_boll_up:
             trend = 'long_strong'
-        elif last_daily_close < last_daily_boll_down:
+        elif last_close < last_boll_down and last_min < last_low:
+            trend = 'long_super_weak'
+        elif last_close < last_boll_down:
             trend = 'long_weak'
         else:
             trend = 'long_normal'
-    elif last_daily_mean < last_daily_open:
-        if last_daily_close < last_daily_boll_down:
+    elif last_mean < last_open:
+        if last_close < last_boll_down:
             trend = 'short_strong'
-        elif last_daily_close > last_daily_boll_up:
+        elif last_close > last_boll_up and last_max > last_high:
+            trend = 'short_super_weak'
+        elif last_close > last_boll_up:
             trend = 'short_weak'
         else:
             trend = 'short_normal' 
