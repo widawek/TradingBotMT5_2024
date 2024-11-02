@@ -2,17 +2,17 @@ from functions import reduce_values, get_timezone_difference
 
 intervals = ['M20']
 symbols = [
-    'BTCUSD'
-    # 'EURUSD',
-    # 'GBPUSD',
-    # 'USDCAD',
-    # 'USDCHF',
-    # 'USDJPY',
-    # 'USDPLN',
-    # 'US30',
-    # 'XAUUSD',
-    # 'EURJPY',
-    # 'EURCAD'
+    'EURUSD',
+    'GBPUSD',
+    'USDCAD',
+    'USDCHF',
+    'USDJPY',
+    'USDPLN',
+    'US30',
+    'XAUUSD',
+    'EURJPY',
+    'EURCAD',
+    'DE40'
     ]
 
 leverage = 30
@@ -26,7 +26,11 @@ range_ = 1
 # print(volatility_divider)
 # absolute, weighted_democracy, ranked_democracy, just_democracy, invertedrank_democracy
 game_system = 'weighted_democracy'
-reverse_ = 'reverse' # 'normal' 'reverse' 'normal_mix'
+
+def reverse_(symbol):
+    if symbol in ['EURUSD', 'USDCHF', 'EURJPY', 'DE40']:
+        return 'normal'
+    return 'reverse'
 
 morning_hour = 7
 evening_hour = 24

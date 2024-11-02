@@ -200,7 +200,7 @@ if __name__=='__main__':
     db_manager = ReadDatabase()
 
     # Odczyt danych z tabeli 'Position' do pandas DataFrame
-    positions_profits = get_raw_close_positions_data(0, -2)
+    positions_profits = get_raw_close_positions_data(3, -2)
     def give_me_profit(ticket):
         df = positions_profits[positions_profits['position_id']==ticket]
         try:
@@ -307,8 +307,8 @@ if __name__=='__main__':
         plt.title(f"Spread on {symbol}: {round(np.mean(spreads), 2)} $")
         plt.show()
     pandas_options()
-    group_profit_by(['reverse_mode', 'trigger'], True)
-    #group_profit_by('symbol')
-    #plot_profits(df_profits, 'all', 0, condition='')
+    group_profit_by(['trend', 'pos_type'], False)
+    #group_profit_by('tiktok')
+    #plot_profits(df_profits, 'all', 2, condition='')
 
 

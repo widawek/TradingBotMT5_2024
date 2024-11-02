@@ -42,7 +42,7 @@ class Bot:
         self.change = 0
         self.tiktok = 0
         self.number_of_positions = 0
-        self.reverse = reverse_
+        self.reverse = reverse_(symbol)
         self.symbol = symbol
         self.profits = []
         self.profit0 = None
@@ -121,7 +121,7 @@ class Bot:
         def fake_position_off():
             self.fake_position = False
             self.max_close = None
-            self.fake_stoploss = None
+            self.fake_stoploss = 0
             self.fake_counter = 0
             return self.actual_position_democracy()
 
@@ -596,7 +596,7 @@ class Bot:
         smaller = int(Bot.position_size/1.5)
         normal = Bot.position_size
         bigger = int(Bot.position_size*1.5)
-        biggest = int(Bot.position_size*2)
+        biggest = int(Bot.position_size*3)
 
 
         self.trend = vwap_std(self.symbol, self.fake_stoploss_interval)
@@ -606,7 +606,7 @@ class Bot:
             if self.trend == 'long_strong': # price is high
                 position_size = normal
             elif self.trend == 'long_normal':
-                position_size = bigger
+                position_size = smaller
             elif self.trend == 'long_weak':  # price is low
                 position_size = biggest
             elif self.trend == 'short_strong': # price is low
@@ -625,7 +625,7 @@ class Bot:
             elif self.trend == 'short_strong':
                 position_size = normal
             elif self.trend =='short_normal':
-                position_size = bigger
+                position_size = smaller
             elif self.trend == 'short_weak':
                 position_size = biggest
         return position_size
