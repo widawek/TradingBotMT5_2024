@@ -311,7 +311,7 @@ def reduce_values(intervals, range_from, range_to, range_):
 def add_comparison_columns(df, x):
     # Pobieramy ostatnie x kolumn
     last_columns = df.iloc[:, -x:]
-    
+
     # Iterujemy przez każdą kolumnę z ostatnich x kolumn
     for col in last_columns.columns:
         unique_list = sorted(list(df[col].unique()))
@@ -322,7 +322,7 @@ def add_comparison_columns(df, x):
         diff = np.diff(last_columns[col], prepend=np.nan)
         # Tworzymy nową kolumnę z wartościami 1 lub 0
         df[f'{col}_comp'] = np.where(diff > 0, 1, 0)
-        
+
     return df
 
 def get_timezone_difference():
@@ -401,7 +401,13 @@ def vwap_std(symbol, interval, factor=1.4):
     df['boll_down'] = df['daily_mean'] - factor*df['std_']
     df['last_daily_high'] = pd.Series(high_)
     df['last_daily_low'] = pd.Series(low_)
-    
+    df['boll_up_max'] = np.where((df['boll_up']>df['last_daily_high']) &
+                                 (df['boll_up'].shift(1)<df['last_daily_high'].shift(1)), 1, 0)
+    df['boll_down_min'] = np.where((df['boll_down']<df['last_daily_low']) &
+                                 (df['boll_down'].shift(1)>df['last_daily_low'].shift(1)), 1, 0)
+    df['boll_up_max'] = df['boll_up_max'].rolling(5).max()
+    df['boll_down_min'] = df['boll_down_min'].rolling(5).max()
+
     last_open = df['open'].iloc[-1]
     last_mean = df['daily_mean'].iloc[-1]
     last_boll_up = df['boll_up'].iloc[-1]
@@ -412,6 +418,9 @@ def vwap_std(symbol, interval, factor=1.4):
 
     last_min = df['low'][-3:-1].min()
     last_max = df['high'][-3:-1].max()
+    last_boll_up_max = df['boll_up_max'].iloc[-1]
+    last_boll_up_min = df['boll_up_min'].iloc[-1]
+
 
     if last_mean > last_open:
         if last_close > last_boll_up:
@@ -430,10 +439,14 @@ def vwap_std(symbol, interval, factor=1.4):
         elif last_close > last_boll_up:
             trend = 'short_weak'
         else:
-            trend = 'short_normal' 
+            trend = 'short_normal'
     else:
         trend = 'neutral'
-    
+
+    if last_boll_up_max and last_max > last_high:
+        trend = 'overbought'
+    elif last_boll_up_min and last_min < last_low:
+        trend = 'sold_out'
     # trend
     # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
 

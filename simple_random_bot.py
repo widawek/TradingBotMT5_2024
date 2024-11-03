@@ -597,43 +597,44 @@ class Bot:
         normal = Bot.position_size
         bigger = int(Bot.position_size*1.5)
         biggest = int(Bot.position_size*3)
-        wow = int(Bot.position_size*5)
-
+        wow = int(Bot.position_size*4)
 
         self.trend = vwap_std(self.symbol, self.fake_stoploss_interval)
-        if self.trend == 'neutral':
-            position_size = Bot.position_size
-        elif posType == 0:
-            if self.trend == 'long_strong': # price is high
-                position_size = normal
+        if posType == 0:
+            if self.trend == 'sold_out': # price is low
+                return wow
+            elif self.trend == 'long_strong': # price is high
+                return normal
             elif self.trend == 'long_normal':
-                position_size = smaller
+                return smaller
             elif self.trend == 'long_weak':  # price is low
-                position_size = biggest
+                return biggest
             elif self.trend == 'short_strong': # price is low
-                position_size = normal
+                return normal
             elif self.trend =='short_normal':
-                position_size = smaller
+                return smaller
             elif self.trend == 'short_weak': # price is high
-                position_size = smallest
+                return smallest
             elif self.trend == 'long_super_weak':  # price is low
-                position_size = wow
+                return wow
         elif posType == 1:
-            if self.trend == 'long_strong':
-                position_size = normal
+            if self.trend == 'overbought':
+                return wow
+            elif self.trend == 'long_strong':
+                return normal
             elif self.trend == 'long_normal':
-                position_size = smaller
+                return smaller
             elif self.trend == 'long_weak':
-                position_size = smallest
+                return smallest
             elif self.trend == 'short_strong':
-                position_size = normal
+                return normal
             elif self.trend =='short_normal':
-                position_size = smaller
+                return smaller
             elif self.trend == 'short_weak':
-                position_size = biggest
+                return biggest
             elif self.trend == 'short_super_weak':
-                position_size = wow
-        return position_size
+                return wow
+        return Bot.position_size
 
     @class_errors
     def request(self, action, posType, price=None):
