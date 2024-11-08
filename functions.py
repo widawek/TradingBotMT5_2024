@@ -356,7 +356,7 @@ def vwap_std(symbol, interval, factor=1.4):
     daily['date'] = pd.to_datetime(daily.time.dt.date)
     daily.dropna(inplace=True)
 
-    df = get_data(symbol, interval, 1, 450)
+    df = get_data(symbol, 'M1', 1, 1440)
     df['date'] = pd.to_datetime(df.time.dt.date)
     df = df.reset_index()
     dates = list(set(df.date.to_list()))
@@ -452,3 +452,10 @@ def vwap_std(symbol, interval, factor=1.4):
     # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
 
     return trend
+
+def avg_daily_vol_for_divider(symbol):
+    df1 = get_data(symbol, 'D1', 2, 30)
+    df2 = get_data(symbol, 'D1', 1, 1)
+    df1['avg_daily'] = (df1.high - df1.low) / df1.open
+    df2['avg_daily'] = (df2.high - df2.low) / df2.open
+    return round(10*(df1['avg_daily'].mean()/df2['avg_daily'].mean()))

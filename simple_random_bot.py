@@ -27,18 +27,17 @@ class Bot:
     weekday = dt.now().weekday()
     tz_diff = tz_diff
     trigger_mode = 'on'
-    trigger_model_divider = 9
     profit_factor = 1.5
     position_size = 6       # percent of balance
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
     system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
     master_interval = intervals[0]
-    decline_factor = 0.65
 
     def __init__(self, symbol):
         print(dt.now())
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
+        self.trigger_model_divider = avg_daily_vol_for_divider(symbol)
         self.change = 0
         self.tiktok = 0
         self.number_of_positions = 0
@@ -68,7 +67,10 @@ class Bot:
 
     @class_errors
     def position_time(self):
-        dt_from_timestamp = dt.fromtimestamp(mt.positions_get(symbol=self.symbol)[0][1])
+        try:
+            dt_from_timestamp = dt.fromtimestamp(mt.positions_get(symbol=self.symbol)[0][1])
+        except Exception:
+            return 0
         return int((dt.now() - dt_from_timestamp - timedelta(hours=Bot.tz_diff)).seconds/60)
 
     @class_errors
@@ -93,10 +95,11 @@ class Bot:
     def if_tiktok(self, profit_=False):
         if self.tiktok <= 2:
             if profit_:
-                self.change_trigger_or_reverse('trigger')
-                self.tiktok -= 1
+                # self.change_trigger_or_reverse('trigger')
+                # self.tiktok -= 1
+                self.close_request()
             else:
-                self.change_trigger_or_reverse('reverse')
+                self.change_trigger_or_reverse('trigger')
                 self.tiktok += 1
         else:
             self.change_trigger_or_reverse('both')
@@ -202,14 +205,6 @@ class Bot:
                 elif self.profit_max > self.profit_needed and profit < self.profit_max*self.profit_decline_factor:
                     self.if_tiktok(True)
 
-                # # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz przez 1.5 oraz zysk mniejszy niż zysk maksymalny pomnożony przez powiększony współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
-                # elif self.profit_max > self.profit_needed * Bot.profit_factor*1.5 and profit < self.profit_max*(((1-Bot.decline_factor)/2)+Bot.decline_factor):
-                #     self.if_tiktok(True)
-
-                # # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                # elif self.profit_max > self.profit_needed and position_time > self.pos_time and profit < self.profit_max*Bot.decline_factor:
-                #     self.if_tiktok(True)
-
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
                 elif profit > self.profit_needed/ (Bot.profit_factor*1.5) and position_time > self.pos_time/(Bot.profit_factor*1.5):
                     _ = self.fake_position_robot()
@@ -224,7 +219,7 @@ class Bot:
 
     @class_errors
     def self_decline_factor(self):
-        min_val = 0.3
+        min_val = 0.4
         max_val = 0.9
         min_value = 0
         max_value = self.kill_position_profit
@@ -272,12 +267,17 @@ class Bot:
 
     @class_errors
     def data(self, report=True):
+        profit = sum([i.profit for i in self.positions if
+                ((i.comment == self.comment) and i.magic == self.magic)])
         if self.check_new_bar():
             # print(Bot.system)
             self.pos_type = self.actual_position_democracy()
         try:
             act_pos = self.positions[0].type
-            if self.pos_type != act_pos:
+            if self.pos_type != act_pos and profit < 0:
+                self.clean_orders()
+                self.if_tiktok()
+            elif self.pos_type != act_pos:
                 self.clean_orders()
         except Exception as e:
             print(e)
@@ -288,8 +288,6 @@ class Bot:
         sym_inf = mt.symbol_info(self.symbol)
         act_price = sym_inf.bid
         act_price2 = sym_inf.ask
-        profit = sum([i.profit for i in self.positions if
-                      ((i.comment == self.comment) and i.magic == self.magic)])
         spread = abs(act_price-act_price2)#real_spread(self.symbol) #*self.number_of_positions*2
         profit_to_margin = round((profit/account.margin)*100, 2)
         profit_to_balance = round((profit/account.balance)*100, 2)
@@ -389,7 +387,7 @@ class Bot:
             self.volume = symbol_info["volume_min"]
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
-        self.profit_needed = round(self.kill_position_profit/Bot.trigger_model_divider, 2)
+        self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
 
     @class_errors
     def find_files(self, directory):
@@ -775,8 +773,8 @@ class Bot:
                 comment=self.positions[0].comment,
                 reverse_mode=self.reverse,
                 trigger=self.trigger,
-                trigger_divider=Bot.trigger_model_divider,
-                decline_factor=Bot.decline_factor,
+                trigger_divider=self.trigger_model_divider,
+                decline_factor=self.profit_decline_factor,
                 profit_factor=Bot.profit_factor,
                 calculated_profit=self.profit_needed,
                 minutes=self.pos_time,

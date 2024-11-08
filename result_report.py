@@ -129,4 +129,4 @@ def plot_results(from_when: int,
 
 if __name__ == "__main__":
     #by_ 'symbol', 'comment', 'interval', 'factor', 'learing_rate', 'training_set'
-    x1 = plot_results(4, -1, by_='symbol')
+    x1 = plot_results(0, -1, by_='symbol')
