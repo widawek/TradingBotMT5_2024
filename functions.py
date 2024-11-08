@@ -348,7 +348,7 @@ def printer(text, value, base_just=50):
     print(f'{text}{space}{value}')
 
 
-def vwap_std(symbol, interval, factor=1.4):
+def vwap_std(symbol, factor=1.4):
     daily = get_data(symbol, 'D1', 0, 10)
     daily = daily.drop(columns=['open', 'close', 'spread', 'volume'])
     daily['high'] = daily['high'].shift(1)

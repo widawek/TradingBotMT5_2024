@@ -50,7 +50,6 @@ class Bot:
         self.max_close = None
         self.fake_stoploss = 0
         self.fake_counter = 0
-        self.fake_stoploss_interval = 'M5'
         self.df_d1 = get_data(symbol, "D1", 1, 30)
         self.avg_daily_vol_()
         self.round_number = round_number_(self.symbol)
@@ -189,7 +188,6 @@ class Bot:
                 printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2)} $")
                 printer("Decline factor:", f"{self.profit_decline_factor}")
 
-
                 if self.fake_position:
                     _ = self.fake_position_robot()
 
@@ -274,7 +272,7 @@ class Bot:
             self.pos_type = self.actual_position_democracy()
         try:
             act_pos = self.positions[0].type
-            if self.pos_type != act_pos and profit < 0:
+            if self.pos_type != act_pos and profit < -self.profit_needed/2:
                 self.clean_orders()
                 self.if_tiktok()
             elif self.pos_type != act_pos:
@@ -625,7 +623,7 @@ class Bot:
         biggest = int(Bot.position_size*3)
         wow = int(Bot.position_size*4)
 
-        self.trend = vwap_std(self.symbol, self.fake_stoploss_interval)
+        self.trend = vwap_std(self.symbol)
         if posType == 0:
             if self.trend == 'sold_out': # price is low
                 return wow
