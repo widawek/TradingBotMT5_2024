@@ -356,7 +356,7 @@ def vwap_std(symbol, interval, factor=1.4):
     daily['date'] = pd.to_datetime(daily.time.dt.date)
     daily.dropna(inplace=True)
 
-    df = get_data(symbol, interval, 0, 450)
+    df = get_data(symbol, interval, 1, 450)
     df['date'] = pd.to_datetime(df.time.dt.date)
     df = df.reset_index()
     dates = list(set(df.date.to_list()))
@@ -419,9 +419,9 @@ def vwap_std(symbol, interval, factor=1.4):
     last_min = df['low'][-3:-1].min()
     last_max = df['high'][-3:-1].max()
     last_boll_up_max = df['boll_up_max'].iloc[-1]
-    last_boll_up_min = df['boll_up_min'].iloc[-1]
+    last_boll_down_min = df['boll_down_min'].iloc[-1]
 
-
+    #vwap trend 'long'
     if last_mean > last_open:
         if last_close > last_boll_up:
             trend = 'long_strong'
@@ -431,6 +431,7 @@ def vwap_std(symbol, interval, factor=1.4):
             trend = 'long_weak'
         else:
             trend = 'long_normal'
+    #vwap trend 'short'
     elif last_mean < last_open:
         if last_close < last_boll_down:
             trend = 'short_strong'
@@ -445,7 +446,7 @@ def vwap_std(symbol, interval, factor=1.4):
 
     if last_boll_up_max and last_max > last_high:
         trend = 'overbought'
-    elif last_boll_up_min and last_min < last_low:
+    elif last_boll_down_min and last_min < last_low:
         trend = 'sold_out'
     # trend
     # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral

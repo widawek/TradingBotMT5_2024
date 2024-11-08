@@ -107,7 +107,19 @@ class Bot:
     @class_errors
     def fake_position_robot(self):
         print("Check fake position")
-        interval_df = get_data(self.symbol, self.fake_stoploss_interval, 1, 3)
+        
+        if self.fake_counter < 5:
+            interval = 'M1'
+        elif self.fake_counter <= 8:
+            interval = 'M5'
+        elif self.fake_counter <= 11:
+            interval = 'M10'
+        elif self.fake_counter <= 14:
+            interval = 'M15'
+        elif self.fake_counter <= 16:
+            interval = 'M30'
+
+        interval_df = get_data(self.symbol, interval, 1, 3)
         close0 = interval_df['close'].iloc[0]
         close1 = interval_df['close'].iloc[1]
         close2 = interval_df['close'].iloc[2]
@@ -165,12 +177,15 @@ class Bot:
                 self.profits.append(profit+self.profit0)
                 self.profit_max = max(self.profits)
                 mean_profits = np.mean(self.profits)
+                self.self_decline_factor()
                 printer("Volume-volatility condition:", self.check_volume_condition)
                 printer("Change value:", f"{round(self.profit_needed, 2)} $")
                 printer("Actual trigger:", self.trigger)
                 printer("Max profit:", f"{self.profit_max} $")
                 printer("Profit zero aka spread:", f"{self.profit0} $")
                 printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2)} $")
+                printer("Decline factor:", f"{self.profit_decline_factor}")
+
 
                 if self.fake_position:
                     _ = self.fake_position_robot()
@@ -184,16 +199,16 @@ class Bot:
                     self.if_tiktok()
 
                 # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz zysk mniejszy niż zysk maksymalny pomnożony przez współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
-                elif self.profit_max > self.profit_needed * Bot.profit_factor and profit < self.profit_max*Bot.decline_factor:
+                elif self.profit_max > self.profit_needed and profit < self.profit_max*self.profit_decline_factor:
                     self.if_tiktok(True)
 
-                # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz przez 1.5 oraz zysk mniejszy niż zysk maksymalny pomnożony przez powiększony współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
-                elif self.profit_max > self.profit_needed * Bot.profit_factor*1.5 and profit < self.profit_max*(((1-Bot.decline_factor)/2)+Bot.decline_factor):
-                    self.if_tiktok(True)
+                # # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz przez 1.5 oraz zysk mniejszy niż zysk maksymalny pomnożony przez powiększony współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
+                # elif self.profit_max > self.profit_needed * Bot.profit_factor*1.5 and profit < self.profit_max*(((1-Bot.decline_factor)/2)+Bot.decline_factor):
+                #     self.if_tiktok(True)
 
-                # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                elif self.profit_max > self.profit_needed and position_time > self.pos_time and profit < self.profit_max*Bot.decline_factor:
-                    self.if_tiktok(True)
+                # # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
+                # elif self.profit_max > self.profit_needed and position_time > self.pos_time and profit < self.profit_max*Bot.decline_factor:
+                #     self.if_tiktok(True)
 
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
                 elif profit > self.profit_needed/ (Bot.profit_factor*1.5) and position_time > self.pos_time/(Bot.profit_factor*1.5):
@@ -206,6 +221,19 @@ class Bot:
                 pass
         else:
             pass
+
+    @class_errors
+    def self_decline_factor(self):
+        min_val = 0.3
+        max_val = 0.9
+        min_value = 0
+        max_value = self.kill_position_profit
+        # only variable is self.profit_max
+        normalized_value = (self.profit_max - min_value) / (max_value - min_value)
+        exp_value = np.exp(normalized_value) - 1
+        exp_max = np.exp(1) - 1
+        #return
+        self.profit_decline_factor = round(min_val + (exp_value / exp_max) * (max_val - min_val), 3)
 
     @class_errors
     def positions_(self):
