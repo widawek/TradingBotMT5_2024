@@ -36,6 +36,7 @@ class Bot:
 
     def __init__(self, symbol):
         print(dt.now())
+        self.global_positions_stats = []
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
         self.trigger_model_divider = avg_daily_vol_for_divider(symbol)
         self.change = 0
@@ -272,10 +273,7 @@ class Bot:
             self.pos_type = self.actual_position_democracy()
         try:
             act_pos = self.positions[0].type
-            if self.pos_type != act_pos and profit < -self.profit_needed/2:
-                self.clean_orders()
-                self.if_tiktok()
-            elif self.pos_type != act_pos:
+            if self.pos_type != act_pos:
                 self.clean_orders()
         except Exception as e:
             print(e)
@@ -615,7 +613,6 @@ class Bot:
 
     @class_errors
     def what_trend_is_it(self, posType):
-
         smallest = int(Bot.position_size/2)
         smaller = int(Bot.position_size/1.5)
         normal = Bot.position_size
@@ -736,6 +733,7 @@ class Bot:
 
     @class_errors
     def close_request(self):
+        self.check_global_pos()
         positions_ = mt.positions_get(symbol=self.symbol)
         for i in positions_:
             request = {"action": mt.TRADE_ACTION_DEAL,
@@ -749,6 +747,18 @@ class Bot:
                         "type_filling": mt.ORDER_FILLING_IOC
                         }
             order_result = mt.order_send(request)
+
+    @class_errors
+    def check_global_pos(self):
+        self.global_positions_stats.append((self.profits[-1], self.reverse, self.trigger))
+        if len(self.global_positions_stats) > 2:
+            pass
+        else:
+            profit_cond = all([i[0] < 0 for i in self.global_positions_stats][-3:])
+            reverse_cond = len(set([i[1] for i in self.global_positions_stats][-3:])) == 1
+            triggers = len(set([i[2] for i in self.global_positions_stats][-3:])) == 1
+            if profit_cond and reverse_cond and triggers:
+                self.if_tiktok('reverse')
 
     @class_errors
     def pos_creator(self):

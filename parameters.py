@@ -12,7 +12,10 @@ symbols = [
     'XAUUSD',
     'EURJPY',
     'EURCAD',
-    'DE40'
+    'DE40',
+    'EURGBP',
+    'JP225',
+    'BTCUSD'
     ]
 
 leverage = 30
