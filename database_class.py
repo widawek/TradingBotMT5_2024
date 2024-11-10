@@ -245,8 +245,6 @@ if __name__=='__main__':
                                                close_profit=('close_profit', 'sum'),
                                                fake_position_counter=('max_counter', 'max'),
                                                fake_position_mean=('mean_counter', 'mean'))
-            print(c)
-            input()
             a['min_profit'] = b['min_profit']
             a['mean_profit'] = c['mean_profit']
             a['max-min'] = a['max_profit'] + a['min_profit']
@@ -324,8 +322,8 @@ if __name__=='__main__':
         pandas_options()
         group_profit_by(by_, False)
         #group_profit_by('tiktok')
-        #plot_profits(df_profits, 'all', 3, condition='')
+        plot_profits(df_profits, 'all', 0, condition='')
 
-    report_('symbol', 4, -2)
+    report_('symbol', 0, -2)
 
 

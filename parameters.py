@@ -1,40 +1,34 @@
 from functions import reduce_values, get_timezone_difference
 
-intervals = ['M20']
-symbols = [
-    'EURUSD',
-    'GBPUSD',
-    'USDCAD',
-    'USDCHF',
-    'USDJPY',
-    'USDPLN',
-    'US30',
-    'XAUUSD',
-    'EURJPY',
-    'EURCAD',
-    'DE40',
-    'EURGBP',
-    'JP225',
-    'BTCUSD'
-    ]
-
-leverage = 30
-delete_old_models = True
-# max_reducer = 12
-# min_reducer = 6
-min_factor = 6
-max_factor = 23
-range_ = 1
-# volatility_divider = [reduce_values(intervals, min_factor, max_factor, range_), max_reducer, min_reducer]
-# print(volatility_divider)
-# absolute, weighted_democracy, ranked_democracy, just_democracy, invertedrank_democracy
-game_system = 'weighted_democracy'
-
 def reverse_(symbol):
     if symbol in ['EURUSD', 'USDCHF', 'EURJPY', 'DE40']:
         return 'normal'
     return 'reverse'
 
+intervals = ['M20']
+symbols = [
+        'EURUSD',
+        'GBPUSD',
+        'USDCAD',
+        'USDCHF',
+        'USDJPY',
+        'USDPLN',
+        'US30',
+        'XAUUSD',
+        'EURJPY',
+        'EURCAD',
+        'DE40',
+        'EURGBP',
+        'JP225',
+        'BTCUSD'
+        ]
+
+leverage = 30
+delete_old_models = True
+min_factor = 6
+max_factor = 23
+range_ = 1
+game_system = 'weighted_democracy'
 morning_hour = 7
 evening_hour = 24
 probability_edge = 0.25

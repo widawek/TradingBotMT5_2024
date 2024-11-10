@@ -217,11 +217,11 @@ class Bot:
             pass
 
     @class_errors
-    def self_decline_factor(self):
+    def self_decline_factor(self, multiplier: int=6):
         min_val = 0.4
         max_val = 0.9
         min_value = 0
-        max_value = self.kill_position_profit
+        max_value = self.profit_needed*multiplier
         # only variable is self.profit_max
         normalized_value = (self.profit_max - min_value) / (max_value - min_value)
         exp_value = np.exp(normalized_value) - 1
@@ -267,7 +267,7 @@ class Bot:
     @class_errors
     def data(self, report=True):
         profit = sum([i.profit for i in self.positions if
-                ((i.comment == self.comment) and i.magic == self.magic)])
+            ((i.comment == self.comment) and i.magic == self.magic)])
         if self.check_new_bar():
             # print(Bot.system)
             self.pos_type = self.actual_position_democracy()
@@ -285,7 +285,11 @@ class Bot:
         act_price = sym_inf.bid
         act_price2 = sym_inf.ask
         spread = abs(act_price-act_price2)#real_spread(self.symbol) #*self.number_of_positions*2
-        profit_to_margin = round((profit/account.margin)*100, 2)
+        try:
+            profit_to_margin = round((profit/account.margin)*100, 2)
+        except ZeroDivisionError:
+            print("WTF??")
+            profit_to_margin = 0
         profit_to_balance = round((profit/account.balance)*100, 2)
 
         if report:
@@ -345,7 +349,7 @@ class Bot:
             print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
             # time_sleep = int(random.randint(5, 15)*60)
             # print(f"Break {int(time_sleep/60)} minutes.")
-            time.sleep(5)
+            time.sleep(1)
             self.reset_bot()
             self.report()
 
@@ -526,7 +530,7 @@ class Bot:
                     continue
                 stance_values.append(int(position_))
                 i+=1
-                if i >= 60:
+                if i >= 30:
                     break
 
             print('Stances: ', stance_values)

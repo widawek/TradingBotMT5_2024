@@ -325,6 +325,7 @@ def add_comparison_columns(df, x):
 
     return df
 
+
 def get_timezone_difference():
     import pytz
     timezone = pytz.timezone('Europe/Warsaw')
@@ -332,6 +333,7 @@ def get_timezone_difference():
     time_mt5 = dt.fromtimestamp(df_time[0][0], timezone).hour
     now_ = dt.now(timezone).hour
     return now_ - time_mt5
+
 
 def want_to_delete_old_models():
     delete_old_models = bool(int(input("0 if you don't want to delete old models or something else if yes: ")))
@@ -448,14 +450,14 @@ def vwap_std(symbol, factor=1.4):
         trend = 'overbought'
     elif last_boll_down_min and last_min < last_low:
         trend = 'sold_out'
-    # trend
-    # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
-
     return trend
+
 
 def avg_daily_vol_for_divider(symbol):
     df1 = get_data(symbol, 'D1', 2, 30)
     df2 = get_data(symbol, 'D1', 1, 1)
     df1['avg_daily'] = (df1.high - df1.low) / df1.open
     df2['avg_daily'] = (df2.high - df2.low) / df2.open
-    return round(10*(df1['avg_daily'].mean()/df2['avg_daily'].mean()))
+    factor = df1['avg_daily'].mean()/df2['avg_daily'].mean()
+    factor = 1+(factor-1)/2
+    return round(10*factor)
