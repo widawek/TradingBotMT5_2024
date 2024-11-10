@@ -461,3 +461,11 @@ def avg_daily_vol_for_divider(symbol):
     factor = df1['avg_daily'].mean()/df2['avg_daily'].mean()
     factor = 1+(factor-1)/2
     return round(10*factor)
+
+
+def time_info(time_data, time_info):
+    hours = int(time_data // 3600)
+    minutes = int((time_data % 3600) // 60)
+    seconds = int((time_data % 3600) % 60)
+    time_info = f'{time_info} - {hours:02}:{minutes:02}:{seconds:02}'
+    print(time_info)

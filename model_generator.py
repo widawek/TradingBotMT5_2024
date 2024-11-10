@@ -21,14 +21,6 @@ catalog = os.path.dirname(__file__)
 from parameters import *
 
 
-def time_info(time_data, time_info):
-    hours = int(time_data // 3600)
-    minutes = int((time_data % 3600) // 60)
-    seconds = int((time_data % 3600) % 60)
-    time_info = f'{time_info} - {hours:02}:{minutes:02}:{seconds:02}'
-    print(time_info)
-
-
 def data_operations(df, factor):
     df['adj'] = (df.high + df.low + df.close) / 3
     df['adj_higher1'] = np.where(df['adj'] > df['adj'].shift(1), 1, 0)

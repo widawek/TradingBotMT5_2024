@@ -24,6 +24,7 @@ catalog = f'{catalog}\\models'
 
 
 class Bot:
+    max_number_of_models = 75
     weekday = dt.now().weekday()
     tz_diff = tz_diff
     trigger_mode = 'on'
@@ -36,6 +37,7 @@ class Bot:
 
     def __init__(self, symbol):
         print(dt.now())
+        self.model_counter = None
         self.global_positions_stats = []
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
         self.trigger_model_divider = avg_daily_vol_for_divider(symbol)
@@ -59,7 +61,7 @@ class Bot:
         self.positions_()
         self.trigger = 'model' # 'model' 'moving_averages'
         self.load_models_democracy(catalog)
-        self.start_pos = self.pos_type = self.actual_position_democracy()
+        #self.pos_type = self.actual_position_democracy()
         self.barOpen = mt.copy_rates_from_pos(self.symbol, timeframe_(self.interval), 0, 1)[0][0]
         printer("Target:", f"{self.tp_miner} $")
         printer("Killer:", f"{-self.kill_position_profit} $")
@@ -110,7 +112,7 @@ class Bot:
     @class_errors
     def fake_position_robot(self):
         print("Check fake position")
-        
+
         if self.fake_counter < 5:
             interval = 'M1'
         elif self.fake_counter <= 8:
@@ -418,9 +420,12 @@ class Bot:
         _.reverse()
         df['rank'] = _
         # print(df)
-        printer("Ilość modeli:", len(df))
+        self.model_counter = len(df)
+        printer("Ilość modeli:", self.model_counter)
+        if self.model_counter > Bot.max_number_of_models:
+            self.model_counter = Bot.max_number_of_models
         if len(df) < 5:
-            print(f"Za mało modeli --> ({len(df)})")
+            print(f"Za mało modeli --> ({self.model_counter})")
             input("Wciśnij cokolwek żeby wyjść.")
             sys.exit(1)
         names = []
@@ -501,10 +506,26 @@ class Bot:
 
         if self.trigger == 'model':
             stance_values = []
+            dataframes = []
             i = 0
+            #df_raw = get_data_for_model(self.symbol, Bot.master_interval, 1, int(650)) # how_many_bars
+            start = time.time()
             for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
-                df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 250)) # how_many_bars
-                df = data_operations(df, factor)
+                name_ = f"{mbuy[1].split('_')[-4]}_{factor}"
+                if i==0:
+                    df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 50)) # how_many_bars
+                    df = data_operations(df, factor)
+                    dataframes.append((df, name_))
+                else:
+                    if any(nazwa == name_ for _, nazwa in dataframes):
+                        for dataframe, nazwa in dataframes:
+                            if nazwa == name_:
+                                df = dataframe
+                                break
+                    else:
+                        df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 50)) # how_many_bars
+                        df = data_operations(df, factor)
+                        dataframes.append((df, name_))
                 dfx = df.copy()
                 dtest_buy = xgb.DMatrix(df)
                 dtest_sell = xgb.DMatrix(df)
@@ -530,9 +551,12 @@ class Bot:
                     continue
                 stance_values.append(int(position_))
                 i+=1
-                if i >= 30:
+                if i >= self.model_counter:
                     break
-
+            end = time.time()
+            duration = end-start
+            time_info(duration, "Decision time")
+            del dataframes
             print('Stances: ', stance_values)
             sum_of_position = np.sum(stance_values)
 
@@ -792,7 +816,8 @@ class Bot:
                 minutes=self.pos_time,
                 weekday=Bot.weekday,
                 trend=self.trend,
-                tiktok=self.tiktok
+                tiktok=self.tiktok,
+                number_of_models = self.model_counter
             )
 
             mean_profit = np.mean(self.profits)
