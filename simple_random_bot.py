@@ -36,7 +36,7 @@ class Bot:
     master_interval = intervals[0]
 
     def __init__(self, symbol):
-        print(dt.now())
+        printer(dt.now(), symbol)
         self.model_counter = None
         self.global_positions_stats = []
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
@@ -55,14 +55,14 @@ class Bot:
         self.fake_counter = 0
         self.df_d1 = get_data(symbol, "D1", 1, 30)
         self.avg_daily_vol_()
-        self.round_number = round_number_(self.symbol)
+        self.round_number = round_number_(symbol)
         self.volume_calc(Bot.position_size, True)
         self.pos_time = interval_time(Bot.master_interval)
         self.positions_()
         self.trigger = 'model' # 'model' 'moving_averages'
         self.load_models_democracy(catalog)
         #self.pos_type = self.actual_position_democracy()
-        self.barOpen = mt.copy_rates_from_pos(self.symbol, timeframe_(self.interval), 0, 1)[0][0]
+        self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_(self.interval), 0, 1)[0][0]
         printer("Target:", f"{self.tp_miner} $")
         printer("Killer:", f"{-self.kill_position_profit} $")
         self.active_session()
@@ -219,9 +219,9 @@ class Bot:
             pass
 
     @class_errors
-    def self_decline_factor(self, multiplier: int=6):
-        min_val = 0.4
-        max_val = 0.9
+    def self_decline_factor(self, multiplier: int=3):
+        min_val = 0.45
+        max_val = 0.85
         min_value = 0
         max_value = self.profit_needed*multiplier
         # only variable is self.profit_max
@@ -230,6 +230,8 @@ class Bot:
         exp_max = np.exp(1) - 1
         #return
         self.profit_decline_factor = round(min_val + (exp_value / exp_max) * (max_val - min_val), 3)
+        if self.profit_decline_factor > max_val:
+            self.profit_decline_factor = max_val
 
     @class_errors
     def positions_(self):
@@ -513,7 +515,7 @@ class Bot:
             for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
                 name_ = f"{mbuy[1].split('_')[-4]}_{factor}"
                 if i==0:
-                    df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 50)) # how_many_bars
+                    df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 250)) # how_many_bars
                     df = data_operations(df, factor)
                     dataframes.append((df, name_))
                 else:
@@ -523,7 +525,7 @@ class Bot:
                                 df = dataframe
                                 break
                     else:
-                        df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 50)) # how_many_bars
+                        df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 250)) # how_many_bars
                         df = data_operations(df, factor)
                         dataframes.append((df, name_))
                 dfx = df.copy()
@@ -761,7 +763,7 @@ class Bot:
 
     @class_errors
     def close_request(self):
-        self.check_global_pos()
+        ic(self.check_global_pos())
         positions_ = mt.positions_get(symbol=self.symbol)
         for i in positions_:
             request = {"action": mt.TRADE_ACTION_DEAL,
@@ -779,12 +781,14 @@ class Bot:
     @class_errors
     def check_global_pos(self):
         self.global_positions_stats.append((self.profits[-1], self.reverse, self.trigger))
+        printer("check global pos", self.global_positions_stats)
         if len(self.global_positions_stats) > 2:
             pass
         else:
             profit_cond = all([i[0] < 0 for i in self.global_positions_stats][-3:])
             reverse_cond = len(set([i[1] for i in self.global_positions_stats][-3:])) == 1
             triggers = len(set([i[2] for i in self.global_positions_stats][-3:])) == 1
+            printer("Conditions", f"{profit_cond}_{reverse_cond}_{triggers}")
             if profit_cond and reverse_cond and triggers:
                 self.if_tiktok('reverse')
 

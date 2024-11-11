@@ -12,16 +12,13 @@ symbols = [
         'USDCAD',
         'USDCHF',
         'USDJPY',
-        'USDPLN',
         'US30',
         'XAUUSD',
         'EURJPY',
         'EURCAD',
-        'DE40',
-        'EURGBP',
-        'JP225',
         'BTCUSD'
         ]
+
 
 leverage = 30
 delete_old_models = True
