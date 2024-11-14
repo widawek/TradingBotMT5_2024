@@ -469,3 +469,18 @@ def time_info(time_data, time_info):
     seconds = int((time_data % 3600) % 60)
     time_info = f'{time_info} - {hours:02}:{minutes:02}:{seconds:02}'
     print(time_info)
+
+
+def trend_or_not(symbol):
+    factor = 15
+    df = get_data(symbol, 'D1', 1, 100)
+    stoch = df.ta.stoch(fast_k=factor, slow_k=factor, slow_d=factor)
+    df['pct_change'] = (df['close'] - df['close'].shift(factor)) / df['close'].shift(factor)
+    df['k'] = stoch.iloc[:,0] * df['pct_change']
+    df['d'] = stoch.iloc[:,1] * df['pct_change']
+    df = df.dropna()
+    if df['k'].iloc[-1] > df['d'].iloc[-1]:
+        print("Trend!")
+        return True
+    print("Not trend!")
+    return False

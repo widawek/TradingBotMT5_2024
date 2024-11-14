@@ -46,6 +46,10 @@ def get_raw_close_positions_data(from_when: int, to_when: int = -1):
     df['minus'] = df['profit'] < 0
     df['plus'] = df['plus'].astype(int)
     df['minus'] = df['minus'].astype(int)
+    df = df[(df['symbol'] != 'GBPUSD')#&
+            #(df['symbol'] != 'EURUSD')#&
+            #(df['symbol'] != 'USDCAD')
+            ]
     df.reset_index(drop=True, inplace=True)
     return df
 

@@ -29,7 +29,7 @@ class Bot:
     tz_diff = tz_diff
     trigger_mode = 'on'
     profit_factor = 1.5
-    position_size = 6       # percent of balance
+    position_size = 5       # percent of balance
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
     system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
@@ -41,6 +41,7 @@ class Bot:
         self.global_positions_stats = []
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
         self.trigger_model_divider = avg_daily_vol_for_divider(symbol)
+        self.trend_or_not = trend_or_not(symbol)
         self.change = 0
         self.tiktok = 0
         self.number_of_positions = 0
@@ -245,6 +246,7 @@ class Bot:
     @class_errors
     def request_get(self):
         if not self.positions:
+            self.checkout_report()
             posType = self.actual_position_democracy()
             self.request(actions['deal'], posType)
         self.positions_()
@@ -651,7 +653,7 @@ class Bot:
         wow = int(Bot.position_size*4)
 
         self.trend = vwap_std(self.symbol)
-        if posType == 0:
+        if posType == (0 if not self.trend_or_not else 1):
             if self.trend == 'sold_out': # price is low
                 return wow
             elif self.trend == 'long_strong': # price is high
@@ -668,7 +670,7 @@ class Bot:
                 return smallest
             elif self.trend == 'long_super_weak':  # price is low
                 return wow
-        elif posType == 1:
+        elif posType == (1 if not self.trend_or_not else 0):
             if self.trend == 'overbought':
                 return wow
             elif self.trend == 'long_strong':
@@ -689,7 +691,6 @@ class Bot:
 
     @class_errors
     def request(self, action, posType, price=None):
-
         if action == actions['deal']:
             print("YES")
             price = mt.symbol_info(self.symbol).bid
@@ -701,7 +702,12 @@ class Bot:
 
         position_size = self.what_trend_is_it(posType)
         self.volume_calc(position_size, True)
-        self.comment = self.trend
+        #self.comment = self.trend
+        if self.trend_or_not:
+            letter = "t"
+        else:
+            letter = "f"
+        self.comment = f'{self.reverse[0]}_{self.trigger[-1]}_{self.ma_factor_fast}_{self.ma_factor_slow}_{letter}'
 
         request = {
             "action": action,
@@ -763,7 +769,6 @@ class Bot:
 
     @class_errors
     def close_request(self):
-        ic(self.check_global_pos())
         positions_ = mt.positions_get(symbol=self.symbol)
         for i in positions_:
             request = {"action": mt.TRADE_ACTION_DEAL,
@@ -842,6 +847,44 @@ class Bot:
         except Exception as e:
             print(e)
             pass
+
+    @class_errors
+    def checkout_report(self):
+        from_date = dt.today().date() - timedelta(days=0)
+        print(from_date)
+        to_date = dt.today().date() + timedelta(days=1)
+        print(f"Data from {from_date.strftime('%A')} {from_date} to {to_date.strftime('%A')} {to_date}")
+        from_date = dt(from_date.year, from_date.month, from_date.day)
+        to_date = dt(to_date.year, to_date.month, to_date.day)
+        try:
+            data = mt.history_deals_get(from_date, to_date)
+            df = pd.DataFrame(list(data), columns=data[0]._asdict().keys())
+            df["time"] = pd.to_datetime(df["time"], unit="s")
+            df = df[(df['symbol'] != '') & (df['symbol']==self.symbol)]
+            df['profit'] = df['profit'] + df['commission'] * 2 + df['swap']
+            df['reason'] = df['reason'].shift(1)
+            df = df.drop(columns=['time_msc', 'commission', 'external_id', 'swap'])
+            df = df[df['time'].dt.date >= from_date.date()]
+            df = df[df.groupby('position_id')['position_id'].transform('count') == 2]
+            df = df.sort_values(by=['position_id', 'time'])
+            df.reset_index(drop=True, inplace=True)
+            df['profit'] = df['profit'].shift(-1)
+            df['time_close'] = df['time'].shift(-1)
+            df = df.rename(columns={'time': 'time_open'})
+            df['sl'] = df.comment.shift(-1).str.contains('sl', na=False)
+            df['tp'] = df.comment.shift(-1).str.contains('tp', na=False)
+            df = df.iloc[::2]
+        except Exception:
+            return False
+        if len(df) < 3:
+            return False
+        prof_lst = df['profit'][-3:].to_list()
+        comm_lst = df['comment'][-3:].to_list()
+        if comm_lst[0][0] == self.reverse[0]:
+            if comm_lst[0][2] == self.trigger[-1]:
+                return all([all([i<0 for i in prof_lst]),
+                            all([i==comm_lst[0] for i in comm_lst])])
+        return False
 
 if __name__ == '__main__':
     print('Yo, wtf?')

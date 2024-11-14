@@ -89,11 +89,11 @@ if __name__ == '__main__':
         'USDCAD',
         'USDCHF',
         'USDJPY',
-        'USDPLN',
         'US30',
         'XAUUSD',
         'EURJPY',
-        'EURCAD'
+        'EURCAD',
+        'BTCUSD'
         ]
 
     symbols = list(set(symbols))
