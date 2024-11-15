@@ -37,10 +37,11 @@ class Bot:
 
     def __init__(self, symbol):
         printer(dt.now(), symbol)
+        self.market = 'e' if dt.now().hour < 15 else 'u'
         self.model_counter = None
         self.global_positions_stats = []
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
-        self.trigger_model_divider = avg_daily_vol_for_divider(symbol)
+        self.trigger_model_divider = avg_daily_vol_for_divider(symbol, 8)
         self.trend_or_not = trend_or_not(symbol)
         self.change = 0
         self.tiktok = 0
@@ -411,8 +412,9 @@ class Bot:
         for filename in os.listdir(directory):
             if self.symbol in filename:
                 matching_files.append(filename[:-6].split('_')[:-1])
-        df = pd.DataFrame(matching_files, columns=['strategy', 'ma_fast', 'ma_slow',
+        df = pd.DataFrame(matching_files, columns=['market', 'strategy', 'ma_fast', 'ma_slow',
             'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result'])
+        
         df['ma_fast'] = df['ma_fast'].astype(int)
         df['ma_slow'] = df['ma_slow'].astype(int)
         df['factor'] = df['factor'].astype(int)
@@ -424,7 +426,7 @@ class Bot:
         _.reverse()
         df['rank'] = _
         # print(df)
-        self.model_counter = len(df)
+        self.model_counter = len(df[df['market'] == self.market])
         printer("Ilość modeli:", self.model_counter)
         if self.model_counter > Bot.max_number_of_models:
             self.model_counter = Bot.max_number_of_models
@@ -435,6 +437,7 @@ class Bot:
         names = []
         create_df = []
         for i in range(0, len(df)):
+            market = df['market'].iloc[i]
             strategy = df['strategy'].iloc[i]
             ma_fast = df['ma_fast'].iloc[i]
             ma_slow = df['ma_slow'].iloc[i]
@@ -447,12 +450,12 @@ class Bot:
                 rank = df['rank'].iloc[i]
             else:
                 rank = df['rank'].iloc[len(df)-i-1]
-            name = f'{strategy}_{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
+            name = f'{market}_{strategy}_{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
             names.append([name, rank]) # change tuple to list
             create_df.append(f'{name}'.split('_'))
 
         if Bot.system == 'weighted_democracy':
-            df_result_filter = pd.DataFrame(create_df, columns=['strategy', 'ma_fast', 'ma_slow',
+            df_result_filter = pd.DataFrame(create_df, columns=['market', 'strategy', 'ma_fast', 'ma_slow',
                     'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result']
                     )
             df_result_filter['result'] = df_result_filter['result'].astype(int)
@@ -480,16 +483,19 @@ class Bot:
         self.factors = []
         ma_list = []
         for model_name in model_names:
-            model_path_buy = os.path.join(directory, f'{model_name[0]}_buy.model')
-            model_path_sell = os.path.join(directory, f'{model_name[0]}_sell.model')
-            model_buy = xgb.Booster()
-            model_sell = xgb.Booster()
-            model_buy.load_model(model_path_buy)
-            model_sell.load_model(model_path_sell)
-            self.buy_models.append((model_buy, f'{model_name[0]}_{model_name[1]}'))
-            self.sell_models.append((model_sell, f'{model_name[0]}_{model_name[1]}'))
-            self.factors.append(int(model_name[0].split('_')[-2])) # factor
-            ma_list.append((int(model_name[0].split('_')[-8]), int(model_name[0].split('_')[-7])))
+            if model_name[0].split('_')[-10] == self.market:
+                model_path_buy = os.path.join(directory, f'{model_name[0]}_buy.model')
+                model_path_sell = os.path.join(directory, f'{model_name[0]}_sell.model')
+                model_buy = xgb.Booster()
+                model_sell = xgb.Booster()
+                model_buy.load_model(model_path_buy)
+                model_sell.load_model(model_path_sell)
+                self.buy_models.append((model_buy, f'{model_name[0]}_{model_name[1]}'))
+                self.sell_models.append((model_sell, f'{model_name[0]}_{model_name[1]}'))
+                self.factors.append(int(model_name[0].split('_')[-2])) # factor
+                ma_list.append((int(model_name[0].split('_')[-8]), int(model_name[0].split('_')[-7])))
+            else:
+                continue
         assert len(self.buy_models) == len(self.sell_models)
         # class return
         most_common_ma = most_common_value(ma_list)
@@ -508,7 +514,13 @@ class Bot:
         if self.fake_position:
             return self.fake_position_robot()
 
+        market = 'e' if dt.now().hour < 15 else 'u'
+        if market != self.market:
+            self.market = market
+            self.load_models_democracy(catalog)
+
         if self.trigger == 'model':
+            
             stance_values = []
             dataframes = []
             i = 0
@@ -595,11 +607,7 @@ class Bot:
         else:
             printer('Position from moving averages:', f'fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
             dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
-            dfx['adj'] = (dfx['close'] + dfx['high'] + dfx['low']) / 3
-            ma1 = dfx.ta.sma(length=self.ma_factor_fast)
-            ma2 = ta.sma(dfx['adj'], length=self.ma_factor_slow)
-            dfx['stance'] = np.where(ma1>=ma2, 1, 0)
-            dfx['stance'] = np.where(ma1<ma2, -1, dfx['stance'])
+            dfx["stance"] = function_when_model_not_work(dfx, self.ma_factor_fast, self.ma_factor_slow)
             position = 0 if dfx.stance.iloc[-1] == 1 else 1
             printer("MA position:", position)
             volume_10 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(8).mean().iloc[-1]

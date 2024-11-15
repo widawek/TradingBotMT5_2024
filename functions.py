@@ -453,14 +453,14 @@ def vwap_std(symbol, factor=1.4):
     return trend
 
 
-def avg_daily_vol_for_divider(symbol):
+def avg_daily_vol_for_divider(symbol: str, base: int) -> int:
     df1 = get_data(symbol, 'D1', 2, 30)
     df2 = get_data(symbol, 'D1', 1, 1)
     df1['avg_daily'] = (df1.high - df1.low) / df1.open
     df2['avg_daily'] = (df2.high - df2.low) / df2.open
     factor = df1['avg_daily'].mean()/df2['avg_daily'].mean()
     factor = 1+(factor-1)/2
-    return round(10*factor)
+    return int(round(base*factor))
 
 
 def time_info(time_data, time_info):
@@ -484,3 +484,11 @@ def trend_or_not(symbol):
         return True
     print("Not trend!")
     return False
+
+def function_when_model_not_work(dfx, a, b):
+    dfx['adj'] = (dfx['close'] + dfx['high'] + dfx['low']) / 3
+    ma1 = dfx.ta.sma(length=a)
+    ma2 = ta.sma(dfx['adj'], length=b)
+    dfx['stance2'] = np.where(ma1>=ma2, 1, 0)
+    dfx['stance2'] = np.where(ma1<ma2, -1, dfx['stance2'])
+    return dfx['stance2']

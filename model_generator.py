@@ -407,13 +407,13 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
         results = []
         for a, b in tqdm(z):
             dfx = df.copy()
-            ma1 = dfx.ta.sma(length=a)
-            ma2 = ta.sma(df['adj'], length=b)
-            dfx['stance2'] = np.where(ma1>=ma2, 1, 0)
-            dfx['stance2'] = np.where(ma1<ma2, -1, dfx['stance2'])
-            dfx['return2'] = np.where(#(dfx['time2'].dt.date == dfx['time2'].dt.date.shift(1)) &
-                                      (dfx['return'] < 0), (dfx.mkt_move * dfx.stance2.shift(1) -\
-                                        (dfx.cross *(spread_mean)/dfx.open))*leverage, 0)
+            dfx['stance2'] = function_when_model_not_work(dfx, a, b)
+            # dfx['return2'] = np.where(#(dfx['time2'].dt.date == dfx['time2'].dt.date.shift(1)) &
+            #                           (dfx['return'] < 0), (dfx.mkt_move * dfx.stance2.shift(1) -\
+            #                             (dfx.cross *(spread_mean)/dfx.open))*leverage, 0)
+            dfx['return2'] = np.where((dfx['time2'].dt.date == dfx['time2'].dt.date.shift(1)),
+                                      (dfx.mkt_move * dfx.stance2.shift(1) -\
+                            (dfx.cross *(spread_mean)/dfx.open))*leverage, 0)
             dfx['strategy2'] = (1+dfx['return2']).cumprod() - 1
             sharpe = sharpe_multiplier * dfx['return2'].mean()/dfx['return2'].std()
             omega = omega_ratio(dfx['return2'].dropna().to_list())
@@ -540,12 +540,11 @@ def generate_my_models(
         for symbol in symbols:
             df_raw = get_data_for_model(symbol, interval, 1, bars)
             for factor in factors:
-                #df = my_test
                 print("DF length: ", len(df_raw))
                 df = data_operations(df_raw.copy(), factor)
                 for function in functions: 
                     for t_set in ts_list:
-                        train_length = 0.99
+                        train_length = 0.98
                         dataset = df.copy()[:int(train_length*len(df))]
                         testset = df.copy()[int(train_length*len(df)):]
                         for learning_rate in lr_list:
@@ -582,27 +581,36 @@ def generate_my_models(
                                     sell = np.where(sell > probability_edge, -1, 0)
                                     dfx['time2'] = pd.to_datetime(dfx['time'], unit='s')
                                     dfx['stance'] = buy + sell
+
                                     dfx['stance'] = dfx['stance'].replace(0, np.NaN)
-                                    dfx['stance'] = dfx['stance'].ffill()
-                                    dfx['stance'] = np.where((dfx['time2'].dt.hour > morning_hour) & (dfx['time2'].dt.hour < evening_hour), dfx['stance'], 0)
+                                    dfx['stance'] = np.where((dfx['time2'].dt.hour > morning_hour) & (dfx['time2'].dt.hour < evening_hour), dfx['stance'], np.NaN)
+                                    dfx['stance'] = dfx.groupby(dfx['time2'].dt.date)['stance'].ffill()
+                                    dfx['stance'] = dfx['stance'].replace(np.NaN, 0)
                                     dfx = dfx[dfx['stance'] != 0]
-                                    dfx.reset_index(drop=True, inplace=True)
-                                    result, status, density, how_it_grow, sqrt_error, final, ma_factor1, ma_factor2 = \
-                                        strategy_with_chart_(
-                                            d_buy, d_sell, dfx, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
-                                                            )
-                                    results.append((symbol, interval, leverage, factor, result, density,
-                                                    how_it_grow, sqrt_error, final, status))
-                                    if generate_model and ma_factor1 != 0:
-                                        if final in finals:
-                                            continue
-                                        _lr_name = str(learning_rate).split('.')[-1]
-                                        _ts_name = str(t_set).split('.')[-1]
-                                        name_ = f'{function.__name__[0]}_{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
-                                        name_ = f'{function.__name__[0]}_{ma_factor1}_{ma_factor2}_{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
-                                        finals.append(final)
-                                        models_buy[m].save_model(f"{catalog}\\models\\{name_}_buy.model") # models_buy[-1]
-                                        models_sell[m].save_model(f"{catalog}\\models\\{name_}_sell.model") # models_sell[-1]
+
+                                    for market in ['e', 'u']:
+                                        dfx_market = dfx.copy()
+                                        if market == 'e':
+                                            dfx_market = dfx_market[dfx_market['time2'].dt.hour <= 17]
+                                        else:
+                                            dfx_market = dfx_market[dfx_market['time2'].dt.hour >= 15]
+                                        dfx_market.reset_index(drop=True, inplace=True)
+                                        result, status, density, how_it_grow, sqrt_error, final, ma_factor1, ma_factor2 = \
+                                            strategy_with_chart_(
+                                                d_buy, d_sell, dfx_market, leverage, interval, symbol, factor, chart=show_results_on_graph, print_=print_
+                                                                )
+                                        results.append((symbol, interval, leverage, factor, result, density,
+                                                        how_it_grow, sqrt_error, final, status))
+                                        if generate_model and ma_factor1 != 0:
+                                            if final in finals:
+                                                continue
+                                            _lr_name = str(learning_rate).split('.')[-1]
+                                            _ts_name = str(t_set).split('.')[-1]
+                                            #name_ = f'{market}_{function.__name__[0]}_{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
+                                            name_ = f'{market}_{function.__name__[0]}_{ma_factor1}_{ma_factor2}_{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
+                                            finals.append(final)
+                                            models_buy[m].save_model(f"{catalog}\\models\\{name_}_buy.model") # models_buy[-1]
+                                            models_sell[m].save_model(f"{catalog}\\models\\{name_}_sell.model") # models_sell[-1]
                             except Exception as e:
                                 print(e)
                                 i += 1

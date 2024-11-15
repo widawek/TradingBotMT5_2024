@@ -327,6 +327,6 @@ if __name__=='__main__':
         group_profit_by(by_, False)
         #group_profit_by('tiktok')
         plot_profits(df_profits, 'all', 0, condition='')
-    report_('symbol', 0, -2)
+    report_(['symbol', 'number_of_models'], 0, -2)
 
 
