@@ -13,7 +13,7 @@ import xgboost as xgb
 from symbols_rank import symbol_stats
 from functions import *
 from model_generator import data_operations, evening_hour, probability_edge
-from parameters import intervals, game_system, reverse_, tz_diff
+from parameters import intervals, game_system, reverse_, tz_diff, change_hour
 import random
 from database_class import TradingProcessor
 processor = TradingProcessor()
@@ -37,7 +37,7 @@ class Bot:
 
     def __init__(self, symbol):
         printer(dt.now(), symbol)
-        self.market = 'e' if dt.now().hour < 15 else 'u'
+        self.market = 'e' if dt.now().hour < change_hour else 'u'
         self.model_counter = None
         self.global_positions_stats = []
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
@@ -300,16 +300,16 @@ class Bot:
         profit_to_balance = round((profit/account.balance)*100, 2)
 
         if report:
-            printer(f"Profit:", f"{round(profit, 2)} $")
+            printer("Profit:", f"{round(profit, 2)} $")
             printer("Account balance:", f"{account.balance} $")
             printer("Account free margin:", f"{account.margin_free} $")
             printer("Profit to margin:", f"{profit_to_margin} %")
             printer("Profit to balance:", f"{profit_to_balance} %")
-            printer("Actual position from model:", f"{self.pos_type}")
-            printer("Mode:", f"{self.reverse}")
-            printer('Fake position:', self.fake_position)
-            printer('Fake counter:', self.fake_counter)
-            printer('Trend:', self.trend)
+            printer("Actual position from model:", self.pos_type)
+            printer("Mode:", self.reverse)
+            printer("Fake position:", self.fake_position)
+            printer("Fake counter:", self.fake_counter)
+            printer("Trend:", self.trend)
             print()
 
         self.write_to_database(profit, spread)
@@ -476,6 +476,8 @@ class Bot:
 
     @class_errors
     def load_models_democracy(self, directory):
+        self.trigger = 'model'
+        self.reverse = reverse_(self.symbol)
         model_names = self.find_files(directory)
         # buy
         self.buy_models = []
@@ -514,7 +516,7 @@ class Bot:
         if self.fake_position:
             return self.fake_position_robot()
 
-        market = 'e' if dt.now().hour < 15 else 'u'
+        market = 'e' if dt.now().hour < change_hour else 'u'
         if market != self.market:
             self.market = market
             self.load_models_democracy(catalog)

@@ -581,7 +581,6 @@ def generate_my_models(
                                     sell = np.where(sell > probability_edge, -1, 0)
                                     dfx['time2'] = pd.to_datetime(dfx['time'], unit='s')
                                     dfx['stance'] = buy + sell
-
                                     dfx['stance'] = dfx['stance'].replace(0, np.NaN)
                                     dfx['stance'] = np.where((dfx['time2'].dt.hour > morning_hour) & (dfx['time2'].dt.hour < evening_hour), dfx['stance'], np.NaN)
                                     dfx['stance'] = dfx.groupby(dfx['time2'].dt.date)['stance'].ffill()
@@ -591,9 +590,9 @@ def generate_my_models(
                                     for market in ['e', 'u']:
                                         dfx_market = dfx.copy()
                                         if market == 'e':
-                                            dfx_market = dfx_market[dfx_market['time2'].dt.hour <= 17]
+                                            dfx_market = dfx_market[dfx_market['time2'].dt.hour <= change_hour + 2]
                                         else:
-                                            dfx_market = dfx_market[dfx_market['time2'].dt.hour >= 15]
+                                            dfx_market = dfx_market[dfx_market['time2'].dt.hour >= change_hour]
                                         dfx_market.reset_index(drop=True, inplace=True)
                                         result, status, density, how_it_grow, sqrt_error, final, ma_factor1, ma_factor2 = \
                                             strategy_with_chart_(

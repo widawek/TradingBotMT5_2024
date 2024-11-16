@@ -1,23 +1,23 @@
 from functions import reduce_values, get_timezone_difference
 
 def reverse_(symbol):
-    if symbol in ['EURUSD', 'USDCHF', 'EURJPY', 'DE40']:
-        return 'normal'
-    return 'reverse'
+    if symbol in []:
+        return 'reverse'
+    return 'normal'
 
 intervals = ['M20']
 symbols = [
         'EURJPY',
         'BTCUSD',
-        # 'EURUSD',
-        # 'GBPUSD',
-        # 'USDCAD',
-        # 'USDCHF',
-        # 'USDJPY',
-        # 'US30',
-        # 'XAUUSD',
-        # 'EURCAD'
-        
+        'EURUSD',
+        'GBPUSD',
+        'USDCAD',
+        'USDCHF',
+        'USDJPY',
+        'US30',
+        'DE40',
+        'XAUUSD',
+        'EURCAD'
         ]
 
 
@@ -39,4 +39,5 @@ ts_list = [0.3]
 factors = [_ for _ in range(min_factor, max_factor, range_)]
 n_splits = 2
 bars = 60000
+change_hour = 15
 tz_diff = get_timezone_difference()
