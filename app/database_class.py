@@ -4,9 +4,16 @@ import pandas as pd
 import MetaTrader5 as mt
 from datetime import datetime as dt
 from datetime import timedelta
-
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Utwórz bazę do definicji modeli
 Base = declarative_base()
+
+# Pobieramy bieżący katalog roboczy
+current_working_dir = os.getcwd()
+db_path = os.path.join(current_working_dir, 'database', 'position_history.db')
+db_url = f"sqlite:///{db_path}"
 
 # Model dla tabeli Position
 class Position(Base):
@@ -57,7 +64,7 @@ class Profit(Base):
 
 # Klasa do zarządzania bazą danych
 class DatabaseManager:
-    def __init__(self, db_url='sqlite:///position_history.db'):
+    def __init__(self, db_url = f"sqlite:///{db_path}"):
         self.engine = create_engine(db_url)
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
@@ -172,7 +179,7 @@ class TradingProcessor:
 
 
 class ReadDatabase:
-    def __init__(self, db_url='sqlite:///position_history.db'):
+    def __init__(self, db_url= f"sqlite:///{db_path}"):
         # Tworzymy silnik
         self.engine = create_engine(db_url)
 
@@ -196,11 +203,11 @@ class ReadDatabase:
 
 if __name__=='__main__':
     def report_(by_, from_, to_, excel=False):
-        from result_report import get_raw_close_positions_data
+        from extensions.result_report import get_raw_close_positions_data
         from numpy import vectorize
         import matplotlib.pyplot as plt
         import numpy as np
-        from functions import pandas_options
+        from app.functions import pandas_options
         # Przykład użycia
         db_manager = ReadDatabase()
 

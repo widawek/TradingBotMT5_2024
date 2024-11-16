@@ -1,4 +1,6 @@
-from functions import reduce_values, get_timezone_difference
+from app.functions import reduce_values, get_timezone_difference
+import sys
+sys.path.append("..")
 
 def reverse_(symbol):
     if symbol in []:
@@ -7,17 +9,17 @@ def reverse_(symbol):
 
 intervals = ['M20']
 symbols = [
-        'EURJPY',
         'BTCUSD',
-        'EURUSD',
-        'GBPUSD',
-        'USDCAD',
-        'USDCHF',
-        'USDJPY',
-        'US30',
-        'DE40',
-        'XAUUSD',
-        'EURCAD'
+        # 'EURJPY',
+        # 'EURUSD',
+        # 'GBPUSD',
+        # 'USDCAD',
+        # 'USDCHF',
+        # 'USDJPY',
+        # 'US30',
+        # 'DE40',
+        # 'XAUUSD',
+        # 'EURCAD'
         ]
 
 

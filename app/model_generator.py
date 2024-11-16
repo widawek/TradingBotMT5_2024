@@ -12,14 +12,15 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import time
 from itertools import product
-from functions import *
+from app.functions import *
 import warnings
 warnings.filterwarnings("ignore")
 mt.initialize()
 import os
 catalog = os.path.dirname(__file__)
-from parameters import *
-
+from config.parameters import *
+import sys
+sys.path.append("..")
 
 def data_operations(df, factor):
     df['adj'] = (df.high + df.low + df.close) / 3
@@ -626,5 +627,5 @@ def generate_my_models(
 
 
 if __name__ == '__main__':
-    from parameters import symbols
+    from config.parameters import symbols
     generate_my_models(symbols, intervals, leverage, False, True)

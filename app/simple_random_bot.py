@@ -10,17 +10,21 @@ from datetime import timedelta
 from datetime import datetime as dt
 from icecream import ic
 import xgboost as xgb
-from symbols_rank import symbol_stats
-from functions import *
-from model_generator import data_operations, evening_hour, probability_edge
-from parameters import intervals, game_system, reverse_, tz_diff, change_hour
+from extensions.symbols_rank import symbol_stats
+from app.functions import *
+from app.model_generator import data_operations, evening_hour, probability_edge
+from config.parameters import intervals, game_system, reverse_, tz_diff, change_hour
 import random
-from database_class import TradingProcessor
+from app.database_class import TradingProcessor
+import sys
+sys.path.append("..")
+
 processor = TradingProcessor()
 mt.initialize()
 
 catalog = os.path.dirname(__file__)
-catalog = f'{catalog}\\models'
+parent_catalog = os.path.dirname(catalog)
+catalog = f'{parent_catalog}\\models'
 
 
 class Bot:

@@ -10,7 +10,8 @@ from collections import Counter
 # from itertools import product
 # import builtins
 from time import sleep
-# import sys
+import sys
+sys.path.append("..")
 # import functools
 
 

@@ -1,4 +1,6 @@
 **/__pycache__/
+**/venv/
+**/trash/
 class_errors.txt
 symbols.py
 **/models/
@@ -9,3 +11,4 @@ symbols_rank.py
 result_report.py
 position_history.db
 position_history-journal.db
+
