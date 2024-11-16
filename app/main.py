@@ -482,6 +482,8 @@ class Bot:
     def load_models_democracy(self, directory):
         self.trigger = 'model'
         self.reverse = reverse_(self.symbol)
+        self.tiktok = 0
+        self.change = 0
         model_names = self.find_files(directory)
         # buy
         self.buy_models = []

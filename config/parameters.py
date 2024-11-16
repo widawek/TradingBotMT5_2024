@@ -23,7 +23,7 @@ symbols = [
         ]
 
 
-leverage = 20
+leverage = 5
 delete_old_models = True
 min_factor = 6
 max_factor = 23
@@ -32,7 +32,7 @@ game_system = 'weighted_democracy'
 morning_hour = 7
 evening_hour = 24
 probability_edge = 0.25
-sharpe_limit = 5
+sharpe_limit = 2
 kk_limit = 1.5
 omega_limit = 1.1
 n_estimators = 4000

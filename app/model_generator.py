@@ -18,9 +18,10 @@ warnings.filterwarnings("ignore")
 mt.initialize()
 import os
 catalog = os.path.dirname(__file__)
+catalog = os.path.dirname(catalog)
 from config.parameters import *
 import sys
-sys.path.append("..")
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 def data_operations(df, factor):
     df['adj'] = (df.high + df.low + df.close) / 3

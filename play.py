@@ -3,7 +3,7 @@ from app.functions import timer, want_to_delete_old_models
 from app.model_generator import generate_my_models
 from config.parameters import *
 
-#generate_my_models(symbols, intervals, leverage, want_to_delete_old_models())
+generate_my_models(symbols, intervals, leverage, want_to_delete_old_models())
 timer(7)
 
 # from app.main import Bot; 
