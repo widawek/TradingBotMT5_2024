@@ -119,9 +119,7 @@ class Bot:
     def fake_position_robot(self):
         print("Check fake position")
 
-        if self.fake_counter < 5:
-            interval = 'M1'
-        elif self.fake_counter <= 8:
+        if self.fake_counter <= 8:
             interval = 'M5'
         elif self.fake_counter <= 11:
             interval = 'M10'
@@ -485,7 +483,6 @@ class Bot:
         self.tiktok = 0
         self.change = 0
         model_names = self.find_files(directory)
-        # buy
         self.buy_models = []
         self.sell_models = []
         self.factors = []
@@ -505,7 +502,7 @@ class Bot:
             else:
                 continue
         assert len(self.buy_models) == len(self.sell_models)
-        # class return
+
         most_common_ma = most_common_value(ma_list)
         self.ma_factor_fast = most_common_ma[0]
         self.ma_factor_slow = most_common_ma[1]
@@ -842,7 +839,8 @@ class Bot:
                 weekday=Bot.weekday,
                 trend=self.trend,
                 tiktok=self.tiktok,
-                number_of_models = self.model_counter
+                number_of_models = self.model_counter,
+                market=self.market
             )
 
             mean_profit = np.mean(self.profits)

@@ -533,6 +533,9 @@ def generate_my_models(
     i = 0
     times = []
 
+    if delete_old_models == "no":
+        return ""
+
     if delete_old_models:
         delete_model(f"{catalog}\\models\\", '')
 

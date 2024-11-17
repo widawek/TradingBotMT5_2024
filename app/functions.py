@@ -336,7 +336,13 @@ def get_timezone_difference():
     return now_ - time_mt5
 
 
-def want_to_delete_old_models():
+def want_to_delete_old_models(test=False):
+    answer = input('Do you want to generate models? ')
+    if answer == "yes":
+        pass
+    else:
+        return "no"
+
     delete_old_models = bool(int(input("0 if you don't want to delete old models or something else if yes: ")))
     print(delete_old_models)
     return delete_old_models
@@ -488,8 +494,8 @@ def trend_or_not(symbol):
 
 def function_when_model_not_work(dfx, a, b):
     dfx['adj'] = (dfx['close'] + dfx['high'] + dfx['low']) / 3
-    ma1 = dfx.ta.sma(length=a)
-    ma2 = ta.sma(dfx['adj'], length=b)
+    ma1 = dfx.ta.vwma(length=a)
+    ma2 = ta.vwma(dfx['adj'], dfx['volume'], length=b)
     dfx['stance2'] = np.where(ma1>=ma2, 1, 0)
     dfx['stance2'] = np.where(ma1<ma2, -1, dfx['stance2'])
     return dfx['stance2']
