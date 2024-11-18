@@ -113,36 +113,7 @@ def data_operations(df, factor):
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
     df.drop(columns=['mean_close', 'pos_volume', 'neg_volume', 'total_volume'], axis=1, inplace=True)
-    # print("Number of columns: ", len(df.columns))
-    # print("Df length: ", len(df))
-    # print(*df.columns)
-    # df.to_excel('df_excel.xlsx')
-    # print("DONE")
-    # input()
     return df
-
-
-def smoothness_criterion(returns: pd.Series, leverage: int) -> float:
-    """
-    Oblicza Kryterium Łagodne (Smoothness Criterion) na podstawie danych stóp zwrotu.
-
-    :param returns: pd.Series - seria danych ze stopami zwrotu
-    :return: float - wartość Kryterium Łagodności
-    """
-    # Logarytmiczne stopy zwrotu
-    returns = returns/leverage
-    log_returns = np.log(1 + returns)
-
-    # Oczekiwana wartość (średnia logarytmicznych stóp zwrotu)
-    expected_log_return = np.mean(log_returns)
-
-    # Wariancja logarytmicznych stóp zwrotu
-    variance_log_return = np.var(log_returns)
-
-    # Kryterium Łagodne (smoothness criterion)
-    smoothness = expected_log_return / np.sqrt(variance_log_return)
-
-    return smoothness
 
 
 def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage):
@@ -162,7 +133,6 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
     drawdown = max_drawdown(returns)
     kk = kelly_criterion(returns)
     result = round(sharpe * omega * 100, 2)
-    smooth = smoothness_criterion(returns, leverage)
 
     if print_:
         print()
@@ -170,7 +140,6 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
         print(f"Final result {annotation}:         ", round(df['strategy'].mean() +
                                              df['strategy'].iloc[-1], 2))
         print(f"Sharpe ratio {annotation}:         ", round(sharpe, 2))
-        print(f"Smooth       {annotation}:         ", round(smooth))
         print(f"Sorotino ratio {annotation}:       ", round(sorotino, 2))
         print(f"Omega ratio {annotation}:          ", round(omega, 4))
         print(f"Kelly ratio {annotation}:          ", round(kk, 4))
@@ -179,7 +148,6 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
         print(f"Mean return [%] {annotation}:      ", round(mean_return, 2))
         print(f"Median return [%] {annotation}:    ", round(
             sharpe_multiplier * np.median(df['return'].dropna().to_list()), 2))
-        # print(f"Growing factor {annotation}:       ", how_it_grow)
 
     if (omega > omega_limit and sharpe > sharpe_limit and kk > kk_limit and dom_ret > 0):
         status = "YES"
@@ -189,13 +157,10 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
 
 
 def interval_time_sharpe(interval):
-    if interval[0] == 'D':
-        return np.sqrt(252)
-    elif interval[0] == 'H':
-        return np.sqrt(252 * 24 / int(interval[1:]))
-    elif interval[0] == 'M':
-        return np.sqrt(252 * 24 * 60 / int(interval[1:]))
-
+    match interval[0]:
+        case 'D': return np.sqrt(252)
+        case 'H': return np.sqrt(252 * 24 / int(interval[1:]))
+        case 'M': return np.sqrt(252 * 24 * 60 / int(interval[1:]))
 
 def train_dataset(df, direction, parameters, factor, n_estimators, function, t_set, show_results=True, n_splits=2):
     dataset = df.copy()
@@ -320,14 +285,8 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
     omega = omega_ratio(df['return'].dropna().to_list())
     dom_ret = calculate_dominant(df['return'].dropna().to_list(), num_ranges=10)
     mean_return = sharpe_multiplier * np.mean(df['return'].dropna().to_list())
-    #result = round((((sharpe + sorotino)/2) * omega * mean_return) * 100, 2)
     result = round(sharpe * omega * 100, 2)
-    #smooth = smoothness_criterion(df['return'].dropna(), leverage)
-
-    #try:
     final = int(result * (1-sqrt_error))
-    # except Exception:
-    #     final = 1000000
 
     density_factor = round(density/(d_buy+d_sell), 2)
 
@@ -336,7 +295,6 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
         print("Signals density:     ", density)
         print("Final result:        ", round(df['strategy'].mean() +
                                              df['strategy'].iloc[-1], 2))
-        #print("Smooth:              ", round(smooth))
         print("Sharpe ratio:        ", round(sharpe, 2))
         print("Sorotino ratio:      ", round(sorotino, 2))
         print("Omega ratio:         ", round(omega, 4))
@@ -344,7 +302,6 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
         print("Mean return [%]:     ", round(mean_return, 2))
         print("Median return [%]:   ", round(
             sharpe_multiplier * np.median(df['return'].dropna().to_list()), 2))
-        #print("Growing factor:      ", how_it_grow)
         print("Sqrt error:          ", sqrt_error)
         print("Density equality:    ", density_factor)
         print("Final:               ", final)
@@ -390,12 +347,10 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
         ax2 = plt.subplot(312, sharex = ax1)
         plt.plot(df['strategy'])
         plt.plot(df['just_line'])
-        #plt.title(f"{symbol}_{interval}_{factor}_{result}_{how_it_grow}_{sqrt_error}_{final}_{status}")
         plt.title(f"{symbol}_{interval}_{factor}_{result}_{0}_{sqrt_error}_{final}_{status}")
         ax3 = plt.subplot(313)
         plt.plot(strategy_result)
         plt.pause(interval=1)
-        #plt.ion()
 
     final = int(final + (1+drawdown))
     summary_status = "YES" if (status == "YES" and status2 == "YES" and density_status) else "NO"
@@ -626,7 +581,7 @@ def generate_my_models(
                             time_info(time_remaining, 'Time remaining')
 
     super_end_time = time.time()
-    total_duration = super_start_time - super_end_time
+    total_duration = super_end_time - super_start_time
     time_info(total_duration, 'Total duration')
 
 

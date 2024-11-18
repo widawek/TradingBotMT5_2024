@@ -10,20 +10,20 @@ def reverse_(symbol):
 intervals = ['M20']
 symbols = [
         'BTCUSD',
-        # 'EURJPY',
-        # 'EURUSD',
-        # 'GBPUSD',
-        # 'USDCAD',
-        # 'USDCHF',
-        # 'USDJPY',
-        # 'US30',
-        # 'DE40',
-        # 'XAUUSD',
-        # 'EURCAD'
+        'EURJPY',
+        'EURUSD',
+        'GBPUSD',
+        'USDCAD',
+        'USDCHF',
+        'USDJPY',
+        'US30',
+        'DE40',
+        'XAUUSD',
+        'EURCAD'
         ]
 
 
-leverage = 5
+leverage = 20
 delete_old_models = True
 min_factor = 6
 max_factor = 23

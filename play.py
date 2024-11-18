@@ -6,7 +6,7 @@ from config.parameters import *
 generate_my_models(symbols, intervals, leverage, want_to_delete_old_models())
 timer(7)
 
-# from app.main import Bot; 
+# from app.main import Bot;
 # bot = Bot('BTCUSD')
 # bot.report()
 

@@ -38,6 +38,7 @@ class Position(Base):
     tiktok = Column(Integer, nullable=False)
     number_of_models = Column(Integer, nullable=False)
     market = Column(String, nullable=False)
+    full_reverse = Column(Boolean, nullable=False)
 
     # Relacja do tabeli Profit
     profits = relationship("Profit", back_populates="position")
@@ -71,7 +72,8 @@ class DatabaseManager:
         self.Session = sessionmaker(bind=self.engine)
 
     def add_position(self, ticket, symbol, pos_type, open_time, volume, price_open, comment, reverse_mode, trigger, trigger_divider,
-                     decline_factor, profit_factor, calculated_profit, minutes, weekday, trend, tiktok, number_of_models, market):
+                     decline_factor, profit_factor, calculated_profit, minutes, weekday, trend, tiktok, number_of_models, market,
+                     full_reverse):
         session = self.Session()
 
         # Sprawdzenie, czy pozycja z danym ticket już istnieje
@@ -101,7 +103,8 @@ class DatabaseManager:
                 trend=trend,
                 tiktok=tiktok,
                 number_of_models=number_of_models,
-                market=market
+                market=market,
+                full_reverse=full_reverse
             )
             session.add(new_position)
             session.commit()
@@ -139,7 +142,7 @@ class TradingProcessor:
 
     def process_new_position(self, ticket, symbol, pos_type, open_time, volume, price_open, comment, reverse_mode, trigger,
                              trigger_divider, decline_factor, profit_factor, calculated_profit, minutes, weekday, trend, tiktok,
-                             number_of_models, market):
+                             number_of_models, market, full_reverse):
         # Przetwarzanie danych pozycji - np. tutaj możesz dodać logikę obliczeń, walidacji itp.
         # Dodajemy pozycję do bazy danych
         self.db_manager.add_position(
@@ -161,7 +164,8 @@ class TradingProcessor:
             trend=trend,
             tiktok=tiktok,
             number_of_models=number_of_models,
-            market=market
+            market=market,
+            full_reverse=full_reverse
         )
 
     def process_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread, volume_condition,

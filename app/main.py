@@ -39,13 +39,16 @@ class Bot:
     system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
     master_interval = intervals[0]
 
+    # botReverse
+    reverse_it_all = True
+
     def __init__(self, symbol):
         printer(dt.now(), symbol)
         self.market = 'e' if dt.now().hour < change_hour else 'u'
         self.model_counter = None
         self.global_positions_stats = []
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
-        self.trigger_model_divider = avg_daily_vol_for_divider(symbol, 8)
+        self.trigger_model_divider = avg_daily_vol_for_divider(symbol, 7)
         self.trend_or_not = trend_or_not(symbol)
         self.change = 0
         self.tiktok = 0
@@ -134,6 +137,10 @@ class Bot:
         close2 = interval_df['close'].iloc[2]
         pos_type = self.positions[0].type
 
+        # BotReverse
+        if Bot.reverse_it_all:
+            pos_type = 0 if pos_type == 1 else 0
+
         def fake_position_on():
             self.fake_position = True
             self.max_close = close2
@@ -181,6 +188,11 @@ class Bot:
             try:
                 #self.check_volume_condition = True
                 profit = sum([i[-4] for i in self.positions])
+
+                # BotReverse
+                if Bot.reverse_it_all:
+                    profit = -profit
+
                 if self.profit0 is None:
                     self.profit0 = profit
                 self.profits.append(profit+self.profit0)
@@ -416,7 +428,7 @@ class Bot:
                 matching_files.append(filename[:-6].split('_')[:-1])
         df = pd.DataFrame(matching_files, columns=['market', 'strategy', 'ma_fast', 'ma_slow',
             'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result'])
-        
+
         df['ma_fast'] = df['ma_fast'].astype(int)
         df['ma_slow'] = df['ma_slow'].astype(int)
         df['factor'] = df['factor'].astype(int)
@@ -525,7 +537,7 @@ class Bot:
             self.load_models_democracy(catalog)
 
         if self.trigger == 'model':
-            
+
             stance_values = []
             dataframes = []
             i = 0
@@ -629,6 +641,10 @@ class Bot:
             if time_.hour >= 14:
                 position = 0 if position == 1 else 1
 
+        # BotReverse
+        if Bot.reverse_it_all:
+            position = 1 if position == 0 else 0
+
         return position
 
     @class_errors
@@ -666,40 +682,33 @@ class Bot:
         wow = int(Bot.position_size*4)
 
         self.trend = vwap_std(self.symbol)
+
+        # BotReverse
+        if Bot.reverse_it_all:
+            posType = 1 if posType == 1 else 0
+
         if posType == (0 if not self.trend_or_not else 1):
-            if self.trend == 'sold_out': # price is low
-                return wow
-            elif self.trend == 'long_strong': # price is high
-                return normal
-            elif self.trend == 'long_normal':
-                return smaller
-            elif self.trend == 'long_weak':  # price is low
-                return biggest
-            elif self.trend == 'short_strong': # price is low
-                return normal
-            elif self.trend =='short_normal':
-                return smaller
-            elif self.trend == 'short_weak': # price is high
-                return smallest
-            elif self.trend == 'long_super_weak':  # price is low
-                return wow
+            match self.trend:
+                case 'sold_out': return wow  # price is low
+                case 'long_strong': return normal  # price is high
+                case 'long_normal': return smaller
+                case 'long_weak': return biggest  # price is low
+                case 'short_strong': return normal  # price is low
+                case 'short_normal': return smaller
+                case 'short_weak': return smallest  # price is high
+                case 'long_super_weak': return wow  # price is low
+
         elif posType == (1 if not self.trend_or_not else 0):
-            if self.trend == 'overbought':
-                return wow
-            elif self.trend == 'long_strong':
-                return normal
-            elif self.trend == 'long_normal':
-                return smaller
-            elif self.trend == 'long_weak':
-                return smallest
-            elif self.trend == 'short_strong':
-                return normal
-            elif self.trend =='short_normal':
-                return smaller
-            elif self.trend == 'short_weak':
-                return biggest
-            elif self.trend == 'short_super_weak':
-                return wow
+            match self.trend:
+                case 'overbought': return wow
+                case 'long_strong': return normal
+                case 'long_normal': return smaller
+                case 'long_weak': return biggest
+                case 'short_strong': return normal
+                case 'short_normal': return smaller
+                case 'short_weak': return smallest
+                case 'short_super_weak': return wow
+
         return Bot.position_size
 
     @class_errors
@@ -715,12 +724,11 @@ class Bot:
 
         position_size = self.what_trend_is_it(posType)
         self.volume_calc(position_size, True)
-        #self.comment = self.trend
         if self.trend_or_not:
             letter = "t"
         else:
             letter = "f"
-        self.comment = f'{self.reverse[0]}_{self.trigger[-1]}_{self.ma_factor_fast}_{self.ma_factor_slow}_{letter}'
+        self.comment = f'{self.reverse[0]}_{self.trigger[-1]}_{self.ma_factor_fast}_{self.ma_factor_slow}_{letter}_{self.market}'
 
         request = {
             "action": action,
@@ -840,7 +848,8 @@ class Bot:
                 trend=self.trend,
                 tiktok=self.tiktok,
                 number_of_models = self.model_counter,
-                market=self.market
+                market=self.market,
+                full_reverse=Bot.reverse_it_all
             )
 
             mean_profit = np.mean(self.profits)
@@ -896,6 +905,12 @@ class Bot:
         comm_lst = df['comment'][-3:].to_list()
         if comm_lst[0][0] == self.reverse[0]:
             if comm_lst[0][2] == self.trigger[-1]:
+
+                # BotReverse
+                if Bot.reverse_it_all:
+                    return all([all([i>0 for i in prof_lst]),
+                            all([i==comm_lst[0] for i in comm_lst])])
+
                 return all([all([i<0 for i in prof_lst]),
                             all([i==comm_lst[0] for i in comm_lst])])
         return False
