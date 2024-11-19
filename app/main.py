@@ -155,9 +155,8 @@ class Bot(AutoDecorate):
             return self.actual_position_democracy()
 
         if not self.fake_position:
-            if pos_type == 0 and (close2 > close1 > close0):
-                fake_position_on()
-            elif pos_type == 1 and (close2 < close1 < close0):
+            if ((pos_type == 0) and (close2 > close1 > close0)) or\
+                ((pos_type == 1) and (close2 < close1 < close0)):
                 fake_position_on()
 
         elif self.fake_position and pos_type == 0:
