@@ -54,36 +54,33 @@ class Bot(AutoDecorate):
 
     def __init__(self, symbol):
         printer(dt.now(), symbol)
-        self.market = 'e' if dt.now().hour < change_hour else 'u'
+        self.symbol = symbol
         self.model_counter = None
-        self.global_positions_stats = []
-        self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
-        self.trigger_model_divider = avg_daily_vol_for_divider(symbol, 7)
-        self.trend_or_not = trend_or_not(symbol)
+        self.profit0 = None
+        self.max_close = None
         self.change = 0
         self.tiktok = 0
         self.number_of_positions = 0
-        self.reverse = reverse_(symbol)
-        self.symbol = symbol
-        self.profits = []
-        self.profit0 = None
         self.profit_max = 0
-        self.fake_position = False
-        self.max_close = None
         self.fake_stoploss = 0
         self.fake_counter = 0
+        self.fake_position = False
+        self.profits = []
+        self.global_positions_stats = []
+        self.trigger = 'model' # 'model' 'moving_averages'
+        self.market = 'e' if dt.now().hour < change_hour else 'u'
+        self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
+        self.trigger_model_divider = avg_daily_vol_for_divider(symbol, 7)
+        self.trend_or_not = trend_or_not(symbol)
+        self.reverse = reverse_(symbol)
         self.df_d1 = get_data(symbol, "D1", 1, 30)
         self.avg_daily_vol_()
         self.round_number = round_number_(symbol)
         self.volume_calc(Bot.position_size, True)
         self.pos_time = interval_time(Bot.master_interval)
         self.positions_()
-        self.trigger = 'model' # 'model' 'moving_averages'
         self.load_models_democracy(catalog)
-        #self.pos_type = self.actual_position_democracy()
         self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_(self.interval), 0, 1)[0][0]
-        printer("Target:", f"{self.tp_miner} $")
-        printer("Killer:", f"{-self.kill_position_profit} $")
         self.active_session()
 
     def position_time(self):
@@ -405,6 +402,8 @@ class Bot(AutoDecorate):
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
+        printer("Target:", f"{self.tp_miner} $")
+        printer("Killer:", f"{-self.kill_position_profit} $")
 
     def find_files(self, directory):
         """
