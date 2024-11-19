@@ -511,7 +511,7 @@ class Bot(AutoDecorate):
         self.ma_factor_slow = most_common_ma[1]
         self.interval = Bot.master_interval
         self.comment = 'wdemo_4'
-        self.mdv = self.MDV_() / 4
+        self.mdv = self.mdv_() / 4
 
         printer("MA values:", f"fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
         printer('comment:', self.comment)
@@ -728,7 +728,7 @@ class Bot(AutoDecorate):
             self.change = 0
             return True
 
-    def MDV_(self):
+    def mdv_(self):
         """Returns mean daily volatility"""
         df = self.df_d1.copy()
         df['mean_vol'] = (df.high - df.low)
