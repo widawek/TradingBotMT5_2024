@@ -282,9 +282,8 @@ class Bot(AutoDecorate):
 
     def data(self, report=True):
         profit = sum([i.profit for i in self.positions if
-            ((i.comment == self.comment) and i.magic == self.magic)])
+            ((i.comment == self.comment) and (i.magic == self.magic))])
         if self.check_new_bar():
-            # print(Bot.system)
             self.pos_type = self.actual_position_democracy()
         try:
             act_pos = self.positions[0].type
@@ -557,15 +556,7 @@ class Bot(AutoDecorate):
                 dfx['stance'] = buy + sell
                 dfx['stance'] = dfx['stance'].replace(0, np.NaN)
                 dfx['stance'] = dfx['stance'].ffill()
-
-                # if Bot.system == 'just_democracy':
-                #     position_ = dfx['stance'].iloc[-1]
-                # elif Bot.system =='weighted_democracy':
                 position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
-                # elif Bot.system == 'ranked_democracy':
-                #     position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
-                # elif Bot.system == 'invertedrank_democracy':
-                #     position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-1])
                 try:
                     _ = int(position_)
                 except Exception:
