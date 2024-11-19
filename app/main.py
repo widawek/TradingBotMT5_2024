@@ -26,16 +26,7 @@ parent_catalog = os.path.dirname(catalog)
 catalog = f'{parent_catalog}\\models'
 
 
-class AutoDecorate:
-    def __getattribute__(self, name):
-        attr = super().__getattribute__(name)
-        # Sprawdź, czy atrybut jest funkcją
-        if callable(attr):
-            return class_errors(attr)  # Dekoruj funkcję
-        return attr
-
-
-class Bot(AutoDecorate):
+class Bot:
     max_number_of_models = 75
     weekday = dt.now().weekday()
     tz_diff = tz_diff
@@ -82,6 +73,7 @@ class Bot(AutoDecorate):
         self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_(self.interval), 0, 1)[0][0]
         self.active_session()
 
+    @class_errors
     def position_time(self):
         try:
             dt_from_timestamp = dt.fromtimestamp(mt.positions_get(symbol=self.symbol)[0][1])
@@ -89,6 +81,7 @@ class Bot(AutoDecorate):
             return 0
         return int((dt.now() - dt_from_timestamp - timedelta(hours=Bot.tz_diff)).seconds/60)
 
+    @class_errors
     def change_trigger_or_reverse(self, what):
         text_ = 'Model of position making is'
         match what:
@@ -107,6 +100,7 @@ class Bot(AutoDecorate):
                 printer(text_, self.reverse)
                 self.change = 1
 
+    @class_errors
     def if_tiktok(self, profit_=False):
         if self.tiktok <= 2:
             if profit_:
@@ -120,6 +114,7 @@ class Bot(AutoDecorate):
 
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
+    @class_errors
     def fake_position_robot(self):
         print("Check fake position")
 
@@ -138,9 +133,9 @@ class Bot(AutoDecorate):
         close2 = interval_df['close'].iloc[2]
         pos_type = self.positions[0].type
 
-        # BotReverse
-        if Bot.reverse_it_all:
-            pos_type = 0 if pos_type == 1 else 1
+        # # BotReverse
+        # if Bot.reverse_it_all:
+        #     pos_type = 0 if pos_type == 1 else 1
 
         def fake_position_on():
             self.fake_position = True
@@ -155,8 +150,9 @@ class Bot(AutoDecorate):
             return self.actual_position_democracy()
 
         if not self.fake_position:
-            if ((pos_type == 0) and (close2 > close1 > close0)) or\
-                ((pos_type == 1) and (close2 < close1 < close0)):
+            if (((pos_type == 0) and (close2 > close1 > close0)) or\
+                ((pos_type == 1) and (close2 < close1 < close0))) and\
+                    self.positions[0].profit > 0:
                 fake_position_on()
 
         elif self.fake_position and pos_type == 0:
@@ -181,6 +177,7 @@ class Bot(AutoDecorate):
             else:
                 return pos_type
 
+    @class_errors
     def check_trigger(self, trigger_mode='on'):
         if trigger_mode == 'on':
             position_time = self.position_time()
@@ -225,8 +222,8 @@ class Bot(AutoDecorate):
                     self.if_tiktok(True)
 
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                elif (profit > self.profit_needed/(Bot.profit_factor*1.5)) \
-                    and (position_time > self.pos_time/(Bot.profit_factor*1.5)):
+                elif (profit > self.profit_needed/(Bot.profit_factor*1.5) and not Bot.reverse_it_all) or (profit < -self.profit_needed/(Bot.profit_factor*1.5) and Bot.reverse_it_all):
+                    #and (position_time > self.pos_time/(Bot.profit_factor*1.5))
                     _ = self.fake_position_robot()
 
                 printer("TIKTOK:", self.tiktok)
@@ -237,6 +234,7 @@ class Bot(AutoDecorate):
         else:
             pass
 
+    @class_errors 
     def self_decline_factor(self, multiplier: int=3):
         min_val = 0.45
         max_val = 0.85
@@ -251,21 +249,24 @@ class Bot(AutoDecorate):
         if self.profit_decline_factor > max_val:
             self.profit_decline_factor = max_val
 
+    @class_errors
     def positions_(self):
         self.positions = mt.positions_get(symbol=self.symbol)
         if len(self.positions) == 0 and isinstance(self.positions, tuple):
             self.positions = [i for i in self.positions if
-                              (i.comment == self.comment)]
+                              (i.magic == self.magic)]
             if len(self.positions) == 0:
                 self.positions = ()
 
+    @class_errors
     def request_get(self):
         if not self.positions:
-            checkout_report(self.symbol, self.reverse, self.trigger)
+            checkout_report(self.symbol, self.reverse, self.trigger, Bot.reverse_it_all)
             posType = self.actual_position_democracy()
             self.request(actions['deal'], posType)
         self.positions_()
 
+    @class_errors
     def report(self):
         time_sleep = 5
         self.pos_type = self.actual_position_democracy()
@@ -284,6 +285,7 @@ class Bot(AutoDecorate):
             time.sleep(time_sleep)
             print()
 
+    @class_errors
     def data(self, report=True):
         profit = sum([i.profit for i in self.positions if
             ((i.comment == self.comment) and (i.magic == self.magic))])
@@ -332,6 +334,7 @@ class Bot(AutoDecorate):
             print('The profit is nice. I want it on our accout.')
             self.clean_orders()
 
+    @class_errors
     def reset_bot(self):
         self.pos_type = None
         self.positions = None
@@ -339,6 +342,7 @@ class Bot(AutoDecorate):
         self.profit0 = None
         self.profit_max = 0
 
+    @class_errors
     def clean_orders(self):
         self.close_request()
         orders = mt.orders_get(symbol=self.symbol)
@@ -369,11 +373,13 @@ class Bot(AutoDecorate):
             self.reset_bot()
             self.report()
 
+    @class_errors
     def avg_daily_vol_(self):
         df = self.df_d1
         df['avg_daily'] = (df.high - df.low) / df.open
         self.avg_vol = df['avg_daily'].mean()
 
+    @class_errors
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
@@ -405,6 +411,7 @@ class Bot(AutoDecorate):
         printer("Target:", f"{self.tp_miner} $")
         printer("Killer:", f"{-self.kill_position_profit} $")
 
+    @class_errors
     def find_files(self, directory):
         """
         Znajduje pliki w danym folderze, których nazwy zawierają określone słowo kluczowe.
@@ -482,6 +489,7 @@ class Bot(AutoDecorate):
                     break
         return names
 
+    @class_errors
     def load_models_democracy(self, directory):
         self.trigger = 'model'
         self.reverse = reverse_(self.symbol)
@@ -518,6 +526,7 @@ class Bot(AutoDecorate):
         printer("MA values:", f"fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
         printer('comment:', self.comment)
 
+    @class_errors
     def actual_position_democracy(self):
         if self.fake_position:
             return self.fake_position_robot()
@@ -630,6 +639,7 @@ class Bot(AutoDecorate):
 
         return position
 
+    @class_errors
     def what_trend_is_it(self, posType):
         smallest = int(Bot.position_size/2)
         smaller = int(Bot.position_size/1.5)
@@ -668,6 +678,7 @@ class Bot(AutoDecorate):
 
         return Bot.position_size
 
+    @class_errors
     def request(self, action, posType, price=None):
         if action == actions['deal']:
             print("YES")
@@ -703,12 +714,14 @@ class Bot(AutoDecorate):
         order_result = mt.order_send(request)
         print(order_result)
 
+    @class_errors
     def delete_model(self):
         os.remove(self.model_buy[1])
         print(f"Model removed: {self.model_buy[1]}")
         os.remove(self.model_sell[1])
         print(f"Model removed: {self.model_sell[1]}")
 
+    @class_errors
     def check_new_bar(self):
         if self.change == 0:
             bar = mt.copy_rates_from_pos(
@@ -722,12 +735,14 @@ class Bot(AutoDecorate):
             self.change = 0
             return True
 
+    @class_errors
     def mdv_(self):
         """Returns mean daily volatility"""
         df = self.df_d1.copy()
         df['mean_vol'] = (df.high - df.low)
         return df['mean_vol'].mean()
 
+    @class_errors
     def active_session(self):
         #from model_generator import morning_hour
         df = get_data(self.symbol, 'D1', 0, 1)
@@ -740,6 +755,7 @@ class Bot(AutoDecorate):
             input()
             sys.exit(1)
 
+    @class_errors
     def close_request(self):
         positions_ = mt.positions_get(symbol=self.symbol)
         for i in positions_:
@@ -755,12 +771,14 @@ class Bot(AutoDecorate):
                         }
             order_result = mt.order_send(request)
 
+    @class_errors
     def pos_creator(self):
         try:
             return self.pos_type
         except NameError:
             return random.randint(0, 1)
 
+    @class_errors
     def write_to_database(self, profit, spread):
         # write data to database
         try:

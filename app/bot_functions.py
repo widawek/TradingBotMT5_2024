@@ -1,4 +1,10 @@
 import os
+from datetime import datetime as dt
+from datetime import timedelta
+import MetaTrader5 as mt
+import pandas as pd
+mt.initialize()
+
 
 def rename_files_in_directory(old_phrase, new_phrase, catalog):
     # Iterate over all files in the specified directory
@@ -25,7 +31,7 @@ def rename_files_in_directory(old_phrase, new_phrase, catalog):
                 change_(old_file_path, new_file_path)
 
 
-def checkout_report(symbol, reverse, trigger):
+def checkout_report(symbol, reverse, trigger, condition):
     from_date = dt.today().date() - timedelta(days=0)
     print(from_date)
     to_date = dt.today().date() + timedelta(days=1)
@@ -50,20 +56,24 @@ def checkout_report(symbol, reverse, trigger):
         df['sl'] = df.comment.shift(-1).str.contains('sl', na=False)
         df['tp'] = df.comment.shift(-1).str.contains('tp', na=False)
         df = df.iloc[::2]
-    except Exception:
-        return False
-    if len(df) < 3:
-        return False
-    prof_lst = df['profit'][-3:].to_list()
-    comm_lst = df['comment'][-3:].to_list()
-    if comm_lst[0][0] == reverse[0]:
-        if comm_lst[0][2] == trigger[-1]:
 
-            # BotReverse
-            if Bot.reverse_it_all:
-                return all([all([i>0 for i in prof_lst]),
-                        all([i==comm_lst[0] for i in comm_lst])])
+        if len(df) < 3:
+            return False
 
-            return all([all([i<0 for i in prof_lst]),
-                        all([i==comm_lst[0] for i in comm_lst])])
+        prof_lst = df['profit'][-3:].to_list()
+        comm_lst = df['comment'][-3:].to_list()
+        if comm_lst[0][0] == reverse[0]:
+            if comm_lst[0][2] == trigger[-1]:
+
+                # BotReverse
+                if condition:
+                    return all([all([i>0 for i in prof_lst]),
+                            all([i==comm_lst[0] for i in comm_lst])])
+
+                return all([all([i<0 for i in prof_lst]),
+                            all([i==comm_lst[0] for i in comm_lst])])
+    except Exception as e:
+        print(e)
+        return False
+
     return False

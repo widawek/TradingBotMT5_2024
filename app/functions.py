@@ -492,6 +492,7 @@ def trend_or_not(symbol):
     print("Not trend!")
     return False
 
+
 def function_when_model_not_work(dfx, a, b):
     dfx['adj'] = (dfx['close'] + dfx['high'] + dfx['low']) / 3
     ma1 = dfx.ta.vwma(length=a)
