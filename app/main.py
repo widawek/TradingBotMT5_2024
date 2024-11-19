@@ -16,7 +16,7 @@ from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import intervals, game_system, reverse_, tz_diff, change_hour
 import random
 from app.database_class import TradingProcessor
-from app.bot_functions import rename_files_in_directory
+from app.bot_functions import rename_files_in_directory, checkout_report
 import sys
 sys.path.append("..")
 
@@ -263,7 +263,7 @@ class Bot(AutoDecorate):
 
     def request_get(self):
         if not self.positions:
-            self.checkout_report()
+            checkout_report(self.symbol, self.reverse, self.trigger)
             posType = self.actual_position_democracy()
             self.request(actions['deal'], posType)
         self.positions_()
@@ -815,49 +815,6 @@ class Bot(AutoDecorate):
         except Exception as e:
             print(e)
             pass
-
-    def checkout_report(self):
-        from_date = dt.today().date() - timedelta(days=0)
-        print(from_date)
-        to_date = dt.today().date() + timedelta(days=1)
-        print(f"Data from {from_date.strftime('%A')} {from_date} to {to_date.strftime('%A')} {to_date}")
-        from_date = dt(from_date.year, from_date.month, from_date.day)
-        to_date = dt(to_date.year, to_date.month, to_date.day)
-        try:
-            data = mt.history_deals_get(from_date, to_date)
-            df = pd.DataFrame(list(data), columns=data[0]._asdict().keys())
-            df["time"] = pd.to_datetime(df["time"], unit="s")
-            df = df[(df['symbol'] != '') & (df['symbol']==self.symbol)]
-            df['profit'] = df['profit'] + df['commission'] * 2 + df['swap']
-            df['reason'] = df['reason'].shift(1)
-            df = df.drop(columns=['time_msc', 'commission', 'external_id', 'swap'])
-            df = df[df['time'].dt.date >= from_date.date()]
-            df = df[df.groupby('position_id')['position_id'].transform('count') == 2]
-            df = df.sort_values(by=['position_id', 'time'])
-            df.reset_index(drop=True, inplace=True)
-            df['profit'] = df['profit'].shift(-1)
-            df['time_close'] = df['time'].shift(-1)
-            df = df.rename(columns={'time': 'time_open'})
-            df['sl'] = df.comment.shift(-1).str.contains('sl', na=False)
-            df['tp'] = df.comment.shift(-1).str.contains('tp', na=False)
-            df = df.iloc[::2]
-        except Exception:
-            return False
-        if len(df) < 3:
-            return False
-        prof_lst = df['profit'][-3:].to_list()
-        comm_lst = df['comment'][-3:].to_list()
-        if comm_lst[0][0] == self.reverse[0]:
-            if comm_lst[0][2] == self.trigger[-1]:
-
-                # BotReverse
-                if Bot.reverse_it_all:
-                    return all([all([i>0 for i in prof_lst]),
-                            all([i==comm_lst[0] for i in comm_lst])])
-
-                return all([all([i<0 for i in prof_lst]),
-                            all([i==comm_lst[0] for i in comm_lst])])
-        return False
 
 if __name__ == '__main__':
     print('Yo, wtf?')
