@@ -214,15 +214,19 @@ class Bot(AutoDecorate):
                     self.if_tiktok()
 
                 # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
-                elif profit < (-self.profit_needed/Bot.profit_factor) and position_time > self.pos_time and mean_profits < (-self.profit_needed/Bot.profit_factor):
+                elif (profit < (-self.profit_needed/Bot.profit_factor)) \
+                    and (position_time > self.pos_time) \
+                    and (mean_profits < (-self.profit_needed/Bot.profit_factor)):
                     self.if_tiktok()
 
                 # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz zysk mniejszy niż zysk maksymalny pomnożony przez współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
-                elif self.profit_max > self.profit_needed and profit < self.profit_max*self.profit_decline_factor:
+                elif (self.profit_max > self.profit_needed) \
+                    and (profit < self.profit_max*self.profit_decline_factor):
                     self.if_tiktok(True)
 
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                elif profit > self.profit_needed/ (Bot.profit_factor*1.5) and position_time > self.pos_time/(Bot.profit_factor*1.5):
+                elif (profit > self.profit_needed/(Bot.profit_factor*1.5)) \
+                    and (position_time > self.pos_time/(Bot.profit_factor*1.5)):
                     _ = self.fake_position_robot()
 
                 printer("TIKTOK:", self.tiktok)
