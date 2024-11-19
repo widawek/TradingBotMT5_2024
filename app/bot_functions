@@ -1,1 +1,25 @@
+import os
 
+def rename_files_in_directory(old_phrase, new_phrase, catalog):
+    # Iterate over all files in the specified directory
+    for filename in os.listdir(catalog):
+        # Check if the old phrase is in the filename
+        if old_phrase in filename:
+            # Create the new filename by replacing the old phrase with the new one
+            new_filename = filename.replace(old_phrase, new_phrase)
+            # Construct the full old and new file paths
+            old_file_path = os.path.join(catalog, filename)
+            new_file_path = os.path.join(catalog, new_filename)
+
+            def change_(old_file_path, new_file_path):
+                os.rename(old_file_path, new_file_path)
+                #print(f'Renamed: {old_file_path} -> {new_file_path}')
+            # Rename the file
+            try:
+                change_(old_file_path, new_file_path)
+            except FileExistsError:
+                new_file_path = new_file_path.split('_')
+                result = int(new_file_path[-2])
+                new_file_path[-2] = str(result + 1)
+                new_file_path = '_'.join(new_file_path)
+                change_(old_file_path, new_file_path)
