@@ -14,10 +14,8 @@ from extensions.symbols_rank import symbol_stats
 from app.functions import *
 from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import intervals, game_system, reverse_, tz_diff, change_hour
-import random
 from app.database_class import TradingProcessor
 from app.bot_functions import rename_files_in_directory, checkout_report
-import sys
 sys.path.append("..")
 
 processor = TradingProcessor()
@@ -92,26 +90,25 @@ class Bot(AutoDecorate):
 
     def change_trigger_or_reverse(self, what):
         text_ = 'Model of position making is'
-        if what == 'trigger':
-            self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
-            printer(text_, self.trigger)
-            self.change = 1
-        elif what == 'reverse':
-            self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
-            printer(text_, self.reverse)
-            self.change = 1
-        elif what == 'both':
-            self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
-            printer(text_, self.trigger)
-            self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
-            printer(text_, self.reverse)
-            self.change = 1
+        match what:
+            case 'trigger':
+                self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
+                printer(text_, self.trigger)
+                self.change = 1
+            case 'reverse':
+                self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
+                printer(text_, self.reverse)
+                self.change = 1
+            case 'both':
+                self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
+                printer(text_, self.trigger)
+                self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
+                printer(text_, self.reverse)
+                self.change = 1
 
     def if_tiktok(self, profit_=False):
         if self.tiktok <= 2:
             if profit_:
-                # self.change_trigger_or_reverse('trigger')
-                # self.tiktok -= 1
                 self.close_request()
             else:
                 self.change_trigger_or_reverse('trigger')
