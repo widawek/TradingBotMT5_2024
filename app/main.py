@@ -53,6 +53,7 @@ class Bot(AutoDecorate):
     def __init__(self, symbol):
         printer(dt.now(), symbol)
         self.symbol = symbol
+        self.magic = magic_(symbol, 'bot_2024')
         self.model_counter = None
         self.profit0 = None
         self.max_close = None
@@ -109,7 +110,7 @@ class Bot(AutoDecorate):
     def if_tiktok(self, profit_=False):
         if self.tiktok <= 2:
             if profit_:
-                self.close_request()
+                self.clean_orders()
             else:
                 self.change_trigger_or_reverse('trigger')
                 self.tiktok += 1
@@ -510,7 +511,6 @@ class Bot(AutoDecorate):
         self.ma_factor_slow = most_common_ma[1]
         self.interval = Bot.master_interval
         self.comment = 'wdemo_4'
-        self.magic = magic_(self.symbol, self.comment)
         self.mdv = self.MDV_() / 4
 
         printer("MA values:", f"fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
