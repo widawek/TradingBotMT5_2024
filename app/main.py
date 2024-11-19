@@ -16,6 +16,7 @@ from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import intervals, game_system, reverse_, tz_diff, change_hour
 import random
 from app.database_class import TradingProcessor
+from app.bot_functions import rename_files_in_directory
 import sys
 sys.path.append("..")
 
@@ -144,7 +145,7 @@ class Bot(AutoDecorate):
 
         # BotReverse
         if Bot.reverse_it_all:
-            pos_type = 0 if pos_type == 1 else 0
+            pos_type = 0 if pos_type == 1 else 1
 
         def fake_position_on():
             self.fake_position = True
@@ -476,7 +477,7 @@ class Bot(AutoDecorate):
                     index_ = int(len(df_result_filter)/2)-3 if int(len(df_result_filter)/2) > 6 else int(len(df_result_filter)/2)-1
                     old_list[-1] = str(df_result_filter['result'].iloc[index_])
                     new_str = '_'.join(old_list)
-                    self.rename_files_in_directory(names[n][0], new_str)
+                    rename_files_in_directory(names[n][0], new_str, catalog)
                     names[n][0] = new_str
                 else:
                     break
@@ -635,33 +636,9 @@ class Bot(AutoDecorate):
 
         # BotReverse
         if Bot.reverse_it_all:
-            position = 1 if position == 0 else 0
+            position = 0 if position == 1 else 1
 
         return position
-
-    def rename_files_in_directory(self, old_phrase, new_phrase):
-        # Iterate over all files in the specified directory
-        for filename in os.listdir(catalog):
-            # Check if the old phrase is in the filename
-            if old_phrase in filename:
-                # Create the new filename by replacing the old phrase with the new one
-                new_filename = filename.replace(old_phrase, new_phrase)
-                # Construct the full old and new file paths
-                old_file_path = os.path.join(catalog, filename)
-                new_file_path = os.path.join(catalog, new_filename)
-
-                def change_(old_file_path, new_file_path):
-                    os.rename(old_file_path, new_file_path)
-                    #print(f'Renamed: {old_file_path} -> {new_file_path}')
-                # Rename the file
-                try:
-                    change_(old_file_path, new_file_path)
-                except FileExistsError:
-                    new_file_path = new_file_path.split('_')
-                    result = int(new_file_path[-2])
-                    new_file_path[-2] = str(result + 1)
-                    new_file_path = '_'.join(new_file_path)
-                    change_(old_file_path, new_file_path)
 
     def what_trend_is_it(self, posType):
         smallest = int(Bot.position_size/2)
@@ -675,7 +652,7 @@ class Bot(AutoDecorate):
 
         # BotReverse
         if Bot.reverse_it_all:
-            posType = 1 if posType == 1 else 0
+            posType = 0 if posType == 1 else 1
 
         if posType == (0 if not self.trend_or_not else 1):
             match self.trend:
@@ -787,19 +764,6 @@ class Bot(AutoDecorate):
                         "type_filling": mt.ORDER_FILLING_IOC
                         }
             order_result = mt.order_send(request)
-
-    def check_global_pos(self):
-        self.global_positions_stats.append((self.profits[-1], self.reverse, self.trigger))
-        printer("check global pos", self.global_positions_stats)
-        if len(self.global_positions_stats) > 2:
-            pass
-        else:
-            profit_cond = all([i[0] < 0 for i in self.global_positions_stats][-3:])
-            reverse_cond = len(set([i[1] for i in self.global_positions_stats][-3:])) == 1
-            triggers = len(set([i[2] for i in self.global_positions_stats][-3:])) == 1
-            printer("Conditions", f"{profit_cond}_{reverse_cond}_{triggers}")
-            if profit_cond and reverse_cond and triggers:
-                self.if_tiktok('reverse')
 
     def pos_creator(self):
         try:
