@@ -27,7 +27,16 @@ parent_catalog = os.path.dirname(catalog)
 catalog = f'{parent_catalog}\\models'
 
 
-class Bot:
+class AutoDecorate:
+    def __getattribute__(self, name):
+        attr = super().__getattribute__(name)
+        # Sprawdź, czy atrybut jest funkcją
+        if callable(attr):
+            return class_errors(attr)  # Dekoruj funkcję
+        return attr
+
+
+class Bot(AutoDecorate):
     max_number_of_models = 75
     weekday = dt.now().weekday()
     tz_diff = tz_diff
@@ -76,7 +85,6 @@ class Bot:
         printer("Killer:", f"{-self.kill_position_profit} $")
         self.active_session()
 
-    @class_errors
     def position_time(self):
         try:
             dt_from_timestamp = dt.fromtimestamp(mt.positions_get(symbol=self.symbol)[0][1])
@@ -84,7 +92,6 @@ class Bot:
             return 0
         return int((dt.now() - dt_from_timestamp - timedelta(hours=Bot.tz_diff)).seconds/60)
 
-    @class_errors
     def change_trigger_or_reverse(self, what):
         text_ = 'Model of position making is'
         if what == 'trigger':
@@ -102,7 +109,6 @@ class Bot:
             printer(text_, self.reverse)
             self.change = 1
 
-    @class_errors
     def if_tiktok(self, profit_=False):
         if self.tiktok <= 2:
             if profit_:
@@ -118,7 +124,6 @@ class Bot:
 
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
-    @class_errors
     def fake_position_robot(self):
         print("Check fake position")
 
@@ -181,7 +186,6 @@ class Bot:
             else:
                 return pos_type
 
-    @class_errors
     def check_trigger(self, trigger_mode='on'):
         if trigger_mode == 'on':
             position_time = self.position_time()
@@ -234,7 +238,6 @@ class Bot:
         else:
             pass
 
-    @class_errors
     def self_decline_factor(self, multiplier: int=3):
         min_val = 0.45
         max_val = 0.85
@@ -249,7 +252,6 @@ class Bot:
         if self.profit_decline_factor > max_val:
             self.profit_decline_factor = max_val
 
-    @class_errors
     def positions_(self):
         self.positions = mt.positions_get(symbol=self.symbol)
         if len(self.positions) == 0 and isinstance(self.positions, tuple):
@@ -258,7 +260,6 @@ class Bot:
             if len(self.positions) == 0:
                 self.positions = ()
 
-    @class_errors
     def request_get(self):
         if not self.positions:
             self.checkout_report()
@@ -266,7 +267,6 @@ class Bot:
             self.request(actions['deal'], posType)
         self.positions_()
 
-    @class_errors
     def report(self):
         time_sleep = 5
         self.pos_type = self.actual_position_democracy()
@@ -285,7 +285,6 @@ class Bot:
             time.sleep(time_sleep)
             print()
 
-    @class_errors
     def data(self, report=True):
         profit = sum([i.profit for i in self.positions if
             ((i.comment == self.comment) and i.magic == self.magic)])
@@ -335,7 +334,6 @@ class Bot:
             print('The profit is nice. I want it on our accout.')
             self.clean_orders()
 
-    @class_errors
     def reset_bot(self):
         self.pos_type = None
         self.positions = None
@@ -343,7 +341,6 @@ class Bot:
         self.profit0 = None
         self.profit_max = 0
 
-    @class_errors
     def clean_orders(self):
         self.close_request()
         orders = mt.orders_get(symbol=self.symbol)
@@ -374,13 +371,11 @@ class Bot:
             self.reset_bot()
             self.report()
 
-    @class_errors
     def avg_daily_vol_(self):
         df = self.df_d1
         df['avg_daily'] = (df.high - df.low) / df.open
         self.avg_vol = df['avg_daily'].mean()
 
-    @class_errors
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
@@ -410,7 +405,6 @@ class Bot:
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
 
-    @class_errors
     def find_files(self, directory):
         """
         Znajduje pliki w danym folderze, których nazwy zawierają określone słowo kluczowe.
@@ -488,7 +482,6 @@ class Bot:
                     break
         return names
 
-    @class_errors
     def load_models_democracy(self, directory):
         self.trigger = 'model'
         self.reverse = reverse_(self.symbol)
@@ -526,7 +519,6 @@ class Bot:
         printer("MA values:", f"fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
         printer('comment:', self.comment)
 
-    @class_errors
     def actual_position_democracy(self):
         if self.fake_position:
             return self.fake_position_robot()
@@ -647,7 +639,6 @@ class Bot:
 
         return position
 
-    @class_errors
     def rename_files_in_directory(self, old_phrase, new_phrase):
         # Iterate over all files in the specified directory
         for filename in os.listdir(catalog):
@@ -672,7 +663,6 @@ class Bot:
                     new_file_path = '_'.join(new_file_path)
                     change_(old_file_path, new_file_path)
 
-    @class_errors
     def what_trend_is_it(self, posType):
         smallest = int(Bot.position_size/2)
         smaller = int(Bot.position_size/1.5)
@@ -711,7 +701,6 @@ class Bot:
 
         return Bot.position_size
 
-    @class_errors
     def request(self, action, posType, price=None):
         if action == actions['deal']:
             print("YES")
@@ -747,14 +736,12 @@ class Bot:
         order_result = mt.order_send(request)
         print(order_result)
 
-    @class_errors
     def delete_model(self):
         os.remove(self.model_buy[1])
         print(f"Model removed: {self.model_buy[1]}")
         os.remove(self.model_sell[1])
         print(f"Model removed: {self.model_sell[1]}")
 
-    @class_errors
     def check_new_bar(self):
         if self.change == 0:
             bar = mt.copy_rates_from_pos(
@@ -768,14 +755,12 @@ class Bot:
             self.change = 0
             return True
 
-    @class_errors
     def MDV_(self):
         """Returns mean daily volatility"""
         df = self.df_d1.copy()
         df['mean_vol'] = (df.high - df.low)
         return df['mean_vol'].mean()
 
-    @class_errors
     def active_session(self):
         #from model_generator import morning_hour
         df = get_data(self.symbol, 'D1', 0, 1)
@@ -788,7 +773,6 @@ class Bot:
             input()
             sys.exit(1)
 
-    @class_errors
     def close_request(self):
         positions_ = mt.positions_get(symbol=self.symbol)
         for i in positions_:
@@ -804,7 +788,6 @@ class Bot:
                         }
             order_result = mt.order_send(request)
 
-    @class_errors
     def check_global_pos(self):
         self.global_positions_stats.append((self.profits[-1], self.reverse, self.trigger))
         printer("check global pos", self.global_positions_stats)
@@ -818,14 +801,12 @@ class Bot:
             if profit_cond and reverse_cond and triggers:
                 self.if_tiktok('reverse')
 
-    @class_errors
     def pos_creator(self):
         try:
             return self.pos_type
         except NameError:
             return random.randint(0, 1)
 
-    @class_errors
     def write_to_database(self, profit, spread):
         # write data to database
         try:
@@ -871,7 +852,6 @@ class Bot:
             print(e)
             pass
 
-    @class_errors
     def checkout_report(self):
         from_date = dt.today().date() - timedelta(days=0)
         print(from_date)
