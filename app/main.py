@@ -86,19 +86,14 @@ class Bot:
         text_ = 'Model of position making is'
         match what:
             case 'trigger':
-                self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
-                printer(text_, self.trigger)
-                self.change = 1
+                self.trigger = 'moving_averages' if self.trigger=='model' else 'model'   
             case 'reverse':
                 self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
-                printer(text_, self.reverse)
-                self.change = 1
             case 'both':
                 self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
-                printer(text_, self.trigger)
                 self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
-                printer(text_, self.reverse)
-                self.change = 1
+        printer(text_, f'{self.trigger}, {self.reverse}')
+        self.change = 1
 
     @class_errors
     def if_tiktok(self, profit_=False):
@@ -223,7 +218,8 @@ class Bot:
                     self.if_tiktok(True)
 
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                elif (profit > self.profit_needed/(Bot.profit_factor*1.5) and not Bot.reverse_it_all) or (profit < -self.profit_needed/(Bot.profit_factor*1.5) and Bot.reverse_it_all):
+                elif (profit > self.profit_needed/(Bot.profit_factor*1.5) and not Bot.reverse_it_all) or \
+                    (profit < -self.profit_needed/(Bot.profit_factor*1.5) and Bot.reverse_it_all):
                     #and (position_time > self.pos_time/(Bot.profit_factor*1.5))
                     _ = self.fake_position_robot()
 
