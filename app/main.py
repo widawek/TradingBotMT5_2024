@@ -86,12 +86,12 @@ class Bot:
         text_ = 'Model of position making is'
         match what:
             case 'trigger':
-                self.trigger = 'moving_averages' if self.trigger=='model' else 'model'   
+                self.trigger = changer(self.trigger, 'moving_averages', 'model')
             case 'reverse':
-                self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
+                self.reverse = changer(self.reverse, 'reverse', 'normal')
             case 'both':
-                self.trigger = 'moving_averages' if self.trigger=='model' else 'model'
-                self.reverse = 'reverse' if self.reverse=='normal' else 'normal'
+                self.trigger = changer(self.trigger, 'moving_averages', 'model')
+                self.reverse = changer(self.reverse, 'reverse', 'normal')
         printer(text_, f'{self.trigger}, {self.reverse}')
         self.change = 1
 
@@ -624,15 +624,15 @@ class Bot:
         if self.reverse == 'normal':
             pass
         elif self.reverse == 'reverse':
-            position = 0 if position == 1 else 1
+            position = changer(position, 0, 1)
         elif self.reverse == 'normal_mix':
             time_ = dt.now()
             if time_.hour >= 14:
-                position = 0 if position == 1 else 1
+                position = changer(position, 0, 1)
 
         # BotReverse
         if Bot.reverse_it_all:
-            position = 0 if position == 1 else 1
+            position = changer(position, 0, 1)
 
         return position
 
@@ -649,7 +649,7 @@ class Bot:
 
         # BotReverse
         if Bot.reverse_it_all:
-            posType = 0 if posType == 1 else 1
+            posType = changer(posType, 0, 1)
 
         if posType == (0 if not self.trend_or_not else 1):
             match self.trend:
