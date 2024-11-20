@@ -265,7 +265,8 @@ class Bot:
 
     @class_errors
     def report(self):
-        time_sleep = 5
+        self.print_count = 0
+        time_sleep = 2
         self.pos_type = self.actual_position_democracy()
         self.positions_()
         # vvv key component vvv
@@ -307,8 +308,8 @@ class Bot:
             print("WTF??")
             profit_to_margin = 0
         profit_to_balance = round((profit/account.balance)*100, 2)
-
-        if report:
+        self.print_count += 1
+        if report and self.print_count >= 30:
             printer("Profit:", f"{round(profit, 2)} $")
             printer("Account balance:", f"{account.balance} $")
             printer("Account free margin:", f"{account.margin_free} $")
@@ -320,6 +321,7 @@ class Bot:
             printer("Fake counter:", self.fake_counter)
             printer("Trend:", self.trend)
             print()
+            self.print_count = 0
 
         self.write_to_database(profit, spread)
 
@@ -346,8 +348,6 @@ class Bot:
         counter = 0
         if orders == ():
             print("Brak zleceń oczekujących dla symbolu", self.symbol)
-            self.reset_bot()
-            self.report()
         else:
             for order in orders:
                 request = {
@@ -361,11 +361,10 @@ class Bot:
                 else:
                     print(f"Usunięto zlecenie oczekujące: {order}\n\n")
                     counter += 1
-
             print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
             time.sleep(1)
-            self.reset_bot()
-            self.report()
+        self.reset_bot()
+        self.report()
 
     @class_errors
     def avg_daily_vol_(self):
