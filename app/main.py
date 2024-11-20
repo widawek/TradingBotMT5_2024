@@ -301,7 +301,7 @@ class Bot:
         sym_inf = mt.symbol_info(self.symbol)
         act_price = sym_inf.bid
         act_price2 = sym_inf.ask
-        spread = abs(act_price-act_price2)#real_spread(self.symbol) #*self.number_of_positions*2
+        spread = abs(act_price-act_price2)
         try:
             profit_to_margin = round((profit/account.margin)*100, 2)
         except ZeroDivisionError:
@@ -355,7 +355,7 @@ class Bot:
                     "action": mt.TRADE_ACTION_REMOVE,
                     "order": order.ticket,
                     "symbol": order.symbol,
-                }
+                    }
                 result = mt.order_send(request)
                 if result.retcode != mt.TRADE_RETCODE_DONE:
                     print("Błąd podczas usuwania zlecenia:", result.comment)
@@ -364,8 +364,6 @@ class Bot:
                     counter += 1
 
             print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
-            # time_sleep = int(random.randint(5, 15)*60)
-            # print(f"Break {int(time_sleep/60)} minutes.")
             time.sleep(1)
             self.reset_bot()
             self.report()
@@ -397,14 +395,14 @@ class Bot:
             printer('Volume from value:', round((max_pos_margin * 100 / margin_min), 2))
         if volume > symbol_info["volume_max"]:
             volume = float(symbol_info["volume_max"])
-        printer('Min volume:', min_volume)
-        printer('Calculated volume:', volume)
         self.volume = volume
         if min_volume and (volume < symbol_info["volume_min"]):
             self.volume = symbol_info["volume_min"]
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
+        printer('Min volume:', min_volume)
+        printer('Calculated volume:', volume)
         printer("Target:", f"{self.tp_miner} $")
         printer("Killer:", f"{-self.kill_position_profit} $")
 
@@ -463,7 +461,7 @@ class Bot:
             else:
                 rank = df['rank'].iloc[len(df)-i-1]
             name = f'{market}_{strategy}_{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
-            names.append([name, rank]) # change tuple to list
+            names.append([name, rank])
             create_df.append(f'{name}'.split('_'))
 
         if Bot.system == 'weighted_democracy':
@@ -534,11 +532,9 @@ class Bot:
             self.load_models_democracy(catalog)
 
         if self.trigger == 'model':
-
             stance_values = []
             dataframes = []
             i = 0
-            #df_raw = get_data_for_model(self.symbol, Bot.master_interval, 1, int(650)) # how_many_bars
             start = time.time()
             for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
                 name_ = f"{mbuy[1].split('_')[-4]}_{factor}"
@@ -756,16 +752,17 @@ class Bot:
     def close_request(self):
         positions_ = mt.positions_get(symbol=self.symbol)
         for i in positions_:
-            request = {"action": mt.TRADE_ACTION_DEAL,
-                        "symbol": i.symbol,
-                        "volume": float(i.volume),
-                        "type": 1 if (i.type == 0) else 0,
-                        "position": i.ticket,
-                        "magic": i.magic,
-                        'deviation': 20,
-                        "type_time": mt.ORDER_TIME_GTC,
-                        "type_filling": mt.ORDER_FILLING_IOC
-                        }
+            request = {
+                "action": mt.TRADE_ACTION_DEAL,
+                "symbol": i.symbol,
+                "volume": float(i.volume),
+                "type": 1 if (i.type == 0) else 0,
+                "position": i.ticket,
+                "magic": i.magic,
+                'deviation': 20,
+                "type_time": mt.ORDER_TIME_GTC,
+                "type_filling": mt.ORDER_FILLING_IOC
+                }
             order_result = mt.order_send(request)
 
     @class_errors
