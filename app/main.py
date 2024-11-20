@@ -270,8 +270,7 @@ class Bot:
         self.positions_()
         # vvv key component vvv
         while True:
-            now_ = dt.now()
-            if now_.hour >= evening_hour:# and now_.minute >= 45:
+            if dt.now().hour >= evening_hour:# and now_.minute >= 45:
                 self.clean_orders()
                 sys.exit()
             self.request_get()
