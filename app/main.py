@@ -61,7 +61,7 @@ class Bot:
         self.trigger = 'model' # 'model' 'moving_averages'
         self.market = 'e' if dt.now().hour < change_hour else 'u'
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
-        self.trigger_model_divider = avg_daily_vol_for_divider(symbol, 7)
+        self.trigger_model_divider = avg_daily_vol_for_divider(symbol, 8)
         self.trend_or_not = trend_or_not(symbol)
         self.reverse = reverse_(symbol)
         self.df_d1 = get_data(symbol, "D1", 1, 30)
@@ -112,8 +112,6 @@ class Bot:
 
     @class_errors
     def fake_position_robot(self):
-        print("Check fake position")
-
         if self.fake_counter <= 8:
             interval = 'M5'
         elif self.fake_counter <= 11:
@@ -192,13 +190,14 @@ class Bot:
                 self.profit_max = max(self.profits)
                 mean_profits = np.mean(self.profits)
                 self.self_decline_factor()
-                printer("Volume-volatility condition:", self.check_volume_condition)
-                printer("Change value:", f"{round(self.profit_needed, 2)} $")
-                printer("Actual trigger:", self.trigger)
-                printer("Max profit:", f"{self.profit_max} $")
-                printer("Profit zero aka spread:", f"{self.profit0} $")
-                printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2)} $")
-                printer("Decline factor:", f"{self.profit_decline_factor}")
+                if self.print_condition():
+                    printer("Volume-volatility condition:", self.check_volume_condition)
+                    printer("Change value:", f"{round(self.profit_needed, 2)} $")
+                    printer("Actual trigger:", self.trigger)
+                    printer("Max profit:", f"{self.profit_max} $")
+                    printer("Profit zero aka spread:", f"{self.profit0} $")
+                    printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2)} $")
+                    printer("Decline factor:", f"{self.profit_decline_factor}")
 
                 if self.fake_position:
                     _ = self.fake_position_robot()
@@ -224,13 +223,18 @@ class Bot:
                     #and (position_time > self.pos_time/(Bot.profit_factor*1.5))
                     _ = self.fake_position_robot()
 
-                printer("TIKTOK:", self.tiktok)
+                if self.print_condition():
+                    printer("TIKTOK:", self.tiktok)
 
             except Exception as e:
                 print("no positions", e)
                 pass
         else:
             pass
+    
+    @class_errors
+    def print_condition(self):
+        return ((self.print_count == 0) or (self.print_count % 10 == 0))
 
     @class_errors
     def self_decline_factor(self, multiplier: int=3):
@@ -275,12 +279,12 @@ class Bot:
                 self.clean_orders()
                 sys.exit()
             self.request_get()
-            printer("Symbol:", self.symbol)
-            printer("Czas:", time.strftime("%H:%M:%S"))
+            if self.print_condition():
+                printer("\nSymbol:", self.symbol)
+                printer("Czas:", time.strftime("%H:%M:%S"))
             self.check_trigger(trigger_mode=Bot.trigger_mode)
             self.data()
             time.sleep(time_sleep)
-            print()
 
     @class_errors
     def data(self, report=True):
@@ -309,10 +313,9 @@ class Bot:
             profit_to_margin = 0
         profit_to_balance = round((profit/account.balance)*100, 2)
         if report:
-            self.print_count += 1
-            if (self.print_count == 1) or (self.print_count % 30 == 0):
+            if self.print_condition():
                 self.info(profit, account, profit_to_margin, profit_to_balance)
-        printer("Print counter", self.print_count)
+        self.print_count += 1
 
         self.write_to_database(profit, spread)
 
