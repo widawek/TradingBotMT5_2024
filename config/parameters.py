@@ -9,17 +9,17 @@ def reverse_(symbol):
 
 intervals = ['M20']
 symbols = [
-        'BTCUSD',
+        # 'BTCUSD',
         'EURJPY',
-        'EURUSD',
-        'GBPUSD',
-        'USDCAD',
-        'USDCHF',
-        'USDJPY',
-        'US30',
-        'DE40',
-        'XAUUSD',
-        'EURCAD'
+        # 'EURUSD',
+        # 'GBPUSD',
+        # 'USDCAD',
+        # 'USDCHF',
+        # 'USDJPY',
+        # 'US30',
+        # 'DE40',
+        # 'XAUUSD',
+        # 'EURCAD'
         ]
 
 
@@ -30,7 +30,7 @@ max_factor = 23
 range_ = 1
 game_system = 'weighted_democracy'
 morning_hour = 7
-evening_hour = 21
+evening_hour = 24
 probability_edge = 0.25
 sharpe_limit = 2
 kk_limit = 1.5

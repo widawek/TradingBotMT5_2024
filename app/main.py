@@ -32,7 +32,7 @@ class Bot:
     tz_diff = tz_diff
     trigger_mode = 'on'
     profit_factor = 1.5
-    position_size = 5       # percent of balance
+    position_size = 6       # percent of balance
     kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
     tp_miner = 3
     system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
@@ -48,6 +48,7 @@ class Bot:
         self.model_counter = None
         self.profit0 = None
         self.max_close = None
+        self.print_count = 0
         self.change = 0
         self.tiktok = 0
         self.number_of_positions = 0
@@ -128,7 +129,7 @@ class Bot:
         close2 = interval_df['close'].iloc[2]
         pos_type = self.positions[0].type
         profit_ = self.positions[0].profit
-        
+
         # # BotReverse
         # if Bot.reverse_it_all:
         #     pos_type = 0 if pos_type == 1 else 1
@@ -231,7 +232,7 @@ class Bot:
         else:
             pass
 
-    @class_errors 
+    @class_errors
     def self_decline_factor(self, multiplier: int=3):
         min_val = 0.45
         max_val = 0.85
@@ -265,7 +266,6 @@ class Bot:
 
     @class_errors
     def report(self):
-        self.print_count = 0
         time_sleep = 2
         self.pos_type = self.actual_position_democracy()
         self.positions_()
@@ -308,14 +308,12 @@ class Bot:
             print("WTF??")
             profit_to_margin = 0
         profit_to_balance = round((profit/account.balance)*100, 2)
-        self.print_count += 1
         if report:
-            if self.print_count >= 30:
+            self.print_count += 1
+            if (self.print_count == 1) or (self.print_count % 30 == 0):
                 self.info(profit, account, profit_to_margin, profit_to_balance)
-                self.print_count = 0
-            elif self.print_count == 0:
-                self.info(profit, account, profit_to_margin, profit_to_balance)
-        
+        printer("Print counter", self.print_count)
+
         self.write_to_database(profit, spread)
 
         if profit < -self.kill_position_profit:
@@ -338,7 +336,7 @@ class Bot:
         printer("Fake counter:", self.fake_counter)
         printer("Trend:", self.trend)
         print()
-    
+
     @class_errors
     def reset_bot(self):
         self.pos_type = None
@@ -612,7 +610,6 @@ class Bot:
             self.check_volume_condition = volume_2 > volume_10
 
         else:
-            
             dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
             dfx["stance"] = function_when_model_not_work(dfx, self.ma_factor_fast, self.ma_factor_slow)
             position = 0 if dfx.stance.iloc[-1] == 1 else 1
