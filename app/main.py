@@ -132,7 +132,8 @@ class Bot:
         close1 = interval_df['close'].iloc[1]
         close2 = interval_df['close'].iloc[2]
         pos_type = self.positions[0].type
-
+        profit_ = self.positions[0].profit
+        
         # # BotReverse
         # if Bot.reverse_it_all:
         #     pos_type = 0 if pos_type == 1 else 1
@@ -152,7 +153,7 @@ class Bot:
         if not self.fake_position:
             if (((pos_type == 0) and (close2 > close1 > close0)) or\
                 ((pos_type == 1) and (close2 < close1 < close0))) and\
-                    self.positions[0].profit > 0:
+                    (profit_ > 0):
                 fake_position_on()
 
         elif self.fake_position and pos_type == 0:
@@ -161,7 +162,7 @@ class Bot:
             if self.max_close > old_max:
                 self.fake_counter+=1
                 self.fake_stoploss = close1
-            if close2 < self.fake_stoploss:
+            if (close2 < self.fake_stoploss) or (profit_ < 0):
                 return fake_position_off()
             else:
                 return pos_type
@@ -172,7 +173,7 @@ class Bot:
             if self.max_close < old_max:
                 self.fake_counter+=1
                 self.fake_stoploss = close1
-            if close2 > self.fake_stoploss:
+            if (close2 > self.fake_stoploss) or (profit_ < 0):
                 return fake_position_off()
             else:
                 return pos_type
