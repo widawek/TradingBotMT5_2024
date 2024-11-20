@@ -309,20 +309,13 @@ class Bot:
             profit_to_margin = 0
         profit_to_balance = round((profit/account.balance)*100, 2)
         self.print_count += 1
-        if report and self.print_count >= 30:
-            printer("Profit:", f"{round(profit, 2)} $")
-            printer("Account balance:", f"{account.balance} $")
-            printer("Account free margin:", f"{account.margin_free} $")
-            printer("Profit to margin:", f"{profit_to_margin} %")
-            printer("Profit to balance:", f"{profit_to_balance} %")
-            printer("Actual position from model:", self.pos_type)
-            printer("Mode:", self.reverse)
-            printer("Fake position:", self.fake_position)
-            printer("Fake counter:", self.fake_counter)
-            printer("Trend:", self.trend)
-            print()
-            self.print_count = 0
-
+        if report:
+            if self.print_count >= 30:
+                self.info(profit, account, profit_to_margin, profit_to_balance)
+                self.print_count = 0
+            elif self.print_count == 0:
+                self.info(profit, account, profit_to_margin, profit_to_balance)
+        
         self.write_to_database(profit, spread)
 
         if profit < -self.kill_position_profit:
@@ -332,6 +325,20 @@ class Bot:
             print('The profit is nice. I want it on our accout.')
             self.clean_orders()
 
+    @class_errors
+    def info(self, profit, account, profit_to_margin, profit_to_balance):
+        printer("Profit:", f"{round(profit, 2)} $")
+        printer("Account balance:", f"{account.balance} $")
+        printer("Account free margin:", f"{account.margin_free} $")
+        printer("Profit to margin:", f"{profit_to_margin} %")
+        printer("Profit to balance:", f"{profit_to_balance} %")
+        printer("Actual position from model:", self.pos_type)
+        printer("Mode:", self.reverse)
+        printer("Fake position:", self.fake_position)
+        printer("Fake counter:", self.fake_counter)
+        printer("Trend:", self.trend)
+        print()
+    
     @class_errors
     def reset_bot(self):
         self.pos_type = None
