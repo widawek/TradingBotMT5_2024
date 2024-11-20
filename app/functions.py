@@ -497,3 +497,8 @@ def function_when_model_not_work(dfx, a, b):
     dfx['stance2'] = np.where(ma1>=ma2, 1, 0)
     dfx['stance2'] = np.where(ma1<ma2, -1, dfx['stance2'])
     return dfx['stance2']
+
+
+def changer(what, value1, value2):
+    return value1 if what == value2 else value2
+
