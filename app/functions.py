@@ -7,12 +7,9 @@ import numpy as np
 import pandas_ta as ta
 import os
 from collections import Counter
-# from itertools import product
-# import builtins
 from time import sleep
 import sys
 sys.path.append("..")
-# import functools
 
 
 def pandas_options():
