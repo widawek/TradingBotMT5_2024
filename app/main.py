@@ -612,13 +612,14 @@ class Bot:
             self.check_volume_condition = volume_2 > volume_10
 
         else:
-            printer('Position from moving averages:', f'fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
+            
             dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
             dfx["stance"] = function_when_model_not_work(dfx, self.ma_factor_fast, self.ma_factor_slow)
             position = 0 if dfx.stance.iloc[-1] == 1 else 1
-            printer("MA position:", position)
             volume_10 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(8).mean().iloc[-1]
             volume_2 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(2).mean().iloc[-1]
+            printer('Position from moving averages:', f'fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
+            printer("MA position:", position)
             print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
             self.check_volume_condition = volume_2 > volume_10
 
