@@ -64,7 +64,7 @@ class Bot:
         self.trend_or_not = trend_or_not(symbol)
         self.reverse = reverse_(symbol)
         self.df_d1 = get_data(symbol, "D1", 1, 30)
-        self.avg_daily_vol_()
+        self.avg_daily_vol()
         self.round_number = round_number_(symbol)
         self.volume_calc(Bot.position_size, True)
         self.pos_time = interval_time(Bot.master_interval)
@@ -374,7 +374,7 @@ class Bot:
         self.report()
 
     @class_errors
-    def avg_daily_vol_(self):
+    def avg_daily_vol(self):
         df = self.df_d1
         df['avg_daily'] = (df.high - df.low) / df.open
         self.avg_vol = df['avg_daily'].mean()
