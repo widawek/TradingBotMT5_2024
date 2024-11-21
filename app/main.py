@@ -659,7 +659,7 @@ class Bot:
                 case 'sold_out': return wow  # price is low
                 case 'long_strong': return normal  # price is high
                 case 'long_normal': return smaller
-                case 'long_weak': return biggest  # price is low
+                case 'long_weak': return bigger  # price is low
                 case 'long_super_weak': return biggest  # price is low
                 case 'short_strong': return normal  # price is low
                 case 'short_normal': return smaller
@@ -676,7 +676,7 @@ class Bot:
                 case 'long_super_weak': return smallest
                 case 'short_strong': return normal
                 case 'short_normal': return smaller
-                case 'short_weak': return biggest
+                case 'short_weak': return bigger
                 case 'short_super_weak': return biggest
 
         return Bot.position_size
