@@ -12,6 +12,7 @@ from icecream import ic
 import xgboost as xgb
 from extensions.symbols_rank import symbol_stats
 from app.functions import *
+from app.decorators import class_errors
 from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import intervals, game_system, reverse_, tz_diff, change_hour
 from app.database_class import TradingProcessor
