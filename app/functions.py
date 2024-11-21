@@ -8,7 +8,7 @@ import os
 from collections import Counter
 from time import sleep
 import sys
-from typing import Union
+from typing import Union, Tuple
 sys.path.append("..")
 from app.decorators import validate_input_types
 
@@ -172,10 +172,12 @@ def magic_(symbol: str, comment: Union[str, float, int]) -> int:
     return result // 10 ** (len(str(result)) - 6)
 
 
+@validate_input_types
 def round_number_(symbol: str) -> int:
     return mt.symbol_info(symbol).digits
 
 
+@validate_input_types
 def real_spread(symbol: str) -> float:
     s = mt.symbol_info(symbol)
     return s.spread / 10**s.digits
@@ -204,6 +206,7 @@ pendings = {
     }
 
 
+@validate_input_types
 def sortino_ratio(returns: list) -> float:
     """
     Calculate the Sortino Ratio.
@@ -223,6 +226,7 @@ def sortino_ratio(returns: list) -> float:
     return sortino_ratio
 
 
+@validate_input_types
 def omega_ratio(returns: list, threshold: float=0) -> float:
     """
     Calculate the Omega Ratio.
@@ -242,6 +246,7 @@ def omega_ratio(returns: list, threshold: float=0) -> float:
     return omega_ratio
 
 
+@validate_input_types
 def max_drawdown(returns: list) -> float:
     compRet = (returns+1).cumprod()
     peak = compRet.expanding(min_periods=1).max()
@@ -249,6 +254,7 @@ def max_drawdown(returns: list) -> float:
     return dd.min()
 
 
+@validate_input_types
 def kelly_criterion(returns: list) -> float:
     good = [i for i in returns if i > 0]
     bad = [i for i in returns if i < 0]
@@ -272,6 +278,7 @@ def kelly_criterion(returns: list) -> float:
     return kk
 
 
+@validate_input_types
 def max_vol_times_price_price(df, window=30):
     # Obliczamy vol * price
     df['vol_times_price'] = df['close'] * df['volume']
@@ -286,11 +293,13 @@ def max_vol_times_price_price(df, window=30):
     return max_price
 
 
+@validate_input_types
 def most_common_value(tuples):
     licznik = Counter(tuples)
     return licznik.most_common(1)[0][0]
 
 
+@validate_input_types
 def calculate_dominant(data, num_ranges=50):
     print("Positions: ", num_ranges)
     # Obliczanie minimalnej i maksymalnej wartości w zbiorze danych
@@ -320,34 +329,8 @@ def calculate_dominant(data, num_ranges=50):
     return overall_dominant
 
 
-def is_this_curve_grow(curve, density):
-    window_ = int(len(curve)*(density/100))
-    max_ = curve.rolling(window=window_).max()
-    min_ = curve.rolling(window=window_).min()
-    maxes = np.where(max_ > max_.shift(1), 1, 0)
-    mins = np.where(min_ < min_.shift(1), 1, 0)
-    return round(np.sum(maxes)/np.sum(mins), 3)
-
-
-def is_this_curve_grow2(curve, density):
-    window_ = int(len(curve)*(density/100))
-    sma_ = ta.sma(curve, length=window_)
-    return np.sum(np.diff(sma_.dropna()))
-
-
-def is_this_curve_grow3(prices, window_size):
-    window_size = int(window_size)
-    df = pd.DataFrame({'prices': prices})
-    df['rolling_max'] = df['prices'].rolling(window=window_size).max()
-    df['rolling_min'] = df['prices'].rolling(window=window_size).min()
-    len_max = len(df[df['prices'] == df['rolling_max']])
-    len_min = len(df[df['prices'] == df['rolling_min']])
-    if len_min == 0:
-        return np.inf
-    return round(len_max / len_min, 2)
-
-
-def get_returns(df, symbol):
+@validate_input_types
+def get_returns(df: DataFrame, symbol:str) -> Tuple[DataFrame, float, float]:
     r_num = round_number_(symbol)
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
