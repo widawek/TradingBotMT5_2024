@@ -111,16 +111,6 @@ def timeframe_(tf: str):
         raise AttributeError(f"Invalid timeframe '{tf}'. Ensure it matches a valid TIMEFRAME constant in the mt module.") from e
 
 
-def get_data(symbol, tf, start, counter):
-    data = pd.DataFrame(mt.copy_rates_from_pos(
-                        symbol, timeframe_(tf), start, counter))
-    data["time"] = pd.to_datetime(data["time"], unit="s")
-    data = data.drop(["real_volume"], axis=1)
-    data.columns = ["time", "open", "high", "low",
-                    "close", "volume", "spread"]
-    return data
-
-
 def get_data_for_model(symbol, tf, start, counter):
     data = pd.DataFrame(mt.copy_rates_from_pos(
                         symbol, timeframe_(tf), start, counter))
@@ -130,6 +120,15 @@ def get_data_for_model(symbol, tf, start, counter):
     data['volume'] = data['volume'].astype('int32')
     data['spread'] = data['spread'].astype('int16')
     return data
+
+
+def get_data(symbol, tf, start, counter):
+    data = get_data_for_model(symbol, tf, start, counter)
+    data["time"] = pd.to_datetime(data["time"], unit="s")
+    return data
+
+
+
 
 
 def magic_(symbol, comment):
