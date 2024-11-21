@@ -12,13 +12,40 @@ import sys
 sys.path.append("..")
 
 
-def pandas_options():
+def pandas_options() -> None:
+    """
+    Configures pandas display options for better readability.
+    
+    This function sets the following options:
+    - display.max_columns: Displays all columns without truncation.
+    - display.max_rows: Displays all rows without truncation.
+    - display.max_colwidth: Displays the full width of cell values.
+    """
     pd.set_option('display.max_columns', None)
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_colwidth', None)
 
 
-def interval_time(interval_string):
+def interval_time(interval_string: str) -> int:
+    """
+    Converts a time interval string into its equivalent duration in minutes.
+    
+    The input string should start with a single-character unit indicator 
+    ('M', 'H', 'D', 'W'), followed by a numeric value. For example:
+    - 'M10' represents 10 minutes.
+    - 'H2' represents 2 hours.
+    - 'D1' represents 1 day.
+    - 'W3' represents 3 weeks.
+
+    Args:
+        interval_string (str): Time interval in the format <unit><value>.
+
+    Returns:
+        int: The equivalent duration in minutes.
+
+    Raises:
+        ValueError: If the input format is invalid or the unit is unsupported.
+    """
     h = interval_string[0]
     t = int(interval_string[1:])
     x = {"M": 1, "H": 60, "D": 1440, "W": 10800}
@@ -26,6 +53,24 @@ def interval_time(interval_string):
 
 
 def class_errors(func):
+    """
+    Decorator to log errors occurring in a class method to a file.
+    
+    Logs the following details for any exception:
+    - Symbol (assumes the first argument is an instance with a `symbol` attribute)
+    - Timestamp
+    - Class name
+    - Function name
+    - Full traceback
+    
+    If a RecursionError occurs, the program prints "Exit", waits for user input, and exits.
+
+    Args:
+        func (callable): The class method to be decorated.
+
+    Returns:
+        callable: The wrapped function.
+    """
     def just_log(*args, **kwargs):
         symbol = args[0].symbol
         try:
@@ -47,8 +92,23 @@ def class_errors(func):
     return just_log
 
 
-def timeframe_(tf):
-    return getattr(mt, 'TIMEFRAME_{}'.format(tf))
+def timeframe_(tf: str):
+    """
+    Retrieves the corresponding TIMEFRAME constant from the MetaTrader (mt) module.
+
+    Args:
+        tf (str): The string representation of the timeframe (e.g., 'M1', 'H1', 'D1').
+
+    Returns:
+        Any: The corresponding TIMEFRAME constant from the mt module.
+
+    Raises:
+        AttributeError: If the specified timeframe is not found in the mt module.
+    """
+    try:
+        return getattr(mt, f'TIMEFRAME_{tf}')
+    except AttributeError as e:
+        raise AttributeError(f"Invalid timeframe '{tf}'. Ensure it matches a valid TIMEFRAME constant in the mt module.") from e
 
 
 def get_data(symbol, tf, start, counter):
