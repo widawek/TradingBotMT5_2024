@@ -3,7 +3,6 @@ from functools import wraps
 import inspect
 from datetime import datetime as dt
 import sys
-from typing import Union
 sys.path.append("..")
 
 

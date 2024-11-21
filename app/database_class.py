@@ -1,9 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 import pandas as pd
-import MetaTrader5 as mt
 from datetime import datetime as dt
-from datetime import timedelta
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

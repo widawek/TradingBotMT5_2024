@@ -3,6 +3,10 @@ from datetime import datetime as dt
 from datetime import timedelta
 import MetaTrader5 as mt
 import pandas as pd
+import numpy as np
+import sys
+sys.path.append("..")
+from app.functions import get_data
 mt.initialize()
 
 
@@ -77,3 +81,132 @@ def checkout_report(symbol, reverse, trigger, condition):
         return False
 
     return False
+
+
+def vwap_std(symbol, factor=1.4):
+    daily = get_data(symbol, 'D1', 0, 10)
+    daily = daily.drop(columns=['open', 'close', 'spread', 'volume'])
+    daily['high'] = daily['high'].shift(1)
+    daily['low'] = daily['low'].shift(1)
+    daily['date'] = pd.to_datetime(daily.time.dt.date)
+    daily.dropna(inplace=True)
+
+    df = get_data(symbol, 'M1', 1, 1440)
+    df['date'] = pd.to_datetime(df.time.dt.date)
+    df = df.reset_index()
+    dates = list(set(df.date.to_list()))
+    dates.sort()
+    opens = []
+    intraday_mean = []
+    std = []
+    high_ = []
+    low_ = []
+    for i in dates:
+        daily_df_x = daily[daily['date'] == i]
+        high_value = float(daily_df_x['high'].iloc[-1])
+        low_value = float(daily_df_x['low'].iloc[-1])
+
+        x = df.copy()[df['date'] == i]
+        x['max'] = x.high.rolling(window=len(x), min_periods=0).max()
+        x['min'] = x.low.rolling(window=len(x), min_periods=0).min()
+        x['cv'] = x['close'] * x['volume']
+        x['cv'] = x['cv'].rolling(window=len(x), min_periods=0).sum()
+        x['vol'] = x.volume.rolling(window=len(x), min_periods=0).sum()
+        x['mean'] = x['cv']/x['vol']
+        x['std_'] = x.close.rolling(window=len(x), min_periods=0).std()
+        x['highs1'] = x['high'] - x['high'].shift(1)
+        x['lows1'] = x['low'].shift(1) - x['low']
+        x['highs_'] = np.where(x['highs1']>0, x['highs1'], 0)
+        x['lows_'] = np.where(x['lows1']>0, x['lows1'], 0)
+        x['highss'] = x['highs_'].ewm(min_periods=0, alpha=1/len(x)).mean()
+        x['lowsss'] = x['lows_'].ewm(min_periods=0, alpha=1/len(x)).mean()
+        x.loc[:,'open'] = x['open'].iloc[0]
+        x.loc[:,'last_high'] = high_value
+        x.loc[:,'last_low'] = low_value
+        opens += x['open'].to_list()
+        intraday_mean += x['mean'].to_list()
+        std += x['std_'].to_list()
+        high_ += x['last_high'].to_list()
+        low_ += x['last_low'].to_list()
+
+    df['open'] = pd.Series(opens)
+    df['daily_mean'] = pd.Series(intraday_mean)
+    df['std_'] = pd.Series(std)
+    df['boll_up'] = df['daily_mean'] + factor*df['std_']
+    df['boll_down'] = df['daily_mean'] - factor*df['std_']
+    df['last_daily_high'] = pd.Series(high_)
+    df['last_daily_low'] = pd.Series(low_)
+    df['boll_up_max'] = np.where((df['boll_up']>df['last_daily_high']) &
+                                 (df['boll_up'].shift(1)<df['last_daily_high'].shift(1)), 1, 0)
+    df['boll_down_min'] = np.where((df['boll_down']<df['last_daily_low']) &
+                                 (df['boll_down'].shift(1)>df['last_daily_low'].shift(1)), 1, 0)
+    df['boll_up_max'] = df['boll_up_max'].rolling(5).max()
+    df['boll_down_min'] = df['boll_down_min'].rolling(5).max()
+
+    last_open = df['open'].iloc[-1]
+    last_mean = df['daily_mean'].iloc[-1]
+    last_boll_up = df['boll_up'].iloc[-1]
+    last_boll_down = df['boll_down'].iloc[-1]
+    last_close = df['close'].iloc[-1]
+    last_high = df['last_daily_high'].iloc[-1]
+    last_low = df['last_daily_low'].iloc[-1]
+
+    last_min = df['low'][-3:-1].min()
+    last_max = df['high'][-3:-1].max()
+    last_boll_up_max = df['boll_up_max'].iloc[-1]
+    last_boll_down_min = df['boll_down_min'].iloc[-1]
+
+    #vwap trend 'long'
+    if last_mean > last_open:
+        if last_close > last_boll_up:
+            trend = 'long_strong'
+        elif last_close < last_boll_down and last_min < last_low:
+            trend = 'long_super_weak'
+        elif last_close < last_boll_down:
+            trend = 'long_weak'
+        else:
+            trend = 'long_normal'
+    #vwap trend 'short'
+    elif last_mean < last_open:
+        if last_close < last_boll_down:
+            trend = 'short_strong'
+        elif last_close > last_boll_up and last_max > last_high:
+            trend = 'short_super_weak'
+        elif last_close > last_boll_up:
+            trend = 'short_weak'
+        else:
+            trend = 'short_normal'
+    else:
+        trend = 'neutral'
+
+    if last_boll_up_max and last_max > last_high:
+        trend = 'overbought'
+    elif last_boll_down_min and last_min < last_low:
+        trend = 'sold_out'
+    return trend
+
+
+def avg_daily_vol_for_divider(symbol: str, base: int) -> int:
+    df1 = get_data(symbol, 'D1', 2, 30)
+    df2 = get_data(symbol, 'D1', 1, 1)
+    df1['avg_daily'] = (df1.high - df1.low) / df1.open
+    df2['avg_daily'] = (df2.high - df2.low) / df2.open
+    factor = df1['avg_daily'].mean()/df2['avg_daily'].mean()
+    factor = 1+(factor-1)/2
+    return int(round(base*factor))
+
+
+def trend_or_not(symbol):
+    factor = 15
+    df = get_data(symbol, 'D1', 1, 100)
+    stoch = df.ta.stoch(fast_k=factor, slow_k=factor, slow_d=factor)
+    df['pct_change'] = (df['close'] - df['close'].shift(factor)) / df['close'].shift(factor)
+    df['k'] = stoch.iloc[:,0] * df['pct_change']
+    df['d'] = stoch.iloc[:,1] * df['pct_change']
+    df = df.dropna()
+    if df['k'].iloc[-1] > df['d'].iloc[-1]:
+        print("Trend!")
+        return True
+    print("Not trend!")
+    return False
+

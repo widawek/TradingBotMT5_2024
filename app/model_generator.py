@@ -12,16 +12,17 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import time
 from itertools import product
-from app.functions import *
 import warnings
 warnings.filterwarnings("ignore")
 mt.initialize()
 import os
 catalog = os.path.dirname(__file__)
 catalog = os.path.dirname(catalog)
-from config.parameters import *
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from app.functions import *
+from config.parameters import *
+
 
 def data_operations(df, factor):
     df['adj'] = (df.high + df.low + df.close) / 3

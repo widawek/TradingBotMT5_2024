@@ -1,5 +1,4 @@
 import pandas as pd
-import pandas_ta as ta
 import numpy as np
 import random
 import MetaTrader5 as mt
@@ -16,7 +15,7 @@ from app.decorators import class_errors
 from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import intervals, game_system, reverse_, tz_diff, change_hour
 from app.database_class import TradingProcessor
-from app.bot_functions import rename_files_in_directory, checkout_report
+from app.bot_functions import rename_files_in_directory, checkout_report, vwap_std, avg_daily_vol_for_divider, trend_or_not
 sys.path.append("..")
 
 processor = TradingProcessor()
