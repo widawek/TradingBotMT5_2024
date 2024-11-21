@@ -660,11 +660,12 @@ class Bot:
                 case 'long_strong': return normal  # price is high
                 case 'long_normal': return smaller
                 case 'long_weak': return biggest  # price is low
+                case 'long_super_weak': return biggest  # price is low
                 case 'short_strong': return normal  # price is low
                 case 'short_normal': return smaller
                 case 'short_weak': return smallest  # price is high
                 case 'short_super_weak': return smallest
-                case 'long_super_weak': return wow  # price is low
+                
 
         elif posType == (1 if not self.trend_or_not else 0):
             match self.trend:
@@ -672,11 +673,11 @@ class Bot:
                 case 'long_strong': return normal
                 case 'long_normal': return smaller
                 case 'long_weak': return smallest
-                case 'long_super_weak': return smallest  # price is low
+                case 'long_super_weak': return smallest
                 case 'short_strong': return normal
                 case 'short_normal': return smaller
                 case 'short_weak': return biggest
-                case 'short_super_weak': return wow
+                case 'short_super_weak': return biggest
 
         return Bot.position_size
 
