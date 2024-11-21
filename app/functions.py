@@ -75,7 +75,7 @@ def timeframe_(tf: str):
 
 
 @validate_input_types
-def get_data_for_model(symbol: str, tf: str, start: int, counter: int) -> DataFrame:
+def get_data_for_model(symbol: str, tf: str, start: int, counter: int) -> pd.DataFrame:
     """
     Fetches historical market data for a given symbol and timeframe, 
     formats it into a DataFrame, and prepares it for model usage.
@@ -124,7 +124,7 @@ def get_data_for_model(symbol: str, tf: str, start: int, counter: int) -> DataFr
 
 
 @validate_input_types
-def get_data(symbol: str, tf: str, start: int, counter: int) -> DataFrame:
+def get_data(symbol: str, tf: str, start: int, counter: int) -> pd.DataFrame:
     """
     Fetches and formats market data for a given symbol and timeframe.
 
@@ -327,7 +327,7 @@ def calculate_dominant(data, num_ranges=50):
 
 
 @validate_input_types
-def get_returns(df: DataFrame, symbol:str) -> Tuple[DataFrame, float, float]:
+def get_returns(df: pd.DataFrame, symbol:str) -> Tuple[pd.DataFrame, float, float]:
     r_num = round_number_(symbol)
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)

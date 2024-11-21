@@ -9,17 +9,17 @@ def reverse_(symbol):
 
 intervals = ['M20']
 symbols = [
-        # 'BTCUSD',
+        'BTCUSD',
         'EURJPY',
-        # 'EURUSD',
-        # 'GBPUSD',
-        # 'USDCAD',
-        # 'USDCHF',
-        # 'USDJPY',
-        # 'US30',
-        # 'DE40',
-        # 'XAUUSD',
-        # 'EURCAD'
+        'EURUSD',
+        'GBPUSD',
+        'USDCAD',
+        'USDCHF',
+        'USDJPY',
+        'US30',
+        'DE40',
+        'XAUUSD',
+        'EURCAD'
         ]
 
 
