@@ -207,7 +207,7 @@ pendings = {
 
 
 @validate_input_types
-def sortino_ratio(returns: list) -> float:
+def sortino_ratio(returns: Union[np.ndarray, list]) -> float:
     """
     Calculate the Sortino Ratio.
 
@@ -227,7 +227,7 @@ def sortino_ratio(returns: list) -> float:
 
 
 @validate_input_types
-def omega_ratio(returns: list, threshold: float=0) -> float:
+def omega_ratio(returns: Union[np.ndarray, list], threshold: float=0) -> float:
     """
     Calculate the Omega Ratio.
 
@@ -247,7 +247,7 @@ def omega_ratio(returns: list, threshold: float=0) -> float:
 
 
 @validate_input_types
-def max_drawdown(returns: list) -> float:
+def max_drawdown(returns: Union[np.ndarray, list]) -> float:
     compRet = (returns+1).cumprod()
     peak = compRet.expanding(min_periods=1).max()
     dd = (compRet/peak)-1
@@ -255,7 +255,7 @@ def max_drawdown(returns: list) -> float:
 
 
 @validate_input_types
-def kelly_criterion(returns: list) -> float:
+def kelly_criterion(returns: Union[np.ndarray, list]) -> float:
     good = [i for i in returns if i > 0]
     bad = [i for i in returns if i < 0]
     p = len(good) / len(returns)
