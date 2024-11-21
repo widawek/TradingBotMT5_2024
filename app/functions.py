@@ -1,15 +1,48 @@
 import pandas as pd
+import numpy as np
+import pandas_ta as ta
 import traceback
+from functools import wraps
+import inspect
 from datetime import datetime as dt
 import MetaTrader5 as mt
 import hashlib
-import numpy as np
-import pandas_ta as ta
 import os
 from collections import Counter
 from time import sleep
 import sys
+from typing import Union
 sys.path.append("..")
+
+
+def validate_input_types(func):
+    """
+    Decorator that validates the types of input arguments for a function
+    based on its type annotations.
+
+    Raises:
+        TypeError: If the type of an argument does not match its annotation.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Get function signature
+        sig = inspect.signature(func)
+        bound_args = sig.bind(*args, **kwargs)
+        bound_args.apply_defaults()
+        
+        # Validate each argument's type
+        for name, value in bound_args.arguments.items():
+            if name in sig.parameters:
+                expected_type = sig.parameters[name].annotation
+                if expected_type is not inspect._empty and not isinstance(value, expected_type):
+                    raise TypeError(
+                        f"Argument '{name}' must be of type {expected_type}, got {type(value)} instead."
+                    )
+        
+        # Call the original function if validation passes
+        return func(*args, **kwargs)
+    
+    return wrapper
 
 
 def pandas_options() -> None:
@@ -26,6 +59,7 @@ def pandas_options() -> None:
     pd.set_option('display.max_colwidth', None)
 
 
+@validate_input_types
 def interval_time(interval_string: str) -> int:
     """
     Converts a time interval string into its equivalent duration in minutes.
@@ -92,6 +126,7 @@ def class_errors(func):
     return just_log
 
 
+@validate_input_types
 def timeframe_(tf: str):
     """
     Retrieves the corresponding TIMEFRAME constant from the MetaTrader (mt) module.
@@ -111,6 +146,7 @@ def timeframe_(tf: str):
         raise AttributeError(f"Invalid timeframe '{tf}'. Ensure it matches a valid TIMEFRAME constant in the mt module.") from e
 
 
+@validate_input_types
 def get_data_for_model(symbol: str, tf: str, start: int, counter: int) -> DataFrame:
     """
     Fetches historical market data for a given symbol and timeframe, 
@@ -159,6 +195,7 @@ def get_data_for_model(symbol: str, tf: str, start: int, counter: int) -> DataFr
         raise ValueError(f"Error retrieving data for symbol '{symbol}': {e}") from e
 
 
+@validate_input_types
 def get_data(symbol: str, tf: str, start: int, counter: int) -> DataFrame:
     """
     Fetches and formats market data for a given symbol and timeframe.
@@ -191,12 +228,15 @@ def get_data(symbol: str, tf: str, start: int, counter: int) -> DataFrame:
         raise ValueError(f"Error in get_data for symbol '{symbol}': {e}") from e
 
 
-def magic_(symbol: str, comment: str) -> int:
+@validate_input_types
+def magic_(symbol: str, comment: Union[str, float, int]) -> int:
     """
     Converts a string to an integer, using the SHA-256 hash function.
     Assigns a unique 6-digit magic number depending on the strategy name,
     symbol and interval.
     """
+    if isinstance(comment, (float, int)):
+        comment = str(comment)
     expression = symbol + comment
     hash_object = hashlib.sha256(expression.encode('utf-8'))
     hash_hex = hash_object.hexdigest()
