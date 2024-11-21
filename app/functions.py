@@ -191,7 +191,7 @@ def get_data(symbol: str, tf: str, start: int, counter: int) -> DataFrame:
         raise ValueError(f"Error in get_data for symbol '{symbol}': {e}") from e
 
 
-def magic_(symbol, comment):
+def magic_(symbol: str, comment: str) -> int:
     """
     Converts a string to an integer, using the SHA-256 hash function.
     Assigns a unique 6-digit magic number depending on the strategy name,
@@ -204,11 +204,11 @@ def magic_(symbol, comment):
     return result // 10 ** (len(str(result)) - 6)
 
 
-def round_number_(symbol):
+def round_number_(symbol: str) -> int:
     return mt.symbol_info(symbol).digits
 
 
-def real_spread(symbol):
+def real_spread(symbol: str) -> float:
     s = mt.symbol_info(symbol)
     return s.spread / 10**s.digits
 
@@ -236,7 +236,7 @@ pendings = {
     }
 
 
-def sortino_ratio(returns):
+def sortino_ratio(returns: list) -> float:
     """
     Calculate the Sortino Ratio.
 
@@ -255,7 +255,7 @@ def sortino_ratio(returns):
     return sortino_ratio
 
 
-def omega_ratio(returns, threshold=0):
+def omega_ratio(returns: list, threshold: float=0) -> float:
     """
     Calculate the Omega Ratio.
 
@@ -274,14 +274,14 @@ def omega_ratio(returns, threshold=0):
     return omega_ratio
 
 
-def max_drawdown(returns):
+def max_drawdown(returns: list) -> float:
     compRet = (returns+1).cumprod()
     peak = compRet.expanding(min_periods=1).max()
     dd = (compRet/peak)-1
     return dd.min()
 
 
-def kelly_criterion(returns):
+def kelly_criterion(returns: list) -> float:
     good = [i for i in returns if i > 0]
     bad = [i for i in returns if i < 0]
     p = len(good) / len(returns)
