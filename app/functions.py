@@ -111,24 +111,58 @@ def timeframe_(tf: str):
         raise AttributeError(f"Invalid timeframe '{tf}'. Ensure it matches a valid TIMEFRAME constant in the mt module.") from e
 
 
-def get_data_for_model(symbol, tf, start, counter):
-    data = pd.DataFrame(mt.copy_rates_from_pos(
-                        symbol, timeframe_(tf), start, counter))
-    data = data.drop(["real_volume"], axis=1)
-    data.columns = ["time", "open", "high", "low",
-                    "close", "volume", "spread"]
-    data['volume'] = data['volume'].astype('int32')
-    data['spread'] = data['spread'].astype('int16')
-    return data
+def get_data_for_model(symbol: str, tf: str, start: int, counter: int) -> DataFrame:
+    """
+    Fetches historical market data for a given symbol and timeframe, 
+    formats it into a DataFrame, and prepares it for model usage.
+
+    Args:
+        symbol (str): The financial instrument symbol (e.g., 'EURUSD').
+        tf (str): The timeframe string (e.g., 'M1', 'H1', 'D1').
+        start (int): The starting position for historical data retrieval.
+        counter (int): The number of data points to retrieve.
+
+    Returns:
+        DataFrame: A pandas DataFrame containing the market data with the following columns:
+            - time (datetime): Timestamp of the candle.
+            - open (float): Open price.
+            - high (float): High price.
+            - low (float): Low price.
+            - close (float): Close price.
+            - volume (int): Volume of trades (integer type).
+            - spread (int): Spread in points (integer type).
+
+    Raises:
+        ValueError: If the data cannot be retrieved or is empty.
+    """
+    # Retrieve data using MetaTrader5 API
+    try:
+        raw_data = mt.copy_rates_from_pos(symbol, timeframe_(tf), start, counter)
+        # if raw_data is None or len(raw_data) == 0:
+        #     raise ValueError(f"No data retrieved for symbol '{symbol}' with timeframe '{tf}'.")
+
+        # Convert data to pandas DataFrame
+        data = pd.DataFrame(raw_data)
+
+        # Drop unnecessary columns and rename remaining ones
+        data = data.drop(["real_volume"], axis=1)
+        data.columns = ["time", "open", "high", "low", "close", "volume", "spread"]
+
+        # Convert data types for better memory efficiency
+        data['volume'] = data['volume'].astype('int32')
+        data['spread'] = data['spread'].astype('int16')
+
+        # Return the processed DataFrame
+        return data
+
+    except Exception as e:
+        raise ValueError(f"Error retrieving data for symbol '{symbol}': {e}") from e
 
 
 def get_data(symbol, tf, start, counter):
     data = get_data_for_model(symbol, tf, start, counter)
     data["time"] = pd.to_datetime(data["time"], unit="s")
     return data
-
-
-
 
 
 def magic_(symbol, comment):
