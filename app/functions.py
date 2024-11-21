@@ -258,23 +258,20 @@ def max_drawdown(returns: Union[np.ndarray, list]) -> float:
 def kelly_criterion(returns: Union[np.ndarray, list]) -> float:
     good = [i for i in returns if i > 0]
     bad = [i for i in returns if i < 0]
+    if len(returns) < 2 or len(good) < 2:
+        return 0
+    if len(bad) == 0:
+        return 2
     p = len(good) / len(returns)
     q = len(bad) / len(returns)
     a = abs(sum(bad))
     b = sum(good)
     try:
         win = (b/q)
-    except ZeroDivisionError:
-        return 0.1
-    try:
         loss = (a/p)
     except ZeroDivisionError:
-        return -0.1
+        return 0
     kk = win - loss
-    if kk > 20:
-        kk = 20
-    if kk < -20:
-        kk = -20
     return kk
 
 
