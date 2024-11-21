@@ -670,10 +670,10 @@ class Bot:
                 case 'overbought': return wow
                 case 'long_strong': return normal
                 case 'long_normal': return smaller
-                case 'long_weak': return biggest
+                case 'long_weak': return smallest
                 case 'short_strong': return normal
                 case 'short_normal': return smaller
-                case 'short_weak': return smallest
+                case 'short_weak': return biggest
                 case 'short_super_weak': return wow
 
         return Bot.position_size
