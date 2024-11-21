@@ -159,10 +159,36 @@ def get_data_for_model(symbol: str, tf: str, start: int, counter: int) -> DataFr
         raise ValueError(f"Error retrieving data for symbol '{symbol}': {e}") from e
 
 
-def get_data(symbol, tf, start, counter):
-    data = get_data_for_model(symbol, tf, start, counter)
-    data["time"] = pd.to_datetime(data["time"], unit="s")
-    return data
+def get_data(symbol: str, tf: str, start: int, counter: int) -> DataFrame:
+    """
+    Fetches and formats market data for a given symbol and timeframe.
+
+    This function wraps `get_data_for_model` and converts the 'time' column
+    from Unix timestamp to a human-readable datetime format.
+
+    Args:
+        symbol (str): The financial instrument symbol (e.g., 'EURUSD').
+        tf (str): The timeframe string (e.g., 'M1', 'H1', 'D1').
+        start (int): The starting position for historical data retrieval.
+        counter (int): The number of data points to retrieve.
+
+    Returns:
+        DataFrame: A pandas DataFrame with market data, including a converted 'time' column.
+
+    Raises:
+        ValueError: If the data retrieval or processing fails.
+    """
+    try:
+        # Get data using the helper function
+        data = get_data_for_model(symbol, tf, start, counter)
+
+        # Convert 'time' column to a datetime object
+        data["time"] = pd.to_datetime(data["time"], unit="s")
+
+        return data
+
+    except Exception as e:
+        raise ValueError(f"Error in get_data for symbol '{symbol}': {e}") from e
 
 
 def magic_(symbol, comment):
