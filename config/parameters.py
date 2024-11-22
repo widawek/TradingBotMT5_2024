@@ -4,9 +4,9 @@ from app.functions import get_timezone_difference
 
 
 def reverse_(symbol):
-    if symbol in ['EURUSD', 'USDCHF', 'EURJPY']:
-        return 'normal'
-    return 'reverse'
+    if symbol in ['EURUSD', 'USDCHF', 'USDCAD']:
+        return 'reverse'
+    return 'normal'
 
 intervals = ['M20']
 symbols = [

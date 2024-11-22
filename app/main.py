@@ -382,6 +382,7 @@ class Bot:
 
     @class_errors
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
+        
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
         price = mt.symbol_info_tick(self.symbol)._asdict()
@@ -405,6 +406,7 @@ class Bot:
         if min_volume and (volume < symbol_info["volume_min"]):
             self.volume = symbol_info["volume_min"]
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
+        self.kill_position_profit = round(self.kill_position_profit * (1+self.multi_voltage('M5', 33)), 2)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
         printer('Min volume:', min_volume)
@@ -528,113 +530,112 @@ class Bot:
         printer('comment:', self.comment)
 
     @class_errors
-    def actual_position_democracy(self):
-        if self.fake_position:
-            return self.fake_position_robot()
+    def actual_position_democracy(self, number_of_bars=250):
+        try:
+            if self.fake_position:
+                return self.fake_position_robot()
 
-        market = 'e' if dt.now().hour < change_hour else 'u'
-        if market != self.market:
-            self.market = market
-            self.load_models_democracy(catalog)
+            market = 'e' if dt.now().hour < change_hour else 'u'
+            if market != self.market:
+                self.market = market
+                self.load_models_democracy(catalog)
 
-        if self.trigger == 'model':
-            stance_values = []
-            dataframes = []
-            i = 0
-            start = time.time()
-            for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
-                name_ = f"{mbuy[1].split('_')[-4]}_{factor}"
-                if i==0:
-                    df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 250)) # how_many_bars
-                    df = data_operations(df, factor)
-                    dataframes.append((df, name_))
-                else:
-                    if any(nazwa == name_ for _, nazwa in dataframes):
-                        for dataframe, nazwa in dataframes:
-                            if nazwa == name_:
-                                df = dataframe
-                                break
-                    else:
-                        df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + 250)) # how_many_bars
+            if self.trigger == 'model':
+                stance_values = []
+                dataframes = []
+                i = 0
+                start = time.time()
+                for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
+                    name_ = f"{mbuy[1].split('_')[-4]}_{factor}"
+                    if i==0:
+                        df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + number_of_bars)) # how_many_bars
                         df = data_operations(df, factor)
                         dataframes.append((df, name_))
-                dfx = df.copy()
-                dtest_buy = xgb.DMatrix(df)
-                dtest_sell = xgb.DMatrix(df)
-                buy = mbuy[0].predict(dtest_buy)
-                sell = msell[0].predict(dtest_sell)
-                buy = np.where(buy > probability_edge, 1, 0)
-                sell = np.where(sell > probability_edge, -1, 0)
-                dfx['stance'] = buy + sell
-                dfx['stance'] = dfx['stance'].replace(0, np.NaN)
-                dfx['stance'] = dfx['stance'].ffill()
-                position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
+                    else:
+                        if any(nazwa == name_ for _, nazwa in dataframes):
+                            for dataframe, nazwa in dataframes:
+                                if nazwa == name_:
+                                    df = dataframe
+                                    break
+                        else:
+                            df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + number_of_bars)) # how_many_bars
+                            df = data_operations(df, factor)
+                            dataframes.append((df, name_))
+                    dfx = df.copy()
+                    dtest_buy = xgb.DMatrix(df)
+                    dtest_sell = xgb.DMatrix(df)
+                    buy = mbuy[0].predict(dtest_buy)
+                    sell = msell[0].predict(dtest_sell)
+                    buy = np.where(buy > probability_edge, 1, 0)
+                    sell = np.where(sell > probability_edge, -1, 0)
+                    dfx['stance'] = buy + sell
+                    dfx['stance'] = dfx['stance'].replace(0, np.NaN)
+                    dfx['stance'] = dfx['stance'].ffill()
+                    position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
+                    try:
+                        _ = int(position_)
+                    except Exception:
+                        continue
+                    stance_values.append(int(position_))
+                    i+=1
+                    if i >= self.model_counter:
+                        break
+                end = time.time()
+                duration = end-start
+                time_info(duration, "Decision time")
+                del dataframes
+                print('Stances: ', stance_values)
+                sum_of_position = np.sum(stance_values)
+
+                def longs(stance_values):
+                    return round(np.sum([1 for i in stance_values if i > 0]) / len(stance_values), 2)
+
+                def longs_democratic(stance_values):
+                    all_ = [abs(i) for i in stance_values]
+                    return round(np.sum(stance_values) / np.sum(all_), 2)
+
+                force_of_democratic = ic(longs_democratic(stance_values))
+                printer("Force of long democratic votes:", force_of_democratic)
                 try:
-                    _ = int(position_)
+                    fx = ic(longs(stance_values))
+                    printer("Percent of long votes:", fx)
                 except Exception:
-                    continue
-                stance_values.append(int(position_))
-                i+=1
-                if i >= self.model_counter:
-                    break
-            end = time.time()
-            duration = end-start
-            time_info(duration, "Decision time")
-            del dataframes
-            print('Stances: ', stance_values)
-            sum_of_position = np.sum(stance_values)
+                    pass
+                if sum_of_position != 0:
+                    position = 0 if sum_of_position > 0 else 1
+                else:
+                    position = self.pos_creator()
 
-            def longs(stance_values):
-                return round(np.sum([1 for i in stance_values if i > 0]) / len(stance_values), 2)
+                volume_10 = ((df['high']-df['low'])*df['volume']).rolling(8).mean().iloc[-1]
+                volume_2 = ((df['high']-df['low'])*df['volume']).rolling(2).mean().iloc[-1]
+                print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
+                self.check_volume_condition = volume_2 > volume_10
 
-            def longs_democratic(stance_values):
-                all_ = [abs(i) for i in stance_values]
-                return round(np.sum(stance_values) / np.sum(all_), 2)
-
-            force_of_democratic = ic(longs_democratic(stance_values))
-            printer("Force of long democratic votes:", force_of_democratic)
-            try:
-                fx = ic(longs(stance_values))
-                printer("Percent of long votes:", fx)
-            except Exception:
-                pass
-            if sum_of_position != 0:
-                position = 0 if sum_of_position > 0 else 1
             else:
-                try:
-                    position = self.pos_type
-                except Exception as e:
-                    print(e)
-                    self.pos_type = self.pos_creator()
+                dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
+                dfx["stance"] = function_when_model_not_work(dfx, self.ma_factor_fast, self.ma_factor_slow)
+                position = 0 if dfx.stance.iloc[-1] == 1 else 1
+                volume_10 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(8).mean().iloc[-1]
+                volume_2 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(2).mean().iloc[-1]
+                printer('Position from moving averages:', f'fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
+                printer("MA position:", position)
+                print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
+                self.check_volume_condition = volume_2 > volume_10
 
-            volume_10 = ((df['high']-df['low'])*df['volume']).rolling(8).mean().iloc[-1]
-            volume_2 = ((df['high']-df['low'])*df['volume']).rolling(2).mean().iloc[-1]
-            print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
-            self.check_volume_condition = volume_2 > volume_10
-
-        else:
-            dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
-            dfx["stance"] = function_when_model_not_work(dfx, self.ma_factor_fast, self.ma_factor_slow)
-            position = 0 if dfx.stance.iloc[-1] == 1 else 1
-            volume_10 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(8).mean().iloc[-1]
-            volume_2 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(2).mean().iloc[-1]
-            printer('Position from moving averages:', f'fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
-            printer("MA position:", position)
-            print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
-            self.check_volume_condition = volume_2 > volume_10
-
-        if self.reverse == 'normal':
-            pass
-        elif self.reverse == 'reverse':
-            position = changer(position, 0, 1)
-        elif self.reverse == 'normal_mix':
-            time_ = dt.now()
-            if time_.hour >= 14:
+            if self.reverse == 'normal':
+                pass
+            elif self.reverse == 'reverse':
                 position = changer(position, 0, 1)
+            elif self.reverse == 'normal_mix':
+                time_ = dt.now()
+                if time_.hour >= 14:
+                    position = changer(position, 0, 1)
 
-        # BotReverse
-        if Bot.reverse_it_all:
-            position = changer(position, 0, 1)
+            # BotReverse
+            if Bot.reverse_it_all:
+                position = changer(position, 0, 1)
+        except KeyError:
+            return self.actual_position_democracy(number_of_bars=number_of_bars*2)
 
         return position
 
@@ -662,16 +663,15 @@ class Bot:
                 case 'long_super_weak': return biggest  # price is low
                 case 'short_strong': return normal  # price is low
                 case 'short_normal': return smaller
-                case 'short_weak': return smallest  # price is high
+                case 'short_weak': return smaller  # price is high
                 case 'short_super_weak': return smallest
                 
-
         elif posType == (1 if not self.trend_or_not else 0):
             match self.trend:
                 case 'overbought': return wow
                 case 'long_strong': return normal
                 case 'long_normal': return smaller
-                case 'long_weak': return smallest
+                case 'long_weak': return smaller
                 case 'long_super_weak': return smallest
                 case 'short_strong': return normal
                 case 'short_normal': return smaller
@@ -826,6 +826,15 @@ class Bot:
         except Exception as e:
             print(e)
             pass
+
+    def multi_voltage(self, interval, factor):
+        df = get_data(self.symbol, interval, 1, factor*3)
+        df['atr'] = df.ta.atr(length=factor)
+        df['atr_ma'] = df.ta.atr(length=factor*2)
+        df['atr_vol_1'] = df['atr'] * df['volume'].rolling(window=factor).mean()
+        df['atr_vol_2'] = df['atr_ma'] * df['volume'].rolling(window=factor*2).mean()
+        df['xxx'] = (1 - (df['atr_vol_1'] / df['atr_vol_2']))*-1
+        return df['xxx'].iloc[-1]
 
 if __name__ == '__main__':
     print('Yo, wtf?')
