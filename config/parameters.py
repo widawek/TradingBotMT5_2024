@@ -4,12 +4,16 @@ from app.functions import get_timezone_difference
 
 
 def reverse_(symbol):
-    if symbol in ['EURUSD', 'USDCHF', 'USDCAD']:
+    if symbol in []:
         return 'reverse'
     return 'normal'
 
 intervals = ['M20']
 symbols = [
+        'BTCUSD',
+        'DE40',
+        'EURCAD',
+        'XAGUSD',
         'EURJPY',
         'EURUSD',
         'GBPUSD',
@@ -17,10 +21,7 @@ symbols = [
         'USDCHF',
         'USDJPY',
         'US30',
-        'XAUUSD',
-        'BTCUSD',
-        'DE40',
-        'EURCAD'
+        'XAUUSD'
         ]
 
 

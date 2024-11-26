@@ -100,6 +100,7 @@ class Bot:
     def if_tiktok(self, profit_=False):
         if self.tiktok <= 2:
             if profit_:
+                self.tiktok -= 1
                 self.clean_orders()
             else:
                 self.change_trigger_or_reverse('trigger')
@@ -204,19 +205,27 @@ class Bot:
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif profit < -self.profit_needed:
-                    self.if_tiktok()
+                    # botReverse
+                    match Bot.reverse_it_all:
+                        case True: self.if_tiktok(True)
+                        case False: self.if_tiktok()
 
                 # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
                 elif (profit < (-self.profit_needed/Bot.profit_factor)) \
                     and (position_time > self.pos_time) \
                     and (mean_profits < (-self.profit_needed/Bot.profit_factor)):
-                    self.if_tiktok()
+                    # botReverse
+                    match Bot.reverse_it_all:
+                        case True: self.if_tiktok(True)
+                        case False: self.if_tiktok()
 
                 # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz zysk mniejszy niż zysk maksymalny pomnożony przez współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
                 elif (self.profit_max > self.profit_needed) \
                     and (profit < self.profit_max*self.profit_decline_factor):
-                    self.if_tiktok(True)
-
+                    # botReverse
+                    match Bot.reverse_it_all:
+                        case True: self.if_tiktok()
+                        case False: self.if_tiktok(True)
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
                 elif (profit > self.profit_needed/(Bot.profit_factor*1.5) and not Bot.reverse_it_all) or \
                     (profit < -self.profit_needed/(Bot.profit_factor*1.5) and Bot.reverse_it_all):
@@ -631,9 +640,9 @@ class Bot:
                 if time_.hour >= 14:
                     position = changer(position, 0, 1)
 
-            # BotReverse
-            if Bot.reverse_it_all:
-                position = changer(position, 0, 1)
+            # # BotReverse
+            # if Bot.reverse_it_all:
+            #     position = changer(position, 0, 1)
         except KeyError:
             return self.actual_position_democracy(number_of_bars=number_of_bars*2)
 
@@ -833,7 +842,7 @@ class Bot:
         df['atr_ma'] = df.ta.atr(length=factor*2)
         df['atr_vol_1'] = df['atr'] * df['volume'].rolling(window=factor).mean()
         df['atr_vol_2'] = df['atr_ma'] * df['volume'].rolling(window=factor*2).mean()
-        df['xxx'] = (1 - (df['atr_vol_1'] / df['atr_vol_2']))*-1
+        df['xxx'] = (1 - (df['atr_vol_1'] / df['atr_vol_2']))#*-1
         return df['xxx'].iloc[-1]
 
 if __name__ == '__main__':

@@ -499,6 +499,9 @@ def generate_my_models(
     for interval in tqdm(intervals):
         finals = []
         for symbol in symbols:
+            from config.parameters import leverage
+            if symbol in ['BTCUSD', 'DE40', 'EURCAD']:
+                leverage = 2
             df_raw = get_data_for_model(symbol, interval, 1, bars)
             for factor in factors:
                 print("DF length: ", len(df_raw))
