@@ -98,7 +98,7 @@ class Bot:
 
     @class_errors
     def if_tiktok(self, profit_=False):
-        if self.tiktok <= 2:
+        if self.tiktok <= 1:
             if profit_:
                 self.tiktok -= 1
                 self.clean_orders()
@@ -113,7 +113,9 @@ class Bot:
 
     @class_errors
     def fake_position_robot(self):
-        if self.fake_counter <= 8:
+        if self.fake_counter <= 5:
+            interval = 'M3'
+        elif self.fake_counter <= 8:
             interval = 'M5'
         elif self.fake_counter <= 11:
             interval = 'M10'
@@ -128,10 +130,6 @@ class Bot:
         close2 = interval_df['close'].iloc[2]
         pos_type = self.positions[0].type
         profit_ = self.positions[0].profit
-
-        # # BotReverse
-        # if Bot.reverse_it_all:
-        #     pos_type = 0 if pos_type == 1 else 1
 
         def fake_position_on():
             self.fake_position = True
@@ -240,7 +238,7 @@ class Bot:
                 pass
         else:
             pass
-    
+
     @class_errors
     def print_condition(self):
         return ((self.print_count == 0) or (self.print_count % 10 == 0))
@@ -391,7 +389,7 @@ class Bot:
 
     @class_errors
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
-        
+
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
         price = mt.symbol_info_tick(self.symbol)._asdict()
@@ -415,7 +413,7 @@ class Bot:
         if min_volume and (volume < symbol_info["volume_min"]):
             self.volume = symbol_info["volume_min"]
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
-        self.kill_position_profit = round(self.kill_position_profit * (1+self.multi_voltage('M5', 33)), 2)
+        self.kill_position_profit = round(self.kill_position_profit, 2)# * (1+self.multi_voltage('M5', 33)), 2)
         self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
         printer('Min volume:', min_volume)
@@ -674,7 +672,7 @@ class Bot:
                 case 'short_normal': return smaller
                 case 'short_weak': return smaller  # price is high
                 case 'short_super_weak': return smallest
-                
+
         elif posType == (1 if not self.trend_or_not else 0):
             match self.trend:
                 case 'overbought': return wow
@@ -836,14 +834,14 @@ class Bot:
             print(e)
             pass
 
-    def multi_voltage(self, interval, factor):
-        df = get_data(self.symbol, interval, 1, factor*3)
-        df['atr'] = df.ta.atr(length=factor)
-        df['atr_ma'] = df.ta.atr(length=factor*2)
-        df['atr_vol_1'] = df['atr'] * df['volume'].rolling(window=factor).mean()
-        df['atr_vol_2'] = df['atr_ma'] * df['volume'].rolling(window=factor*2).mean()
-        df['xxx'] = (1 - (df['atr_vol_1'] / df['atr_vol_2']))#*-1
-        return df['xxx'].iloc[-1]
+    # def multi_voltage(self, interval, factor):
+    #     df = get_data(self.symbol, interval, 1, factor*3)
+    #     df['atr'] = df.ta.atr(length=factor)
+    #     df['atr_ma'] = df.ta.atr(length=factor*2)
+    #     df['atr_vol_1'] = df['atr'] * df['volume'].rolling(window=factor).mean()
+    #     df['atr_vol_2'] = df['atr_ma'] * df['volume'].rolling(window=factor*2).mean()
+    #     df['xxx'] = (1 - (df['atr_vol_1'] / df['atr_vol_2']))#*-1
+    #     return df['xxx'].iloc[-1]
 
 if __name__ == '__main__':
     print('Yo, wtf?')
