@@ -642,7 +642,13 @@ class Bot:
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
             cross = dfx[dfx['cross'] == 1]
             self.strategy_pos_open_price = cross['open'].iloc[-1]
-        
+
+            # check if price is nice to open
+            tick = mt.symbol_info_tick(self.symbol)
+            price = round((tick.ask + tick.bid) / 2, self.round_number)
+            match position:
+                case 0: self.good_price_to_open_pos = True if price <= self.strategy_pos_open_price else False
+                case 1: self.good_price_to_open_pos = True if price >= self.strategy_pos_open_price else False
             # # BotReverse
             # if Bot.reverse_it_all:
             #     position = changer(position, 0, 1)
