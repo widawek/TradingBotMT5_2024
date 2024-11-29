@@ -13,7 +13,7 @@ from extensions.symbols_rank import symbol_stats
 from app.functions import *
 from app.decorators import class_errors
 from app.model_generator import data_operations, evening_hour, probability_edge
-from config.parameters import intervals, game_system, reverse_, tz_diff, change_hour
+from config.parameters import *
 from app.database_class import TradingProcessor
 from app.bot_functions import rename_files_in_directory, checkout_report, vwap_std, avg_daily_vol_for_divider, trend_or_not
 sys.path.append("..")
@@ -27,19 +27,7 @@ catalog = f'{parent_catalog}\\models'
 
 
 class Bot:
-    max_number_of_models = 75
     weekday = dt.now().weekday()
-    tz_diff = tz_diff
-    trigger_mode = 'on'
-    profit_factor = 1.5
-    position_size = 6       # percent of balance
-    kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
-    tp_miner = 3
-    system = game_system # absolute, weighted_democracy, ranked_democracy, just_democracy
-    master_interval = intervals[0]
-
-    # botReverse
-    reverse_it_all = True
 
     def __init__(self, symbol):
         printer(dt.now(), symbol)
@@ -64,14 +52,14 @@ class Bot:
         self.trigger = 'model' # 'model' 'moving_averages'
         self.market = 'e' if dt.now().hour < change_hour else 'u'
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
-        self.trigger_model_divider = avg_daily_vol_for_divider(symbol, 8)
+        self.trigger_model_divider = avg_daily_vol_for_divider(symbol, trigger_model_divider_factor)
         self.trend_or_not = trend_or_not(symbol)
         self.reverse = reverse_(symbol)
         self.df_d1 = get_data(symbol, "D1", 1, 30)
         self.avg_daily_vol()
         self.round_number = round_number_(symbol)
-        self.volume_calc(Bot.position_size, True)
-        self.pos_time = interval_time(Bot.master_interval)
+        self.volume_calc(position_size, True)
+        self.pos_time = interval_time(master_interval)
         self.positions_()
         self.load_models_democracy(catalog)
         self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_(self.interval), 0, 1)[0][0]
@@ -83,7 +71,7 @@ class Bot:
             dt_from_timestamp = dt.fromtimestamp(mt.positions_get(symbol=self.symbol)[0][1])
         except Exception:
             return 0
-        return int((dt.now() - dt_from_timestamp - timedelta(hours=Bot.tz_diff)).seconds/60)
+        return int((dt.now() - dt_from_timestamp - timedelta(hours=tz_diff)).seconds/60)
 
     @class_errors
     def change_trigger_or_reverse(self, what):
@@ -183,7 +171,7 @@ class Bot:
                 profit = sum([i[-4] for i in self.positions])
 
                 # BotReverse
-                if Bot.reverse_it_all:
+                if reverse_it_all:
                     profit = -profit
 
                 if self.profit0 is None:
@@ -207,16 +195,16 @@ class Bot:
                 # Jeżeli strata mniejsza od straty granicznej
                 elif profit < -self.profit_needed:
                     # botReverse
-                    match Bot.reverse_it_all:
+                    match reverse_it_all:
                         case True: self.if_tiktok(True)
                         case False: self.if_tiktok()
 
                 # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
-                elif (profit < (-self.profit_needed/Bot.profit_factor)) \
+                elif (profit < (-self.profit_needed/profit_factor)) \
                     and (position_time > self.pos_time) \
-                    and (mean_profits < (-self.profit_needed/Bot.profit_factor)):
+                    and (mean_profits < (-self.profit_needed/profit_factor)):
                     # botReverse
-                    match Bot.reverse_it_all:
+                    match reverse_it_all:
                         case True: self.if_tiktok(True)
                         case False: self.if_tiktok()
 
@@ -224,13 +212,13 @@ class Bot:
                 elif (self.profit_max > self.profit_needed) \
                     and (profit < self.profit_max*self.profit_decline_factor):
                     # botReverse
-                    match Bot.reverse_it_all:
+                    match reverse_it_all:
                         case True: self.if_tiktok()
                         case False: self.if_tiktok(True)
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                elif (profit > self.profit_needed/(Bot.profit_factor*1.5) and not Bot.reverse_it_all) or \
-                    (profit < -self.profit_needed/(Bot.profit_factor*1.5) and Bot.reverse_it_all):
-                    #and (position_time > self.pos_time/(Bot.profit_factor*1.5))
+                elif (profit > self.profit_needed/(profit_factor*1.5) and not reverse_it_all) or \
+                    (profit < -self.profit_needed/(profit_factor*1.5) and reverse_it_all):
+                    #and (position_time > self.pos_time/(profit_factor*1.5))
                     _ = self.fake_position_robot()
 
                 if self.print_condition():
@@ -273,7 +261,7 @@ class Bot:
     @class_errors
     def request_get(self):
         if not self.positions:
-            checkout_report(self.symbol, self.reverse, self.trigger, Bot.reverse_it_all)
+            checkout_report(self.symbol, self.reverse, self.trigger, reverse_it_all)
             posType = self.actual_position_democracy()
             self.request(actions['deal'], posType)
         self.positions_()
@@ -292,7 +280,7 @@ class Bot:
             if self.print_condition():
                 printer("\nSymbol:", self.symbol)
                 printer("Czas:", time.strftime("%H:%M:%S"))
-            self.check_trigger(trigger_mode=Bot.trigger_mode)
+            self.check_trigger(trigger_mode=trigger_mode)
             self.data()
             time.sleep(time_sleep)
 
@@ -415,9 +403,9 @@ class Bot:
         self.volume = volume
         if min_volume and (volume < symbol_info["volume_min"]):
             self.volume = symbol_info["volume_min"]
-        _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, Bot.kill_multiplier)
+        _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, kill_multiplier)
         self.kill_position_profit = round(self.kill_position_profit, 2)# * (1+self.multi_voltage('M5', 33)), 2)
-        self.tp_miner = round(self.kill_position_profit * Bot.tp_miner / Bot.kill_multiplier, 2)
+        self.tp_miner = round(self.kill_position_profit * tp_miner / kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
         printer('Min volume:', min_volume)
         printer('Calculated volume:', volume)
@@ -456,8 +444,8 @@ class Bot:
         # print(df)
         self.model_counter = len(df[df['market'] == self.market])
         printer("Ilość modeli:", self.model_counter)
-        if self.model_counter > Bot.max_number_of_models:
-            self.model_counter = Bot.max_number_of_models
+        if self.model_counter > max_number_of_models:
+            self.model_counter = max_number_of_models
         if len(df) < 5:
             print(f"Za mało modeli --> ({self.model_counter})")
             input("Wciśnij cokolwek żeby wyjść.")
@@ -474,7 +462,7 @@ class Bot:
             interval = df['interval'].iloc[i]
             factor = df['factor'].iloc[i]
             result = df['result'].iloc[i]
-            if Bot.system != 'invertedrank_democracy':
+            if game_system != 'invertedrank_democracy':
                 rank = df['rank'].iloc[i]
             else:
                 rank = df['rank'].iloc[len(df)-i-1]
@@ -482,7 +470,7 @@ class Bot:
             names.append([name, rank])
             create_df.append(f'{name}'.split('_'))
 
-        if Bot.system == 'weighted_democracy':
+        if game_system == 'weighted_democracy':
             df_result_filter = pd.DataFrame(create_df, columns=['market', 'strategy', 'ma_fast', 'ma_slow',
                     'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result']
                     )
@@ -532,7 +520,7 @@ class Bot:
         most_common_ma = most_common_value(ma_list)
         self.ma_factor_fast = most_common_ma[0]
         self.ma_factor_slow = most_common_ma[1]
-        self.interval = Bot.master_interval
+        self.interval = master_interval
         self.comment = 'wdemo_4'
         self.mdv = self.mdv_() / 4
 
@@ -642,7 +630,7 @@ class Bot:
                     position = changer(position, 0, 1)
 
             # BotReverse
-            if Bot.reverse_it_all:
+            if reverse_it_all:
                 position = changer(position, 0, 1)
             
             # finding the last opening price as strategy_pos_open_price
@@ -668,7 +656,9 @@ class Bot:
                         
                     if self.check_new_bar():
                         return self.actual_position_democracy(number_of_bars=number_of_bars)
-                    print("Waiting for new position or better price.")
+                    pos = 'LONG' if position==0 else "SHORT"
+                    diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
+                    printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff} %', base_just=65)
                     time.sleep(5)
                 
         except KeyError:
@@ -678,17 +668,17 @@ class Bot:
 
     @class_errors
     def what_trend_is_it(self, posType):
-        smallest = int(Bot.position_size/2)
-        smaller = int(Bot.position_size/1.5)
-        normal = Bot.position_size
-        bigger = int(Bot.position_size*1.5)
-        biggest = int(Bot.position_size*3)
-        wow = int(Bot.position_size*4)
+        smallest = int(position_size/2)
+        smaller = int(position_size/1.5)
+        normal = position_size
+        bigger = int(position_size*1.5)
+        biggest = int(position_size*3)
+        wow = int(position_size*4)
 
         self.trend = vwap_std(self.symbol)
 
         # BotReverse
-        if Bot.reverse_it_all:
+        if reverse_it_all:
             posType = changer(posType, 0, 1)
 
         if posType == (0 if not self.trend_or_not else 1):
@@ -715,7 +705,7 @@ class Bot:
                 case 'short_weak': return bigger
                 case 'short_super_weak': return biggest
 
-        return Bot.position_size
+        return position_size
 
     @class_errors
     def request(self, action, posType, price=None):
@@ -834,7 +824,7 @@ class Bot:
                 trigger=self.trigger,
                 trigger_divider=self.trigger_model_divider,
                 decline_factor=self.profit_decline_factor,
-                profit_factor=Bot.profit_factor,
+                profit_factor=profit_factor,
                 calculated_profit=self.profit_needed,
                 minutes=self.pos_time,
                 weekday=Bot.weekday,
@@ -842,7 +832,7 @@ class Bot:
                 tiktok=self.tiktok,
                 number_of_models = self.model_counter,
                 market=self.market,
-                full_reverse=Bot.reverse_it_all
+                full_reverse=reverse_it_all
             )
 
             mean_profit = np.mean(self.profits)
