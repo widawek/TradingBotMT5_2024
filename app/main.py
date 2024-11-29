@@ -638,6 +638,11 @@ class Bot:
                 if time_.hour >= 14:
                     position = changer(position, 0, 1)
 
+            # finding the last opening price as strategy_pos_open_price
+            dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
+            cross = dfx[dfx['cross'] == 1]
+            self.strategy_pos_open_price = cross['open'].iloc[-1]
+        
             # # BotReverse
             # if Bot.reverse_it_all:
             #     position = changer(position, 0, 1)
