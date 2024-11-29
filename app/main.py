@@ -640,6 +640,7 @@ class Bot:
 
             # finding the last opening price as strategy_pos_open_price
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
+            self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
             cross = dfx[dfx['cross'] == 1]
             self.strategy_pos_open_price = cross['open'].iloc[-1]
 
