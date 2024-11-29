@@ -48,6 +48,9 @@ class Bot:
         self.model_counter = None
         self.profit0 = None
         self.max_close = None
+        self.fresh_signal = None
+        self.strategy_pos_open_price = None
+        self.good_price_to_open_pos = None
         self.print_count = 0
         self.change = 0
         self.tiktok = 0
