@@ -641,6 +641,10 @@ class Bot:
                 if time_.hour >= 14:
                     position = changer(position, 0, 1)
 
+            # BotReverse
+            if Bot.reverse_it_all:
+                position = changer(position, 0, 1)
+            
             # finding the last opening price as strategy_pos_open_price
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
             self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
@@ -665,9 +669,6 @@ class Bot:
                 print("Waiting for new position or better price.")
                 time.sleep(5)
                 
-            # # BotReverse
-            # if Bot.reverse_it_all:
-            #     position = changer(position, 0, 1)
         except KeyError:
             return self.actual_position_democracy(number_of_bars=number_of_bars*2)
 
