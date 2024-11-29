@@ -654,7 +654,7 @@ class Bot:
             positions_ = mt.positions_get(symbol=self.symbol)
             if len(positions_) == 0:
                 while True:
-                    if self.fresh_start:
+                    if self.fresh_signal:
                         break
                         
                     # check if price is nice to open
