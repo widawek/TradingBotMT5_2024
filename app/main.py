@@ -647,12 +647,24 @@ class Bot:
             cross = dfx[dfx['cross'] == 1]
             self.strategy_pos_open_price = cross['open'].iloc[-1]
 
-            # check if price is nice to open
-            tick = mt.symbol_info_tick(self.symbol)
-            price = round((tick.ask + tick.bid) / 2, self.round_number)
-            match position:
-                case 0: self.good_price_to_open_pos = True if price <= self.strategy_pos_open_price else False
-                case 1: self.good_price_to_open_pos = True if price >= self.strategy_pos_open_price else False
+            while True:
+                if self.fresh_start:
+                    break
+                    
+                # check if price is nice to open
+                tick = mt.symbol_info_tick(self.symbol)
+                price = round((tick.ask + tick.bid) / 2, self.round_number)
+                match position:
+                    case 0: self.good_price_to_open_pos = True if price <= self.strategy_pos_open_price else False
+                    case 1: self.good_price_to_open_pos = True if price >= self.strategy_pos_open_price else False
+                if self.good_price_to_open_pos:
+                    break
+                    
+                if self.check_new_bar():
+                    return self.actual_position_democracy(number_of_bars=number_of_bars)
+                print("Waiting for new position or better price.")
+                time.sleep(5)
+                
             # # BotReverse
             # if Bot.reverse_it_all:
             #     position = changer(position, 0, 1)
