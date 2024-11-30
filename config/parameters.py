@@ -3,54 +3,56 @@ sys.path.append("..")
 from app.functions import get_timezone_difference
 
 # global params
-intervals = ['M20']
-symbols = [
+
+symbols: list = [
         'BTCUSD',
-        'DE40',
-        'EURCAD',
-        'XAGUSD',
-        'EURJPY',
-        'EURUSD',
-        'GBPUSD',
-        'USDCAD',
-        'USDCHF',
-        'USDJPY',
-        'US30',
-        'XAUUSD'
+        'ETHUSD',
+        # 'DE40',
+        # 'EURCAD',
+        # 'XAGUSD',
+        # 'EURJPY',
+        # 'EURUSD',
+        # 'GBPUSD',
+        # 'USDCAD',
+        # 'USDCHF',
+        # 'USDJPY',
+        # 'US30',
+        # 'XAUUSD'
         ]
 
 # model_generator_params
-leverage = 20
-delete_old_models = True
-min_factor = 6
-max_factor = 23
-range_ = 1
-morning_hour = 7
-evening_hour = 24
-probability_edge = 0.25
-sharpe_limit = 2
-kk_limit = 1.5
-omega_limit = 1.1
-n_estimators = 4000
-lr_list = [0.05, 0.15, 0.30]
-ts_list = [0.3]
-factors = [_ for _ in range(min_factor, max_factor, range_)]
-n_splits = 2
-bars = 60000
-change_hour = 15
+intervals: list                         = ['M20']
+leverage: int                           = 20
+delete_old_models: bool                 = True
+min_factor: int                         = 6
+max_factor: int                         = 23
+range_: int                             = 1
+morning_hour: int                       = 7
+evening_hour: int                       = 24
+probability_edge: float                 = 0.25
+sharpe_limit: float                     = 3.0
+kk_limit: float                         = 1.0
+omega_limit: float                      = 1.1
+n_estimators: int                       = 4000
+lr_list: list                           = [0.05, 0.15, 0.30]
+ts_list: list                           = [0.3]
+factors: list                           = [_ for _ in range(min_factor, max_factor, range_)]
+n_splits: int                           = 2
+bars: int                               = 30000
+change_hour: int                        = 15
 
 # bot params
-tz_diff = get_timezone_difference()
-game_system = 'weighted_democracy'
-max_number_of_models = 75
-trigger_mode = 'on'
-profit_factor = 1.5
-position_size = 6       # percent of balance
-kill_multiplier = 1.5   # loss of daily volatility by one position multiplier
-tp_miner = 3
-master_interval = intervals[0]
-reverse_it_all = True   # bool
-trigger_model_divider_factor = 5
+tz_diff                                 = get_timezone_difference()
+game_system: str                        = 'weighted_democracy'
+max_number_of_models: int               = 75
+trigger_mode: str                       = 'on'
+profit_factor: float                    = 1.5
+position_size: int                      = 6       # percent of balance
+kill_multiplier: float                  = 1.5   # loss of daily volatility by one position multiplier
+tp_miner: int                           = 3
+master_interval: str                    = intervals[0]
+reverse_it_all: bool                    = True
+trigger_model_divider_factor: int       = 5
 
 def reverse_(symbol):
     if symbol in []:

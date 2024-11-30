@@ -123,7 +123,8 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
     df['cross'] = np.where(df['stance'] != df['stance'].shift(1), 1, 0)
     density = round((df['cross'].sum()/len(df))*100, 2)
     returns, _, _ = get_returns(df, symbol)
-    strategy_result = (1 + returns).cumprod() - 1
+    #strategy_result = (1 + returns).cumprod() - 1
+    strategy_result = returns.cumsum()
 
     returns_list = returns.to_list()
     sharpe = sharpe_multiplier * returns.mean()/returns.std()
@@ -150,7 +151,7 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
         print(f"Median return [%] {annotation}:    ", round(
             sharpe_multiplier * np.median(df['return'].dropna().to_list()), 2))
 
-    if (omega > omega_limit and sharpe > sharpe_limit and kk > kk_limit and dom_ret > 0):
+    if (omega > omega_limit and sharpe > sharpe_limit and kk > kk_limit and dom_ret > drawdown):
         status = "YES"
         print(f"OK {annotation} "*30)
         print(f"""#### RESULT: {result} ####""")
@@ -500,15 +501,15 @@ def generate_my_models(
         finals = []
         for symbol in symbols:
             from config.parameters import leverage
-            if symbol in ['BTCUSD', 'DE40', 'EURCAD']:
+            if symbol in ['BTCUSD', 'DE40', 'EURCAD', 'ETHUSD']:
                 leverage = 2
             df_raw = get_data_for_model(symbol, interval, 1, bars)
             for factor in factors:
-                print("DF length: ", len(df_raw))
+                print("\nDF length: ", len(df_raw))
                 df = data_operations(df_raw.copy(), factor)
                 for function in functions: 
                     for t_set in ts_list:
-                        train_length = 0.98
+                        train_length = 0.975
                         dataset = df.copy()[:int(train_length*len(df))]
                         testset = df.copy()[int(train_length*len(df)):]
                         for learning_rate in lr_list:

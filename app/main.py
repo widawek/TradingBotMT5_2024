@@ -182,11 +182,11 @@ class Bot:
                 self.self_decline_factor()
                 if self.print_condition():
                     printer("Volume-volatility condition:", self.check_volume_condition)
-                    printer("Change value:", f"{round(self.profit_needed, 2)} $")
+                    printer("Change value:", f"{round(self.profit_needed, 2):.2f} $")
                     printer("Actual trigger:", self.trigger)
-                    printer("Max profit:", f"{self.profit_max} $")
-                    printer("Profit zero aka spread:", f"{self.profit0} $")
-                    printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2)} $")
+                    printer("Max profit:", f"{self.profit_max:.2f} $")
+                    printer("Profit zero aka spread:", f"{self.profit0:.2f} $")
+                    printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2):.2f} $")
                     printer("Decline factor:", f"{self.profit_decline_factor}")
 
                 if self.fake_position:
@@ -326,11 +326,11 @@ class Bot:
 
     @class_errors
     def info(self, profit, account, profit_to_margin, profit_to_balance):
-        printer("Profit:", f"{round(profit, 2)} $")
-        printer("Account balance:", f"{account.balance} $")
-        printer("Account free margin:", f"{account.margin_free} $")
-        printer("Profit to margin:", f"{profit_to_margin} %")
-        printer("Profit to balance:", f"{profit_to_balance} %")
+        printer("Profit:", f"{round(profit, 2):.2f} $")
+        printer("Account balance:", f"{account.balance:.2f} $")
+        printer("Account free margin:", f"{account.margin_free:.2f} $")
+        printer("Profit to margin:", f"{profit_to_margin:.2f} %")
+        printer("Profit to balance:", f"{profit_to_balance:.2f} %")
         printer("Actual position from model:", self.pos_type)
         printer("Mode:", self.reverse)
         printer("Fake position:", self.fake_position)
@@ -409,8 +409,8 @@ class Bot:
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
         printer('Min volume:', min_volume)
         printer('Calculated volume:', volume)
-        printer("Target:", f"{self.tp_miner} $")
-        printer("Killer:", f"{-self.kill_position_profit} $")
+        printer("Target:", f"{self.tp_miner:.2f} $")
+        printer("Killer:", f"{-self.kill_position_profit:.2f} $")
 
     @class_errors
     def find_files(self, directory):
@@ -658,7 +658,7 @@ class Bot:
                         return self.actual_position_democracy(number_of_bars=number_of_bars)
                     pos = 'LONG' if position==0 else "SHORT"
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
-                    printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff} %', base_just=65)
+                    printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
                     time.sleep(5)
                 
         except KeyError:
