@@ -4,23 +4,23 @@ from app.functions import get_timezone_difference
 
 # global params
 
-symbols: list = [
-        'BTCUSD',
-        'ETHUSD',
-        # 'DE40',
-        # 'EURCAD',
-        # 'XAGUSD',
-        # 'EURJPY',
-        # 'EURUSD',
-        # 'GBPUSD',
-        # 'USDCAD',
-        # 'USDCHF',
-        # 'USDJPY',
-        # 'US30',
-        # 'XAUUSD'
-        ]
+symbols:                                list = [
+                                            'BTCUSD',
+                                            'ETHUSD',
+                                            # 'DE40',
+                                            # 'EURCAD',
+                                            # 'XAGUSD',
+                                            # 'EURJPY',
+                                            # 'EURUSD',
+                                            # 'GBPUSD',
+                                            # 'USDCAD',
+                                            # 'USDCHF',
+                                            # 'USDJPY',
+                                            # 'US30',
+                                            # 'XAUUSD'
+                                            ]
 
-# model_generator_params
+#                                       model_generator_params
 intervals: list                         = ['M20']
 leverage: int                           = 20
 delete_old_models: bool                 = True
@@ -41,7 +41,7 @@ n_splits: int                           = 2
 bars: int                               = 30000
 change_hour: int                        = 15
 
-# bot params
+#                                       bot params
 tz_diff                                 = get_timezone_difference()
 game_system: str                        = 'weighted_democracy'
 max_number_of_models: int               = 75
@@ -53,6 +53,7 @@ tp_miner: int                           = 3
 master_interval: str                    = intervals[0]
 reverse_it_all: bool                    = True
 trigger_model_divider_factor: int       = 5
+base_fake_interval: str                 = 'M3'
 
 def reverse_(symbol):
     if symbol in []:

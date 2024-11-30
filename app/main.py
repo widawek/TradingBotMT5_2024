@@ -16,7 +16,6 @@ from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import *
 from app.database_class import TradingProcessor
 from app.bot_functions import *
-from app.decorators import validate_input_types
 sys.path.append("..")
 
 processor = TradingProcessor()
@@ -40,6 +39,7 @@ class Bot:
         self.fresh_signal = None
         self.strategy_pos_open_price = None
         self.good_price_to_open_pos = None
+        self.base_fake_interval = base_fake_interval
         self.print_count = 0
         self.change = 0
         self.tiktok = 0
@@ -109,7 +109,7 @@ class Bot:
     @class_errors
     def fake_position_robot(self):
         if self.fake_counter <= 5:
-            interval = 'M3'
+            interval = self.base_fake_interval
         elif self.fake_counter <= 8:
             interval = 'M5'
         elif self.fake_counter <= 11:
@@ -126,6 +126,17 @@ class Bot:
         pos_type = self.positions[0].type
         profit_ = self.positions[0].profit
 
+        if self.base_fake_interval != interval:
+            test = get_data(self.symbol, interval, 1, 200)
+            test['better_close'] = np.where((test['close']>test['close'].shift(1)) & (test['close']>test['close'].shift(2)) & (pos_type==0) |
+                                            (test['close']<test['close'].shift(1)) & (test['close']<test['close'].shift(2)) & (pos_type==1), 1, 0)
+            test_better = test[test['better_close']==1]
+            test_better.reset_index()
+            self.fake_stoploss = test_better['close'].iloc[-2]
+            self.base_fake_interval = interval
+            return pos_type
+
+
         def fake_position_on():
             self.fake_position = True
             self.max_close = close2
@@ -136,6 +147,7 @@ class Bot:
             self.max_close = None
             self.fake_stoploss = 0
             self.fake_counter = 0
+            self.base_fake_interval = base_fake_interval
             return self.actual_position_democracy()
 
         if not self.fake_position:
