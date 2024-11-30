@@ -88,14 +88,17 @@ class Bot:
         self.change = 1
 
     @class_errors
-    def if_tiktok(self, profit_=False):
+    def if_tiktok(self):
+        pos = mt.positions_get(symbol=self.symbol)
+        profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].comment == self.comment])
         if self.tiktok <= 1:
-            if profit_:
+            if profit_ > 0:
                 self.tiktok -= 1
-                self.clean_orders()
-            else:
+            elif profit_ < 0:
                 self.change_trigger_or_reverse('trigger')
                 self.tiktok += 1
+            else:
+                pass
         else:
             self.change_trigger_or_reverse('both')
             self.tiktok = 0
@@ -194,27 +197,18 @@ class Bot:
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif profit < -self.profit_needed:
-                    # botReverse
-                    match reverse_it_all:
-                        case True: self.if_tiktok(True)
-                        case False: self.if_tiktok()
+                    self.clean_orders()
 
                 # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
                 elif (profit < (-self.profit_needed/profit_factor)) \
                     and (position_time > self.pos_time) \
                     and (mean_profits < (-self.profit_needed/profit_factor)):
-                    # botReverse
-                    match reverse_it_all:
-                        case True: self.if_tiktok(True)
-                        case False: self.if_tiktok()
+                    self.clean_orders()
 
                 # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz zysk mniejszy niż zysk maksymalny pomnożony przez współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
                 elif (self.profit_max > self.profit_needed) \
                     and (profit < self.profit_max*self.profit_decline_factor):
-                    # botReverse
-                    match reverse_it_all:
-                        case True: self.if_tiktok()
-                        case False: self.if_tiktok(True)
+                    self.clean_orders()
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
                 elif (profit > self.profit_needed/(profit_factor*1.5) and not reverse_it_all) or \
                     (profit < -self.profit_needed/(profit_factor*1.5) and reverse_it_all):
@@ -229,6 +223,33 @@ class Bot:
                 pass
         else:
             pass
+
+    @class_errors
+    def clean_orders(self):
+        self.if_tiktok()
+        self.close_request()
+        orders = mt.orders_get(symbol=self.symbol)
+        print(orders)
+        counter = 0
+        if orders == ():
+            print("Brak zleceń oczekujących dla symbolu", self.symbol)
+        else:
+            for order in orders:
+                request = {
+                    "action": mt.TRADE_ACTION_REMOVE,
+                    "order": order.ticket,
+                    "symbol": order.symbol,
+                    }
+                result = mt.order_send(request)
+                if result.retcode != mt.TRADE_RETCODE_DONE:
+                    print("Błąd podczas usuwania zlecenia:", result.comment)
+                else:
+                    print(f"Usunięto zlecenie oczekujące: {order}\n\n")
+                    counter += 1
+            print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
+            time.sleep(1)
+        self.reset_bot()
+        self.report()
 
     @class_errors
     def print_condition(self):
@@ -345,32 +366,6 @@ class Bot:
         self.profits = []
         self.profit0 = None
         self.profit_max = 0
-
-    @class_errors
-    def clean_orders(self):
-        self.close_request()
-        orders = mt.orders_get(symbol=self.symbol)
-        print(orders)
-        counter = 0
-        if orders == ():
-            print("Brak zleceń oczekujących dla symbolu", self.symbol)
-        else:
-            for order in orders:
-                request = {
-                    "action": mt.TRADE_ACTION_REMOVE,
-                    "order": order.ticket,
-                    "symbol": order.symbol,
-                    }
-                result = mt.order_send(request)
-                if result.retcode != mt.TRADE_RETCODE_DONE:
-                    print("Błąd podczas usuwania zlecenia:", result.comment)
-                else:
-                    print(f"Usunięto zlecenie oczekujące: {order}\n\n")
-                    counter += 1
-            print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
-            time.sleep(1)
-        self.reset_bot()
-        self.report()
 
     @class_errors
     def avg_daily_vol(self):
