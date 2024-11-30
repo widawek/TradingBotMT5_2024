@@ -49,6 +49,7 @@ class Bot:
         self.fake_counter = 0
         self.fake_position = False
         self.profits = []
+        self.close_profits = []
         self.global_positions_stats = []
         self.trigger = 'model' # 'model' 'moving_averages'
         self.market = 'e' if dt.now().hour < change_hour else 'u'
@@ -92,6 +93,8 @@ class Bot:
     def if_tiktok(self):
         pos = mt.positions_get(symbol=self.symbol)
         profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].comment == self.comment])
+        if profit_ != 0:
+            self.close_profits.append(profit_)
         if self.tiktok <= 4:
             if profit_ > 0:
                 self.tiktok -= 1
