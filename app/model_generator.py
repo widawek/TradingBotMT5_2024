@@ -22,109 +22,39 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from app.functions import *
 from config.parameters import *
+from app.mg_functions import *
+
+# parameters
+def params(learning_rate, df_cols):
+    params = {
+        'learning_rate':        learning_rate,
+        'max_depth':            2*len(df_cols),
+        'colsample_by*':        0.9,
+        'min_child_weight':     int(len(df_cols)/17),
+        'subsample':            0.7,
+        'random_state':         42,
+        'eval_metric':          'auc',
+        'tree_method':          'gpu_hist',
+        'device':               'cuda',
+        'objective':            'binary:logistic',
+        'gamma':                1,
+        'alpha':                0.2,
+        'lambda':               0.01,
+        }
+    return params                          
+
+functions = [t3_shift, alma_solo, primal, macd_solo]
+train_length = 0.975
 
 
-def data_operations(df, factor):
-    df['adj'] = (df.high + df.low + df.close) / 3
-    df['adj_higher1'] = np.where(df['adj'] > df['adj'].shift(1), 1, 0)
-    df['adj_higher2'] = np.where(df['adj'] > df['adj'].shift(2), 1, 0)
-    df['adj_higher3'] = np.where(df['adj'] > df['adj'].shift(3), 1, 0)
-    df['adj_higher4'] = np.where(df['adj'] > df['adj'].shift(4), 1, 0)
-    df['adj_lower1'] = np.where(df['adj'] < df['adj'].shift(1), 1, 0)
-    df['adj_lower2'] = np.where(df['adj'] < df['adj'].shift(2), 1, 0)
-    df['adj_lower3'] = np.where(df['adj'] < df['adj'].shift(3), 1, 0)
-    df['adj_lower4'] = np.where(df['adj'] < df['adj'].shift(4), 1, 0)
-    df['high_higher'] = np.where(df['high'] > df['high'].shift(1), 1, 0)
-    df['low_lower'] = np.where(df['low'] < df['low'].shift(1), 1, 0)
-    df['close_higher'] = np.where(df['close'] > df['close'].shift(1), 1, 0)
-    df['volume_square'] = np.sin(np.log(df['volume']**2))
-    df['high_square'] = np.sin(np.log(df['high']**2))
-    df['low_square'] = np.sin(np.log(df['low']**2))
-    df['close_square'] = np.sin(np.log(df['close']**2))
-    df['high_log'] = np.log(df.high/df.high.shift(1))
-    df['low_log'] = np.log(df.low/df.low.shift(1))
-    df['close_log'] = np.log(df.close/df.close.shift(1))
-    df['adj_log'] = np.log(df.adj/df.adj.shift(1))
-    df['high_log2'] = np.log(df.high/df.high.shift(2))
-    df['low_log2'] = np.log(df.low/df.low.shift(2))
-    df['close_log2'] = np.log(df.close/df.close.shift(2))
-    df['adj_log2'] = np.log(df.adj/df.adj.shift(2))
-    df['volume_log'] = np.log(df.volume/df.volume.shift(1))
-    df['volume_log2'] = np.log(df.volume/df.volume.shift(2))
-    df['volatility_'] = (df['high'] - df['low'])/df['open']
-    df['vola_vol'] = df['volume'] / df['volatility_']
-    df['high_corr'] = df['close'].rolling(window=factor).corr(df['high'])
-    df['low_corr'] = df['close'].rolling(window=factor).corr(df['low'])
-    df['high_low_corr'] = df['high'].rolling(window=factor).corr(df['low'])
-    df['logs_corr'] = df['close_log'].rolling(window=factor).corr(df['volume_log'])
-    df['volume_mean'] = df['volume'].rolling(factor).mean()
-    df['volume_std'] = df['volume'].rolling(factor).std()
-    df['volatility_mean'] = df['volatility_'].rolling(factor).mean()
-    df['volatility_std'] = df['volatility_'].rolling(factor).std()
-    df['close_std'] = df['close'].rolling(factor).std()
-    df['low_std'] = df['low'].rolling(factor).std()
-    df['high_std'] = df['high'].rolling(factor).std()
-    df['adj_std'] = df['adj'].rolling(factor).std()
-    df['volume_pdiff'] = df['volume'].pct_change(periods=factor) * 100
-    df['close_pdiff'] = df['close'].pct_change(periods=factor) * 100
-    df['low_pdiff'] = df['low'].pct_change(periods=factor) * 100
-    df['high_pdiff'] = df['high'].pct_change(periods=factor) * 100
-    df['adj_pdiff'] = df['adj'].pct_change(periods=factor) * 100
-
-    library = (
-    dir(ta.trend) +
-    dir(ta.momentum) +
-    dir(ta.overlap) +
-    dir(ta.volume) +
-    dir(ta.statistics)
-           )
-
-    not_add = [
-        'alma', 'ma', 'mcgd', 'kama', 'jma', 'vidya', 'hilo', 'vwap',
-        # 'ichimoku',
-        #'supertrend',
-        #'squeeze_pro'
-        'hma', 'ssf', 'wma', 'sinwma', 'linreg',
-        'td_seq', 'qqe', 'inertia', 'coppock', 'cti', 'stc', 'psar', 'dpo',
-        'tos_stdevall', 'mean_close', 'pos_volume', 'neg_volume', 'total_volume',
-        ]
-
-    try:
-        for i in library:
-            number_of_columns_before = len(df.columns)
-            if not i.startswith('_') and i not in not_add:
-                zxy = getattr(ta, i)
-                pdw = getattr(df.ta, zxy.__name__)
-                try:
-                    fac = factor/3 if factor > 6 else 3
-                    pdw(length=factor, slow=factor,
-                        fast=int(fac), signal=int(fac),
-                        k=factor, d=int(fac), append=True)
-                except Exception:
-                    pdw(append=True)
-                number_of_columns_after = len(df.columns)
-                numb_of_new = number_of_columns_after-number_of_columns_before
-                df = add_comparison_columns(df, numb_of_new)
-    except Exception as e:
-        print(e)
-
-    df.replace(np.inf, np.nan, inplace=True)
-    df.replace(-np.inf, np.nan, inplace=True)
-    df.fillna(method='ffill', inplace=True)
-    df = df.dropna()
-    df.reset_index(drop=True, inplace=True)
-    df.drop(columns=['mean_close', 'pos_volume', 'neg_volume', 'total_volume'], axis=1, inplace=True)
-    return df
-
-
+# functions
 def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage):
     status = "NO"
     annotation = "clean position"
     df['cross'] = np.where(df['stance'] != df['stance'].shift(1), 1, 0)
     density = round((df['cross'].sum()/len(df))*100, 2)
     returns, _, _ = get_returns(df, symbol)
-    #strategy_result = (1 + returns).cumprod() - 1
-    strategy_result = returns.cumsum()
+    strategy_result = (1 + returns).cumprod() - 1
 
     returns_list = returns.to_list()
     sharpe = sharpe_multiplier * returns.mean()/returns.std()
@@ -157,12 +87,6 @@ def stats_from_positions_returns(df, symbol, sharpe_multiplier, print_, leverage
         print(f"""#### RESULT: {result} ####""")
     return status, strategy_result, drawdown
 
-
-def interval_time_sharpe(interval):
-    match interval[0]:
-        case 'D': return np.sqrt(252)
-        case 'H': return np.sqrt(252 * 24 / int(interval[1:]))
-        case 'M': return np.sqrt(252 * 24 * 60 / int(interval[1:]))
 
 def train_dataset(df, direction, parameters, factor, n_estimators, function, t_set, show_results=True, n_splits=2):
     dataset = df.copy()
@@ -255,7 +179,6 @@ def train_dataset(df, direction, parameters, factor, n_estimators, function, t_s
         print(f'Average Recall: {round(avg_recall, 3)}')
         print(f'Average F1 Score: {round(avg_f1, 3)}')
 
-
     return models, goal_density
 
 
@@ -321,20 +244,6 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
         df, symbol, sharpe_multiplier, print_, leverage
         )
 
-    def marker(df):
-        buy = df[(df['stance'] == 1) & (df['stance'].shift(1) != 1)]
-        sell = df[(df['stance'] == -1) & (df['stance'].shift(1) != -1)]
-        for idx in buy.index.tolist():
-          plt.plot(
-              idx, df.loc[idx]["close"],
-              "g^", markersize=8
-          )
-        for idx in sell.index.tolist():
-          plt.plot(
-              idx, df.loc[idx]["close"],
-              "rv", markersize=8
-          )
-
     if chart and status == "YES" and status2 == "YES":
         cross = np.where(((df.stance == 1) &
                     (df.stance.shift(1) != 1)) |
@@ -392,94 +301,6 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
     return result, summary_status, density, 1, sqrt_error, final, ma_factor1, ma_factor2
 
 
-def primal(df, direction, factor):
-    factor = factor - 3
-    up = (df.close < df.close.shift(-1)) & \
-        (df.close < df.close.shift(-round(factor/2))) & \
-        (df.close < df.close.shift(-factor))
-    down = (df.close > df.close.shift(-1)) & \
-        (df.close > df.close.shift(-round(factor/2))) & \
-        (df.close > df.close.shift(-factor))
-    df['goal'] = np.where(up, 1, np.NaN)
-    df['goal'] = np.where(down, -1, df['goal'])
-    df['goal'] = df['goal'].ffill()
-    if direction == 'buy':
-        df['goal'] = np.where(df['goal'] > df['goal'].shift(1), 'yes', 'no')
-    elif direction == 'sell':
-        df['goal'] = np.where(df['goal'] < df['goal'].shift(1), 'yes', 'no')
-    df = df.dropna()
-    df.reset_index(drop=True, inplace=True)
-    return df
-
-def linreg_alma(df, direction, factor):
-    col1 = df.ta.linreg(length=round(factor/4))
-    col2 = df.ta.alma(length=round(factor))
-    col2 = col2.shift(-round(factor))
-    df['goal'] = np.where(col1 < col2, 1, -1)
-    if direction == 'buy':
-        df['goal'] = np.where(((col1 < col2) &
-            (col1.shift(1) > col2.shift(1))), 'yes', 'no')
-    elif direction == 'sell':
-        df['goal'] = np.where(((col1 > col2) &
-            (col1.shift(1) < col2.shift(1))), 'yes', 'no')
-    df = df.dropna()
-    df.reset_index(drop=True, inplace=True)
-    return df
-
-def alma_solo(df, direction, factor):
-    ma = ta.alma(df['adj'], length=int(factor))
-    ma = ma.shift(-int(factor))
-    col1 = df['close']
-    col2 = ma
-    df['goal'] = np.where(col1 < col2, 1, -1)
-    if direction == 'buy':
-        df['goal'] = np.where(((col1 < col2) &
-                    (col1.shift(1) > col2.shift(1))), 'yes', 'no')
-    elif direction == 'sell':
-        df['goal'] = np.where(((col1 > col2) &
-                    (col1.shift(1) < col2.shift(1))), 'yes', 'no')
-    df = df.dropna()
-    df.reset_index(drop=True, inplace=True)
-    return df
-
-def t3_shift(df, direction, factor):
-    ma = ta.t3(df['close'], length=int(factor), a=0.8)
-    ma = ma.shift(-int(factor/3))
-    col1 = df['close']
-    col2 = ma
-    df['goal'] = np.where(col1 < col2, 1, -1)
-    if direction == 'buy':
-        df['goal'] = np.where(((col1 < col2) &
-                    (col1.shift(1) > col2.shift(1))), 'yes', 'no')
-    elif direction == 'sell':
-        df['goal'] = np.where(((col1 > col2) &
-                    (col1.shift(1) < col2.shift(1))), 'yes', 'no')
-    df = df.dropna()
-    df.reset_index(drop=True, inplace=True)
-    return df
-
-def macd_solo(df, direction, factor):
-    fast = df.ta.sma(length=round(factor/3))
-    slow = df.ta.sma(length=round(factor))
-    signal = fast - slow
-    macd = ta.sma(signal, length=int(factor/4))
-    signal = signal.shift(-round(factor/3))
-    col1 = macd
-    col2 = signal
-    df['goal'] = np.where(signal > macd, 1, -1)
-    if direction == 'buy':
-        df['goal'] = np.where(((col1 < col2) &
-            (col1.shift(1) > col2.shift(1))), 'yes', 'no')
-    elif direction == 'sell':
-        df['goal'] = np.where(((col1 > col2) &
-            (col1.shift(1) < col2.shift(1))), 'yes', 'no')
-    df = df.dropna()
-    df.reset_index(drop=True, inplace=True)
-    return df
-
-
-functions = [t3_shift, alma_solo, primal, macd_solo]
-
 def generate_my_models(
         symbols: list, intervals: list, leverage: int, delete_old_models: bool,
         show_results_on_graph: bool=False, print_: bool=True, generate_model:bool=True) -> None:
@@ -507,27 +328,12 @@ def generate_my_models(
             for factor in factors:
                 print("\nDF length: ", len(df_raw))
                 df = data_operations(df_raw.copy(), factor)
-                for function in functions: 
+                for function in functions:
                     for t_set in ts_list:
-                        train_length = 0.975
                         dataset = df.copy()[:int(train_length*len(df))]
                         testset = df.copy()[int(train_length*len(df)):]
                         for learning_rate in lr_list:
-                            parameters = {
-                                'learning_rate': learning_rate,
-                                'max_depth': 2*len(dataset.columns),
-                                'colsample_by*': 0.9,
-                                'min_child_weight': int(len(dataset.columns)/17),
-                                'subsample': 0.7,
-                                'random_state': 42,
-                                'eval_metric': 'auc',
-                                'tree_method': 'gpu_hist',
-                                'device': 'cuda',
-                                'objective': 'binary:logistic',
-                                'gamma': 1,
-                                'alpha': 0.2,
-                                'lambda': 0.01,
-                            }
+                            parameters = params(learning_rate, dataset.columns)
                             start = time.time()
                             try:
                                 print(f"\nSymbol: {symbol}; Interval: {interval}; Factor: {factor}")
@@ -570,7 +376,6 @@ def generate_my_models(
                                                 continue
                                             _lr_name = str(learning_rate).split('.')[-1]
                                             _ts_name = str(t_set).split('.')[-1]
-                                            #name_ = f'{market}_{function.__name__[0]}_{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
                                             name_ = f'{market}_{function.__name__[0]}_{ma_factor1}_{ma_factor2}_{_lr_name}_{_ts_name}_{symbol}_{interval}_{factor}_{final}'
                                             finals.append(final)
                                             models_buy[m].save_model(f"{catalog}\\models\\{name_}_buy.model") # models_buy[-1]

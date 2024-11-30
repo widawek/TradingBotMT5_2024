@@ -15,7 +15,8 @@ from app.decorators import class_errors
 from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import *
 from app.database_class import TradingProcessor
-from app.bot_functions import rename_files_in_directory, checkout_report, vwap_std, avg_daily_vol_for_divider, trend_or_not
+from app.bot_functions import *
+from app.decorators import validate_input_types
 sys.path.append("..")
 
 processor = TradingProcessor()

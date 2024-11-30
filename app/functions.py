@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import pandas_ta as ta
+import matplotlib.pyplot as plt
 from datetime import datetime as dt
 import MetaTrader5 as mt
 import hashlib
@@ -11,6 +12,7 @@ import sys
 from typing import Union, Tuple
 sys.path.append("..")
 from app.decorators import validate_input_types
+
 
 
 def pandas_options() -> None:
@@ -207,75 +209,6 @@ pendings = {
 
 
 @validate_input_types
-def sortino_ratio(returns: Union[pd.Series, np.ndarray, list]) -> float:
-    """
-    Calculate the Sortino Ratio.
-
-    Parameters:
-    returns (numpy.ndarray or list): Array of investment returns.
-    risk_free_rate (float): The risk-free rate.
-
-    Returns:
-    float: The Sortino Ratio.
-    """
-    returns = np.array(returns)
-    downside_returns = returns[returns < 0]
-    mean_return = np.mean(returns)
-    downside_deviation = np.std(downside_returns, ddof=1)
-    sortino_ratio = mean_return / downside_deviation
-    return sortino_ratio
-
-
-@validate_input_types
-def omega_ratio(returns: Union[pd.Series, np.ndarray, list], threshold: Union[float, int]=0) -> float:
-    """
-    Calculate the Omega Ratio.
-
-    Parameters:
-    returns (numpy.ndarray or list): Array of investment returns.
-    threshold (float): The threshold return. Default is 0.
-
-    Returns:
-    float: The Omega Ratio.
-    """
-    returns = np.array(returns)
-    excess_returns = returns - threshold
-    gains = excess_returns[excess_returns > 0]
-    losses = -excess_returns[excess_returns < 0]
-    omega_ratio = np.sum(gains) / np.sum(losses) if np.sum(losses) != 0 else np.inf
-    return omega_ratio
-
-
-@validate_input_types
-def max_drawdown(returns: Union[pd.Series, np.ndarray, list]) -> float:
-    compRet = (returns+1).cumprod()
-    peak = compRet.expanding(min_periods=1).max()
-    dd = (compRet/peak)-1
-    return dd.min()
-
-
-@validate_input_types
-def kelly_criterion(returns: Union[pd.Series, np.ndarray, list]) -> float:
-    good = [i for i in returns if i > 0]
-    bad = [i for i in returns if i < 0]
-    if len(returns) < 2 or len(good) < 2:
-        return 0
-    if len(bad) == 0:
-        return 2
-    p = len(good) / len(returns)
-    q = len(bad) / len(returns)
-    a = abs(sum(bad))
-    b = sum(good)
-    try:
-        win = (b/q)
-        loss = (a/p)
-    except ZeroDivisionError:
-        return 0
-    kk = win - loss
-    return kk
-
-
-@validate_input_types
 def max_vol_times_price_price(df, window=30):
     # Obliczamy vol * price
     df['vol_times_price'] = df['close'] * df['volume']
@@ -349,15 +282,6 @@ def get_returns(df: pd.DataFrame, symbol:str) -> Tuple[pd.DataFrame, float, floa
     if sl == 0:
         sl = round(0.5*tp, r_num)
     return ret['return'].dropna(), tp, sl
-
-
-def delete_model(path, fragment):
-    for filename in os.listdir(path):
-        if fragment in filename:
-            file_path = os.path.join(path, filename)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-                print(f"Model removed: {file_path}")
 
 
 def timer(hour_):
@@ -442,3 +366,17 @@ def function_when_model_not_work(dfx, a, b):
 def changer(what, value1, value2):
     return value1 if what == value2 else value2
 
+
+def marker(df):
+    buy = df[(df['stance'] == 1) & (df['stance'].shift(1) != 1)]
+    sell = df[(df['stance'] == -1) & (df['stance'].shift(1) != -1)]
+    for idx in buy.index.tolist():
+        plt.plot(
+            idx, df.loc[idx]["close"],
+            "g^", markersize=8
+        )
+    for idx in sell.index.tolist():
+        plt.plot(
+            idx, df.loc[idx]["close"],
+            "rv", markersize=8
+        )
