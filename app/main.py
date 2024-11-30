@@ -92,10 +92,12 @@ class Bot:
     def if_tiktok(self):
         pos = mt.positions_get(symbol=self.symbol)
         profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].comment == self.comment])
-        if self.tiktok <= 1:
+        if self.tiktok <= 4:
             if profit_ > 0:
                 self.tiktok -= 1
-            elif profit_ < 0:
+            elif profit_ < 0 and self.tiktok <= 1:
+                self.tiktok += 1
+            elif profit_ < 0 and self.tiktok in [2, 4]:
                 self.change_trigger_or_reverse('trigger')
                 self.tiktok += 1
             else:
