@@ -93,10 +93,10 @@ class Bot:
     def if_tiktok(self):
         pos = mt.positions_get(symbol=self.symbol)
         profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].magic == self.magic])
-        self.close_profits.append((profit_, self.comment))
+        self.close_profits.append((profit_, self.comment[:-1]))
         if len(self.close_profits) >= 2:
             try:
-                last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment]
+                last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment[:-1]]
                 if len(last_to_by_comment) >= 2:
                     last_two = sum(last_to_by_comment[-2:])
                     printer("Last two positions profit", f"{last_two:.2f} $")
@@ -106,6 +106,7 @@ class Bot:
                 last_two = 0
         else:
             last_two = 0
+
         if self.tiktok < 3:
             if profit_ > 0 and last_two >= 0:
                 self.tiktok -= 1
@@ -144,16 +145,19 @@ class Bot:
         close2 = interval_df['close'].iloc[2]
         pos_type = self.positions[0].type
         profit_ = self.positions[0].profit
-
-        if self.base_fake_interval != interval:
-            test = get_data(self.symbol, interval, 1, 200)
-            test['better_close'] = np.where(((test['close']>test['close'].shift(1)) & (test['close'].shift(1)>test['close'].shift(2)) & (pos_type==0)) |
-                                            ((test['close']<test['close'].shift(1)) & (test['close'].shift(1)<test['close'].shift(2)) & (pos_type==1)), 1, 0)
-            test_better = test[test['better_close']==1]
-            test_better.reset_index()
-            self.fake_stoploss = test_better['close'].iloc[-2]
-            self.base_fake_interval = interval
-            return pos_type
+        try:
+            if self.base_fake_interval != interval:
+                test = get_data(self.symbol, interval, 1, 200)
+                test['better_close'] = np.where(((test['close']>test['close'].shift(1)) & (test['close'].shift(1)>test['close'].shift(2)) & (pos_type==0)) |
+                                                ((test['close']<test['close'].shift(1)) & (test['close'].shift(1)<test['close'].shift(2)) & (pos_type==1)), 1, 0)
+                test_better = test[test['better_close']==1]
+                test_better.reset_index()
+                self.fake_stoploss = test_better['close'].iloc[-2]
+                self.base_fake_interval = interval
+                return pos_type
+        except Exception as e:
+            print(e)
+            pass
 
 
         def fake_position_on():
@@ -660,7 +664,7 @@ class Bot:
             # BotReverse
             if reverse_it_all:
                 position = changer(position, 0, 1)
-            
+
             # finding the last opening price as strategy_pos_open_price
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
             self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
@@ -672,7 +676,7 @@ class Bot:
                 while True:
                     if self.fresh_signal:
                         break
-                        
+
                     # check if price is nice to open
                     tick = mt.symbol_info_tick(self.symbol)
                     price = round((tick.ask + tick.bid) / 2, self.round_number)
@@ -681,14 +685,14 @@ class Bot:
                         case 1: self.good_price_to_open_pos = True if price >= self.strategy_pos_open_price else False
                     if self.good_price_to_open_pos:
                         break
-                        
+
                     if self.check_new_bar():
                         return self.actual_position_democracy(number_of_bars=number_of_bars)
                     pos = 'LONG' if position==0 else "SHORT"
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
                     printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
                     time.sleep(5)
-                
+
         except KeyError:
             return self.actual_position_democracy(number_of_bars=number_of_bars*2)
 

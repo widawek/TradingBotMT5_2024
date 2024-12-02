@@ -1,6 +1,7 @@
 **/__pycache__/
 **/venv/
 **/trash/
+**/extensions/
 class_errors.txt
 symbols.py
 **/models/

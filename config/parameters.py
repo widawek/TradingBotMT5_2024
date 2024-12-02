@@ -50,7 +50,7 @@ tp_miner: int                           = 3
 master_interval: str                    = intervals[0]
 reverse_it_all: bool                    = True
 trigger_model_divider_factor: int       = 6
-base_fake_interval: str                 = 'M3'
+base_fake_interval: str                 = 'M2'
 
 def reverse_(symbol):
     if symbol in []:
