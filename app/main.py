@@ -93,14 +93,20 @@ class Bot:
     def if_tiktok(self):
         pos = mt.positions_get(symbol=self.symbol)
         profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].magic == self.magic])
-        if profit_ != 0:
-            self.close_profits.append(profit_)
+        self.close_profits.append((profit_, self.comment))
+        if len(self.close_profits) >= 2:
+            last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment]
+            if len(last_to_by_comment) >= 2:
+                last_two = sum(last_to_by_comment[-2:])
+                printer("Last two positions profit", f"{last_two:.2f} $")
+            else:
+                last_two = 0
         if self.tiktok <= 4:
-            if profit_ > 0:
+            if profit_ > 0 and last_two >= 0:
                 self.tiktok -= 1
-            elif profit_ < 0 and self.tiktok in  [0, 1, 3]:
+            elif (profit_ < 0 and self.tiktok in [0, 1, 3]) or (last_two < 0):
                 self.tiktok += 1
-            elif profit_ < 0 and self.tiktok in [2, 4]:
+            elif (profit_ < 0 and self.tiktok in [2, 4]):
                 self.change_trigger_or_reverse('trigger')
                 self.tiktok += 1
             else:
