@@ -14,8 +14,6 @@ symbols:                                list = [
                                             'US30',
                                             'XAUUSD',
                                             'BTCUSD',
-                                            'DE40',
-                                            'EURCAD',
                                             'XAGUSD'
                                             ]
 

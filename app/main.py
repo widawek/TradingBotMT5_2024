@@ -95,12 +95,17 @@ class Bot:
         profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].magic == self.magic])
         self.close_profits.append((profit_, self.comment))
         if len(self.close_profits) >= 2:
-            last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment]
-            if len(last_to_by_comment) >= 2:
-                last_two = sum(last_to_by_comment[-2:])
-                printer("Last two positions profit", f"{last_two:.2f} $")
-            else:
+            try:
+                last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment]
+                if len(last_to_by_comment) >= 2:
+                    last_two = sum(last_to_by_comment[-2:])
+                    printer("Last two positions profit", f"{last_two:.2f} $")
+                else:
+                    last_two = 0
+            except Exception:
                 last_two = 0
+        else:
+            last_two = 0
         if self.tiktok < 3:
             if profit_ > 0 and last_two >= 0:
                 self.tiktok -= 1
@@ -208,6 +213,7 @@ class Bot:
                     self.profit0 = profit
                 self.profits.append(profit+self.profit0)
                 self.profit_max = max(self.profits)
+                self.profit_min = min(self.profits)
                 mean_profits = np.mean(self.profits)
                 self.self_decline_factor()
                 if self.print_condition():
@@ -223,7 +229,7 @@ class Bot:
                     _ = self.fake_position_robot()
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif profit < -self.profit_needed:
+                elif profit < -self.profit_needed and profit > 0.91 * self.profit_min:
                     self.clean_orders()
 
                 # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
