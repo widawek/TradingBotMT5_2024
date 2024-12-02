@@ -148,8 +148,8 @@ class Bot:
         try:
             if self.base_fake_interval != interval:
                 test = get_data(self.symbol, interval, 1, 200)
-                test['better_close'] = np.where(((test['close']>test['close'].shift(1)) & (test['close'].shift(1)>test['close'].shift(2)) & (pos_type==0)) |
-                                                ((test['close']<test['close'].shift(1)) & (test['close'].shift(1)<test['close'].shift(2)) & (pos_type==1)), 1, 0)
+                test['better_close'] = np.where(((test['close']>test['close'].shift(1)) & (test['close']>test['close'].shift(2)) & (pos_type==0)) |
+                                                ((test['close']<test['close'].shift(1)) & (test['close']<test['close'].shift(2)) & (pos_type==1)), 1, 0)
                 test_better = test[test['better_close']==1]
                 test_better.reset_index()
                 self.fake_stoploss = test_better['close'].iloc[-2]
