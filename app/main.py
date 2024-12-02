@@ -92,7 +92,7 @@ class Bot:
     @class_errors
     def if_tiktok(self):
         pos = mt.positions_get(symbol=self.symbol)
-        profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].comment == self.comment])
+        profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].magic == self.magic])
         if profit_ != 0:
             self.close_profits.append(profit_)
         if self.tiktok <= 4:
@@ -737,7 +737,7 @@ class Bot:
             letter = "t"
         else:
             letter = "f"
-        self.comment = f'{self.reverse[0]}_{self.trigger[-1]}_{self.ma_factor_fast}_{self.ma_factor_slow}_{letter}_{self.market}'
+        self.comment = f'{self.reverse[0]}_{self.trigger[-1]}_{self.ma_factor_fast}_{self.ma_factor_slow}_{letter}_{self.market}_{self.tiktok}'
 
         request = {
             "action": action,
