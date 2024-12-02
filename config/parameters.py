@@ -5,19 +5,18 @@ from app.functions import get_timezone_difference
 # global params
 
 symbols:                                list = [
+                                            'EURJPY',
+                                            'EURUSD',
+                                            'GBPUSD',
+                                            'USDCAD',
+                                            'USDCHF',
+                                            'USDJPY',
+                                            'US30',
+                                            'XAUUSD',
                                             'BTCUSD',
-                                            'ETHUSD',
-                                            # 'DE40',
-                                            # 'EURCAD',
-                                            # 'XAGUSD',
-                                            # 'EURJPY',
-                                            # 'EURUSD',
-                                            # 'GBPUSD',
-                                            # 'USDCAD',
-                                            # 'USDCHF',
-                                            # 'USDJPY',
-                                            # 'US30',
-                                            # 'XAUUSD'
+                                            'DE40',
+                                            'EURCAD',
+                                            'XAGUSD'
                                             ]
 
 #                                       model_generator_params
@@ -52,7 +51,7 @@ kill_multiplier: float                  = 1.5   # loss of daily volatility by on
 tp_miner: int                           = 3
 master_interval: str                    = intervals[0]
 reverse_it_all: bool                    = True
-trigger_model_divider_factor: int       = 5
+trigger_model_divider_factor: int       = 6
 base_fake_interval: str                 = 'M3'
 
 def reverse_(symbol):

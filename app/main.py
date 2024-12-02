@@ -98,7 +98,7 @@ class Bot:
         if self.tiktok <= 4:
             if profit_ > 0:
                 self.tiktok -= 1
-            elif profit_ < 0 and self.tiktok <= 1:
+            elif profit_ < 0 and self.tiktok in  [0, 1, 3]:
                 self.tiktok += 1
             elif profit_ < 0 and self.tiktok in [2, 4]:
                 self.change_trigger_or_reverse('trigger')
