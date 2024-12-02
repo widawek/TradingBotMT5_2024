@@ -112,8 +112,11 @@ class Bot:
             else:
                 pass
         else:
-            self.change_trigger_or_reverse('both')
-            self.tiktok = 0
+            if profit_ > 0 and last_two >= 0:
+                self.tiktok -= 1
+            else:
+                self.change_trigger_or_reverse('both')
+                self.tiktok = 0
 
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
