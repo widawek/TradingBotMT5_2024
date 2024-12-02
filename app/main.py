@@ -101,12 +101,12 @@ class Bot:
                 printer("Last two positions profit", f"{last_two:.2f} $")
             else:
                 last_two = 0
-        if self.tiktok <= 4:
+        if self.tiktok < 3:
             if profit_ > 0 and last_two >= 0:
                 self.tiktok -= 1
-            elif (profit_ < 0 and self.tiktok in [0, 1, 3]) or (last_two < 0):
+            elif (profit_ < 0 and self.tiktok in [0, 2]) or (last_two < 0):
                 self.tiktok += 1
-            elif (profit_ < 0 and self.tiktok in [2, 4]) or (last_two < 0):
+            elif (profit_ < 0 and self.tiktok == 1) or (last_two < 0):
                 self.change_trigger_or_reverse('trigger')
                 self.tiktok += 1
             else:
