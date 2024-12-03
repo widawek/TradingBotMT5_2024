@@ -44,12 +44,12 @@ game_system: str                        = 'weighted_democracy'
 max_number_of_models: int               = 75
 trigger_mode: str                       = 'on'
 profit_factor: float                    = 1.5
-position_size: int                      = 6       # percent of balance
+position_size: int                      = 8       # percent of balance
 kill_multiplier: float                  = 1.5   # loss of daily volatility by one position multiplier
 tp_miner: int                           = 3
 master_interval: str                    = intervals[0]
 reverse_it_all: bool                    = True
-trigger_model_divider_factor: int       = 6
+trigger_model_divider_factor: int       = 7
 base_fake_interval: str                 = 'M2'
 
 def reverse_(symbol):
