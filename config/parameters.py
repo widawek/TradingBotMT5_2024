@@ -14,7 +14,8 @@ symbols:                                list = [
                                             'US30',
                                             'XAUUSD',
                                             'BTCUSD',
-                                            'XAGUSD'
+                                            'XAGUSD',
+                                            'AUDUSD'
                                             ]
 
 #                                       model_generator_params

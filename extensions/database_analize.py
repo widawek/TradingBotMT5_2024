@@ -142,4 +142,4 @@ def report_(by_, from_, to_, excel=False):
     group_profit_by(by_, False)
     #group_profit_by('tiktok')
     plot_profits(df_profits, 'all', 0, condition='')
-report_(['symbol', 'number_of_models'], 1, -2)
+report_(['tiktok'], 2, -2)

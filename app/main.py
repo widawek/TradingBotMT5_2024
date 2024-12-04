@@ -18,6 +18,8 @@ from app.database_class import TradingProcessor
 from app.bot_functions import *
 sys.path.append("..")
 
+
+
 processor = TradingProcessor()
 mt.initialize()
 
@@ -30,6 +32,8 @@ class Bot:
     weekday = dt.now().weekday()
 
     def __init__(self, symbol):
+        self.changer_reverse = False
+        self.interval = master_interval if symbol not in ['AUDUSD'] else 'M10'
         printer(dt.now(), symbol)
         self.symbol = symbol
         self.magic = magic_(symbol, 'bot_2024')
@@ -61,7 +65,7 @@ class Bot:
         self.avg_daily_vol()
         self.round_number = round_number_(symbol)
         self.volume_calc(position_size, True)
-        self.pos_time = interval_time(master_interval)
+        self.pos_time = interval_time(self.interval)
         self.positions_()
         self.load_models_democracy(catalog)
         self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_(self.interval), 0, 1)[0][0]
@@ -439,10 +443,12 @@ class Bot:
         self.kill_position_profit = round(self.kill_position_profit, 2)# * (1+self.multi_voltage('M5', 33)), 2)
         self.tp_miner = round(self.kill_position_profit * tp_miner / kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
+        self.reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check()
         printer('Min volume:', min_volume)
         printer('Calculated volume:', volume)
         printer("Target:", f"{self.tp_miner:.2f} $")
         printer("Killer:", f"{-self.kill_position_profit:.2f} $")
+
 
     @class_errors
     def find_files(self, directory):
@@ -552,12 +558,8 @@ class Bot:
         most_common_ma = most_common_value(ma_list)
         self.ma_factor_fast = most_common_ma[0]
         self.ma_factor_slow = most_common_ma[1]
-        self.interval = master_interval
-        self.comment = 'wdemo_4'
         self.mdv = self.mdv_() / 4
-
         printer("MA values:", f"fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
-        printer('comment:', self.comment)
 
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
@@ -661,9 +663,10 @@ class Bot:
                 if time_.hour >= 14:
                     position = changer(position, 0, 1)
 
-            # BotReverse
-            if reverse_it_all:
-                position = changer(position, 0, 1)
+            if not self.changer_reverse:
+                # BotReverse
+                if reverse_it_all:
+                    position = changer(position, 0, 1)
 
             # finding the last opening price as strategy_pos_open_price
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
@@ -704,8 +707,8 @@ class Bot:
         smaller = int(position_size/1.5)
         normal = position_size
         bigger = int(position_size*1.5)
-        biggest = int(position_size*3)
-        wow = int(position_size*4)
+        biggest = int(position_size*2)
+        wow = int(position_size*3)
 
         self.trend = vwap_std(self.symbol)
 
@@ -894,6 +897,59 @@ class Bot:
     #     df['atr_vol_2'] = df['atr_ma'] * df['volume'].rolling(window=factor*2).mean()
     #     df['xxx'] = (1 - (df['atr_vol_1'] / df['atr_vol_2']))#*-1
     #     return df['xxx'].iloc[-1]
+
+
+    @class_errors
+    def reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check(self):
+        if dt.now().hour >= morning_hour + 3:
+            if not self.changer_reverse:
+                try:
+                    from_date = dt.today().date()
+                    to_date = dt.today().date() + timedelta(days=1)
+                    from_date = dt(from_date.year, from_date.month, from_date.day)
+                    to_date = dt(to_date.year, to_date.month, to_date.day)
+                    data = mt.history_deals_get(from_date, to_date)
+                    df = pd.DataFrame(list(data), columns=data[0]._asdict().keys())
+                    df["time"] = pd.to_datetime(df["time"], unit="s")
+                    df = df[df['symbol'] != '']
+                    df['profit'] = df['profit'] + df['commission'] * 2 + df['swap']
+                    df['reason'] = df['reason'].shift(1)
+                    df = df.drop(columns=['time_msc', 'commission', 'external_id', 'swap'])
+                    df = df[df['time'].dt.date >= from_date.date()]
+                    df = df[df.groupby('position_id')['position_id'].transform('count') == 2]
+                    df = df.sort_values(by=['position_id', 'time'])
+                    df.reset_index(drop=True, inplace=True)
+                    df['profit'] = df['profit'].shift(-1)
+                    df['time_close'] = df['time'].shift(-1)
+                    df = df.rename(columns={'time': 'time_open'})
+                    df['sl'] = df.comment.shift(-1).str.contains('sl', na=False)
+                    df['tp'] = df.comment.shift(-1).str.contains('tp', na=False)
+                    df = df.iloc[::2]
+                    df['hour_open'] = df['time_open'].dt.hour
+                    df['hour_close'] = df['time_close'].dt.hour
+                    df = df[df['symbol'] == self.symbol]
+                    df.reset_index(drop=True, inplace=True)
+                    df = df.groupby('hour_close').agg(
+                        profit=('profit', 'sum'),
+                        count_sum=('profit', 'size')
+                    ).reset_index()
+                    df = df.sort_values('hour_close')
+                    result = df['profit'].rolling(3).mean()
+                    result = float(result.iloc[-1])
+                    print(result)
+                except Exception as e:
+                    print(e)
+                try:
+                    if isinstance(result, float):
+                        if result < 0:
+                            self.changer_reverse = True
+                            print("CHANGER WAS CHANGED")
+                except Exception as e:
+                    print(e)
+            else:
+                print("NOT CHECK")
+
+
 
 if __name__ == '__main__':
     print('Yo, wtf?')
