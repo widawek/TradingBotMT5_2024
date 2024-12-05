@@ -16,6 +16,7 @@ from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import *
 from app.database_class import TradingProcessor
 from app.bot_functions import *
+from tqdm import trange
 sys.path.append("..")
 
 
@@ -57,7 +58,7 @@ class Bot:
         self.close_profits = []
         self.global_positions_stats = []
         self.position_size = position_size
-        self.trigger = 'model' # 'model' 'moving_averages'
+        self.trigger = 'moving_averages' # 'model' 'moving_averages'
         self.market = 'e' if dt.now().hour < change_hour else 'u'
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
         self.trigger_model_divider = avg_daily_vol_for_divider(symbol, trigger_model_divider_factor)
@@ -567,8 +568,11 @@ class Bot:
         assert len(self.buy_models) == len(self.sell_models)
 
         most_common_ma = most_common_value(ma_list)
-        self.ma_factor_fast = most_common_ma[0]
-        self.ma_factor_slow = most_common_ma[1]
+        if use_moving_averages:
+            self.ma_factor_fast = most_common_ma[0]
+            self.ma_factor_slow = most_common_ma[1]
+        else:
+            self.ma_factor_fast, self.ma_factor_slow = self.trend_backtest()
         self.mdv = self.mdv_() / 4
         printer("MA values:", f"fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
 
@@ -655,9 +659,15 @@ class Bot:
                 self.check_volume_condition = volume_2 > volume_10
 
             else:
-                dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
-                dfx["stance"] = function_when_model_not_work(dfx, self.ma_factor_fast, self.ma_factor_slow)
-                position = 0 if dfx.stance.iloc[-1] == 1 else 1
+                if use_moving_averages:
+                    dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
+                    dfx["stance"] = function_when_model_not_work(dfx, self.ma_factor_fast, self.ma_factor_slow)
+                    position = 0 if dfx.stance.iloc[-1] == 1 else 1
+                else:
+                    dfx = get_data(self.symbol, self.interval, 1, int(self.ma_factor_slow * self.ma_factor_fast + 100)) # how_many_bars
+                    _, position = technique3(dfx, self.ma_factor_slow, self.ma_factor_fast)
+                    position = 0 if dfx.stance.iloc[-1] == 1 else 1
+
                 volume_10 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(8).mean().iloc[-1]
                 volume_2 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(2).mean().iloc[-1]
                 printer('Position from moving averages:', f'fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
@@ -944,7 +954,7 @@ class Bot:
                         count_sum=('profit', 'size')
                     ).reset_index()
                     df = df.sort_values('hour_close')
-                    result = df['profit'].rolling(3).mean()
+                    result = df['profit'].dropna().rolling(3).mean()
                     result = float(result.iloc[-1])
                     print(result)
                 except Exception as e:
@@ -959,6 +969,42 @@ class Bot:
                     print(e)
             else:
                 print("NOT CHECK")
+
+    @class_errors
+    def trend_backtest(self):
+        def strategy3(df):
+            z = [len(str(x).split(".")[1])+1 for x in list(df["close"][:101])]
+            divider = 10**round((sum(z)/len(z))-1)
+            spread_mean = df.spread/divider
+            spread_mean = spread_mean.mean()
+            df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
+                                            ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
+            df['mkt_move'] = np.log(df.close/df.close.shift(1))
+            df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open))*leverage
+            df['strategy'] = (1+df['return']).cumprod() - 1
+            return df
+
+        def calc_result(df):
+            df = strategy3(df)
+            df.set_index(df['numbers'], inplace=True)
+            df = df.dropna()
+            cross = df['cross'].sum()/len(df)
+            sharpe = round(((df['return'].mean()/df['return'].std()))/cross, 2)
+            return sharpe
+
+        df_raw = get_data(self.symbol, self.interval, 1, 20000)
+        df_raw2 = df_raw.copy()[-8000:]
+        results = []
+        for factor in trange(2, 50):
+            for factor2 in range(2, 21):
+                df1, position = technique3(df_raw, factor, factor2)
+                sharpe = calc_result(df1)
+                df2, position = technique3(df_raw2, factor, factor2)
+                sharpe2 = calc_result(df2)
+                results.append((factor2, factor, sharpe+sharpe2))
+        f_result = sorted(results, key=lambda x: x[2], reverse=True)[0]
+        print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
+        return f_result[0], f_result[1]
 
 
 

@@ -274,7 +274,7 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
         z = [i for i in z if i[0] < i[1]]
         results = []
         for a, b in tqdm(z):
-            dfx = df.copy()
+            dfx = df.copy()[int(-len(dfx)/2):]
             dfx['stance2'] = function_when_model_not_work(dfx, a, b)
             # dfx['return2'] = np.where(#(dfx['time2'].dt.date == dfx['time2'].dt.date.shift(1)) &
             #                           (dfx['return'] < 0), (dfx.mkt_move * dfx.stance2.shift(1) -\
@@ -285,8 +285,9 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
             dfx['strategy2'] = (1+dfx['return2']).cumprod() - 1
             sharpe = sharpe_multiplier * dfx['return2'].mean()/dfx['return2'].std()
             omega = omega_ratio(dfx['return2'].dropna().to_list())
-            mean_return = sharpe_multiplier * np.mean(dfx['return2'].dropna().to_list())
-            result_ = round(((dfx['strategy2'].iloc[-1] + mean_return) / 2)*sharpe*omega, 2)
+            #mean_return = sharpe_multiplier * np.mean(dfx['return2'].dropna().to_list())
+            #result_ = round(((dfx['strategy2'].iloc[-1] + mean_return) / 2)*sharpe*omega, 2)
+            result_ = round(sharpe*omega, 2)
             results.append((a, b, result_))
         f_result = sorted(results, key=lambda x: x[2], reverse=True)[0]
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")

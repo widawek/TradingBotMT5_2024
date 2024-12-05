@@ -1,5 +1,6 @@
 import os
 from datetime import datetime as dt
+import pandas_ta as ta
 from datetime import timedelta
 import MetaTrader5 as mt
 import pandas as pd
@@ -209,4 +210,27 @@ def trend_or_not(symbol):
         return True
     print("Not trend!")
     return False
+
+
+def technique3(df_raw, factor, factor2):
+    df = df_raw.copy()
+    df.set_index(df['time'], inplace=True)
+    df['numbers'] = [1+i for i in range(len(df))]
+    df['vwap_D'] = df.ta.vwap(anchor="D")
+    df['adj'] = (df['close'] + df['high'] + df['low'])/3
+    df['ma'] = ta.sma(df['adj'], length=factor)
+    df['super_new_indicator'] = (df['close'] - df['close'].shift(1)) * df['volume']
+    df['super_new_indicator'] = df['super_new_indicator'].rolling(factor).mean()
+    df['super_max'] = df['super_new_indicator'].rolling(factor*factor2).max()
+    df['super_min'] = df['super_new_indicator'].rolling(factor*factor2).min()
+    df['median'] = (df['super_max'] + df['super_min']) / 2
+    df['super_ma'] = df['ma'] + df['ma']*df['median']
+    df['k1'] = df.ta.stoch(k=factor2).iloc[:,0]
+    df['k2'] = df.ta.stoch(k=factor).iloc[:,0]
+    df['stance'] = np.where((df['super_ma'] < df['ma']) & (df.close > df.vwap_D), 1, 0)
+    df['stance'] = np.where((df['super_ma'] > df['ma']) & (df.close < df.vwap_D), -1, df['stance'])
+    df['stance'] = np.where((df.k1>df.k2)&(df.stance==0), 1, df['stance'])
+    df['stance'] = np.where((df.k1<df.k2)&(df.stance==0), -1, df['stance'])
+    position = df['stance'].iloc[-1]
+    return df, position
 
