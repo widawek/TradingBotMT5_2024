@@ -274,7 +274,7 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
         z = [i for i in z if i[0] < i[1]]
         results = []
         for a, b in tqdm(z):
-            dfx = df.copy()[int(-len(dfx)/2):]
+            dfx = df.copy()[int(-len(df)/2):]
             dfx['stance2'] = function_when_model_not_work(dfx, a, b)
             # dfx['return2'] = np.where(#(dfx['time2'].dt.date == dfx['time2'].dt.date.shift(1)) &
             #                           (dfx['return'] < 0), (dfx.mkt_move * dfx.stance2.shift(1) -\
