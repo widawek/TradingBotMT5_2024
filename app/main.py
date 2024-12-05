@@ -55,6 +55,7 @@ class Bot:
         self.profits = []
         self.close_profits = []
         self.global_positions_stats = []
+        self.position_size = position_size
         self.trigger = 'model' # 'model' 'moving_averages'
         self.market = 'e' if dt.now().hour < change_hour else 'u'
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
@@ -703,12 +704,12 @@ class Bot:
 
     @class_errors
     def what_trend_is_it(self, posType):
-        smallest = int(position_size/2)
-        smaller = int(position_size/1.5)
-        normal = position_size
-        bigger = int(position_size*1.5)
-        biggest = int(position_size*2)
-        wow = int(position_size*3)
+        smallest = int(self.position_size/2)
+        smaller = int(self.position_size/1.5)
+        normal = self.position_size
+        bigger = int(self.position_size*1.5)
+        biggest = int(self.position_size*2)
+        wow = int(self.position_size*3)
 
         self.trend = vwap_std(self.symbol)
 
