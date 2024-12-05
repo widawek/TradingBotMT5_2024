@@ -52,6 +52,7 @@ reverse_it_all: bool                    = True
 trigger_model_divider_factor: int       = 7
 base_fake_interval: str                 = 'M2'
 use_moving_averages: bool               = False
+start_trigger: str                      = 'moving_averages'
 
 def reverse_(symbol):
     if symbol in []:

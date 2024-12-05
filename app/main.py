@@ -58,7 +58,7 @@ class Bot:
         self.close_profits = []
         self.global_positions_stats = []
         self.position_size = position_size
-        self.trigger = 'moving_averages' # 'model' 'moving_averages'
+        self.trigger = start_trigger # 'model' 'moving_averages'
         self.market = 'e' if dt.now().hour < change_hour else 'u'
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
         self.trigger_model_divider = avg_daily_vol_for_divider(symbol, trigger_model_divider_factor)
@@ -542,7 +542,7 @@ class Bot:
 
     @class_errors
     def load_models_democracy(self, directory):
-        self.trigger = 'model'
+        self.trigger = start_trigger
         self.reverse = reverse_(self.symbol)
         self.tiktok = 0
         self.change = 0
@@ -665,8 +665,8 @@ class Bot:
                     position = 0 if dfx.stance.iloc[-1] == 1 else 1
                 else:
                     dfx = get_data(self.symbol, self.interval, 1, int(self.ma_factor_slow * self.ma_factor_fast + 100)) # how_many_bars
-                    _, position = technique3(dfx, self.ma_factor_slow, self.ma_factor_fast)
-                    position = 0 if dfx.stance.iloc[-1] == 1 else 1
+                    dfx, position = technique3(dfx, self.ma_factor_slow, self.ma_factor_fast)
+                    position = 0 if position == 1 else 1
 
                 volume_10 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(8).mean().iloc[-1]
                 volume_2 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(2).mean().iloc[-1]
@@ -997,6 +997,8 @@ class Bot:
         results = []
         for factor in trange(2, 50):
             for factor2 in range(2, 21):
+                if factor == factor2:
+                    continue
                 df1, position = technique3(df_raw, factor, factor2)
                 sharpe = calc_result(df1)
                 df2, position = technique3(df_raw2, factor, factor2)
