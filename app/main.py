@@ -32,6 +32,7 @@ class Bot:
     weekday = dt.now().weekday()
 
     def __init__(self, symbol):
+        self.reverse_it_all = reverse_it_all
         self.changer_reverse = False
         self.interval = master_interval if symbol not in ['AUDUSD'] else 'M10'
         printer(dt.now(), symbol)
@@ -100,6 +101,15 @@ class Bot:
         profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].magic == self.magic])
         self.close_profits.append((profit_, self.comment[:-1]))
         if len(self.close_profits) >= 2:
+            x = self.close_profits[-2:]
+            if all([i[0] < 0 for i in x]):
+                self.position_size = self.position_size - 1
+                if self.position_size < 1:
+                    self.position_size = 1
+            elif all([i[0] > 0 for i in x]):
+                self.position_size = self.position_size + 1
+                if self.position_size > position_size + 4:
+                    self.position_size = position_size + 4
             try:
                 last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment[:-1]]
                 if len(last_to_by_comment) >= 2:
@@ -215,7 +225,7 @@ class Bot:
                 profit = sum([i[-4] for i in self.positions])
 
                 # BotReverse
-                if reverse_it_all:
+                if self.reverse_it_all:
                     profit = -profit
 
                 if self.profit0 is None:
@@ -252,8 +262,8 @@ class Bot:
                     and (profit < self.profit_max*self.profit_decline_factor):
                     self.clean_orders()
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                elif (profit > self.profit_needed/(profit_factor*1.5) and not reverse_it_all) or \
-                    (profit < -self.profit_needed/(profit_factor*1.5) and reverse_it_all):
+                elif (profit > self.profit_needed/(profit_factor*1.5) and not self.reverse_it_all) or \
+                    (profit < -self.profit_needed/(profit_factor*1.5) and self.reverse_it_all):
                     #and (position_time > self.pos_time/(profit_factor*1.5))
                     _ = self.fake_position_robot()
 
@@ -324,7 +334,7 @@ class Bot:
     @class_errors
     def request_get(self):
         if not self.positions:
-            checkout_report(self.symbol, self.reverse, self.trigger, reverse_it_all)
+            checkout_report(self.symbol, self.reverse, self.trigger, self.reverse_it_all)
             posType = self.actual_position_democracy()
             self.request(actions['deal'], posType)
         self.positions_()
@@ -664,10 +674,9 @@ class Bot:
                 if time_.hour >= 14:
                     position = changer(position, 0, 1)
 
-            if not self.changer_reverse:
-                # BotReverse
-                if reverse_it_all:
-                    position = changer(position, 0, 1)
+
+            if self.reverse_it_all:
+                position = changer(position, 0, 1)
 
             # finding the last opening price as strategy_pos_open_price
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
@@ -714,7 +723,7 @@ class Bot:
         self.trend = vwap_std(self.symbol)
 
         # BotReverse
-        if reverse_it_all:
+        if self.reverse_it_all:
             posType = changer(posType, 0, 1)
 
         if posType == (0 if not self.trend_or_not else 1):
@@ -868,7 +877,7 @@ class Bot:
                 tiktok=self.tiktok,
                 number_of_models = self.model_counter,
                 market=self.market,
-                full_reverse=reverse_it_all
+                full_reverse=self.reverse_it_all
             )
 
             mean_profit = np.mean(self.profits)
@@ -944,6 +953,7 @@ class Bot:
                     if isinstance(result, float):
                         if result < 0:
                             self.changer_reverse = True
+                            self.reverse_it_all = changer(self.reverse_it_all, True, False)
                             print("CHANGER WAS CHANGED")
                 except Exception as e:
                     print(e)
