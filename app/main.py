@@ -18,15 +18,12 @@ from app.database_class import TradingProcessor
 from app.bot_functions import *
 from tqdm import trange
 sys.path.append("..")
-
-
-
-processor = TradingProcessor()
 mt.initialize()
 
 catalog = os.path.dirname(__file__)
 parent_catalog = os.path.dirname(catalog)
 catalog = f'{parent_catalog}\\models'
+processor = TradingProcessor()
 
 
 class Bot:
@@ -104,11 +101,11 @@ class Bot:
         if len(self.close_profits) >= 2:
             x = self.close_profits[-2:]
             if all([i[0] < 0 for i in x]):
-                self.position_size = self.position_size - 1
+                self.position_size -= 1
                 if self.position_size < 1:
                     self.position_size = 1
             elif all([i[0] > 0 for i in x]):
-                self.position_size = self.position_size + 1
+                self.position_size += 1
                 if self.position_size > position_size + 4:
                     self.position_size = position_size + 4
             try:
