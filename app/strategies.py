@@ -25,7 +25,8 @@ def technique3(df_raw, slow, fast):
     return df, position
 
 
-def rsi_divergence_strategy(df, slow, fast):
+def rsi_divergence_strategy(df_raw, slow, fast):
+    df = df_raw.copy()
     df['rsi'] = ta.rsi(df['close'], length=slow)
     df['price_peak'] = df['high'].rolling(fast).max()
     df['price_trough'] = df['low'].rolling(fast).min()
