@@ -48,8 +48,16 @@ def rsi_divergence_strategy(df, slow, fast):
     df.loc[df['bullish_div'] == 1, 'stance'] = 1.0  # Buy signal on bullish divergence
     df.loc[df['bearish_div'] == 1, 'stance'] = -1.0  # Sell signal on bearish divergence
     df['stance'] = df['stance'].ffill()
-    return df
+    position = df['stance'].iloc[-1]
+    return df, position
 
 
-def moving_average(df_raw, slow, fast):
-  pass
+def moving_averages(df_raw, slow, fast):
+    df = df_raw.copy()
+    df['adj'] = (df['close'] + df['high'] + df['low']) / 3
+    ma1 = df.ta.vwma(length=fast)
+    ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
+    df['stance'] = np.where(ma1>=ma2, 1, 0)
+    df['stance'] = np.where(ma1<ma2, -1, df['stance'])
+    position = df['stance'].iloc[-1]
+    return df, position
