@@ -675,18 +675,14 @@ class Bot:
                 print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
                 self.check_volume_condition = volume_2 > volume_10
 
+            # deactivate position change for new technical technique and reverse position making by reverse_it_all
             if self.reverse == 'normal':
                 pass
-            elif self.reverse == 'reverse':
+            elif self.reverse == 'reverse' and self.trigger == 'model':
                 position = changer(position, 0, 1)
-            elif self.reverse == 'normal_mix':
-                time_ = dt.now()
-                if time_.hour >= 14:
-                    position = changer(position, 0, 1)
 
-
-            if self.reverse_it_all:
-                position = changer(position, 0, 1)
+            # if self.reverse_it_all:
+            # position = changer(position, 0, 1)
 
             # finding the last opening price as strategy_pos_open_price
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
