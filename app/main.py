@@ -30,6 +30,8 @@ class Bot:
     weekday = dt.now().weekday()
 
     def __init__(self, symbol):
+        self.strategy_number = 0
+        self.number_of_bars_for_backtest = 20000
         self.reverse_it_all = reverse_it_all
         self.changer_reverse = False
         printer(dt.now(), symbol)
@@ -68,6 +70,7 @@ class Bot:
         self.load_models_democracy(catalog)
         self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_(self.model_interval), 0, 1)[0][0]
         self.interval = self.model_interval
+        self.test_strategies()
         self.active_session()
 
     @class_errors
@@ -218,7 +221,6 @@ class Bot:
         if trigger_mode == 'on':
             position_time = self.position_time()
             try:
-                #self.check_volume_condition = True
                 profit = sum([i[-4] for i in self.positions])
 
                 # BotReverse
@@ -233,7 +235,6 @@ class Bot:
                 mean_profits = np.mean(self.profits)
                 self.self_decline_factor()
                 if self.print_condition():
-                    printer("Volume-volatility condition:", self.check_volume_condition)
                     printer("Change value:", f"{round(self.profit_needed, 2):.2f} $")
                     printer("Actual trigger:", self.trigger)
                     printer("Max profit:", f"{self.profit_max:.2f} $")
@@ -536,7 +537,7 @@ class Bot:
         return names
 
     @class_errors
-    def load_models_democracy(self, directory):
+    def load_models_democracy(self, directory, backtest=False):
         self.trigger = start_trigger
         self.reverse = reverse_(self.symbol)
         self.tiktok = 0
@@ -547,8 +548,9 @@ class Bot:
         self.factors = []
         intervals = []
         ma_list = []
+        print(self.market)
         for model_name in model_names:
-            if model_name[0].split('_')[-10] == self.market:
+            if model_name[0].split('_')[-10] == self.market or backtest:
                 model_path_buy = os.path.join(directory, f'{model_name[0]}_buy.model')
                 model_path_sell = os.path.join(directory, f'{model_name[0]}_sell.model')
                 model_buy = xgb.Booster()
@@ -564,15 +566,94 @@ class Bot:
                 continue
         assert len(self.buy_models) == len(self.sell_models)
 
-        most_common_ma = most_common_value(ma_list)
-        if use_moving_averages:
-            self.ma_factor_fast = most_common_ma[0]
-            self.ma_factor_slow = most_common_ma[1]
-        else:
-            self.ma_factor_fast, self.ma_factor_slow = self.trend_backtest()
         self.mdv = self.mdv_() / 4
-        printer("MA values:", f"fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
         self.model_interval = sorted(list(set(intervals)), key=lambda i: int(i[1:]))[0]
+
+    @class_errors
+    def model_position(self, number_of_bars, backtest=False):
+        if backtest:
+            #self.market = 'x'
+            self.load_models_democracy(catalog, True)
+            main_df = get_data_for_model(self.symbol, self.model_interval, 1, self.number_of_bars_for_backtest)
+            main_df['stance'] = 0
+        stance_values = []
+        dataframes = []
+        i = 0
+        start = time.time()
+        for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
+            name_ = f"{mbuy[1].split('_')[-4]}_{factor}"
+            if backtest:
+                number_of_bars = self.number_of_bars_for_backtest
+            else:
+                number_of_bars = int(factor**2 + number_of_bars)
+
+            if i==0:
+                df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, number_of_bars) # how_many_bars
+                df = data_operations(df, factor)
+                dataframes.append((df, name_))
+            else:
+                if any(nazwa == name_ for _, nazwa in dataframes):
+                    for dataframe, nazwa in dataframes:
+                        if nazwa == name_:
+                            df = dataframe
+                            break
+                else:
+                    df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, number_of_bars) # how_many_bars
+                    df = data_operations(df, factor)
+                    dataframes.append((df, name_))
+            dfx = df.copy()
+            dtest_buy = xgb.DMatrix(df)
+            dtest_sell = xgb.DMatrix(df)
+            buy = mbuy[0].predict(dtest_buy)
+            sell = msell[0].predict(dtest_sell)
+            buy = np.where(buy > probability_edge, 1, 0)
+            sell = np.where(sell > probability_edge, -1, 0)
+            dfx['stance'] = buy + sell
+            dfx['stance'] = dfx['stance'].replace(0, np.NaN)
+            dfx['stance'] = dfx['stance'].ffill()
+            if backtest:
+                main_df['stance'] += dfx['stance'] * int(mbuy[1].split('_')[-2])
+            position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
+            try:
+                _ = int(position_)
+            except Exception:
+                continue
+            stance_values.append(int(position_))
+            i+=1
+            if i >= self.model_counter:
+                break
+        end = time.time()
+        duration = end-start
+        time_info(duration, "Decision time")
+        del dataframes
+        print('Stances: ', stance_values)
+        sum_of_position = np.sum(stance_values)
+
+        def longs(stance_values):
+            return round(np.sum([1 for i in stance_values if i > 0]) / len(stance_values), 2)
+
+        def longs_democratic(stance_values):
+            all_ = [abs(i) for i in stance_values]
+            return round(np.sum(stance_values) / np.sum(all_), 2)
+
+        if not backtest:
+            force_of_democratic = ic(longs_democratic(stance_values))
+            printer("Force of long democratic votes:", force_of_democratic)
+            try:
+                fx = ic(longs(stance_values))
+                printer("Percent of long votes:", fx)
+            except Exception:
+                pass
+            if sum_of_position != 0:
+                position = 0 if sum_of_position > 0 else 1
+            else:
+                position = self.pos_creator()
+
+        if backtest:
+            main_df['stance'] = np.where(main_df['stance'] >= 0, 1, -1)
+            print(main_df)
+            return main_df
+        return main_df, position
 
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
@@ -585,91 +666,26 @@ class Bot:
                 self.market = market
                 self.load_models_democracy(catalog)
 
-            if self.trigger == 'model':
-                stance_values = []
-                dataframes = []
-                i = 0
-                start = time.time()
-                for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
-                    name_ = f"{mbuy[1].split('_')[-4]}_{factor}"
-                    if i==0:
-                        df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + number_of_bars)) # how_many_bars
-                        df = data_operations(df, factor)
-                        dataframes.append((df, name_))
-                    else:
-                        if any(nazwa == name_ for _, nazwa in dataframes):
-                            for dataframe, nazwa in dataframes:
-                                if nazwa == name_:
-                                    df = dataframe
-                                    break
-                        else:
-                            df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, int(factor**2 + number_of_bars)) # how_many_bars
-                            df = data_operations(df, factor)
-                            dataframes.append((df, name_))
-                    dfx = df.copy()
-                    dtest_buy = xgb.DMatrix(df)
-                    dtest_sell = xgb.DMatrix(df)
-                    buy = mbuy[0].predict(dtest_buy)
-                    sell = msell[0].predict(dtest_sell)
-                    buy = np.where(buy > probability_edge, 1, 0)
-                    sell = np.where(sell > probability_edge, -1, 0)
-                    dfx['stance'] = buy + sell
-                    dfx['stance'] = dfx['stance'].replace(0, np.NaN)
-                    dfx['stance'] = dfx['stance'].ffill()
-                    position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
-                    try:
-                        _ = int(position_)
-                    except Exception:
-                        continue
-                    stance_values.append(int(position_))
-                    i+=1
-                    if i >= self.model_counter:
-                        break
-                end = time.time()
-                duration = end-start
-                time_info(duration, "Decision time")
-                del dataframes
-                print('Stances: ', stance_values)
-                sum_of_position = np.sum(stance_values)
+            strategy = self.strategies[self.strategy_number]
+            print(strategy[0])
 
-                def longs(stance_values):
-                    return round(np.sum([1 for i in stance_values if i > 0]) / len(stance_values), 2)
-
-                def longs_democratic(stance_values):
-                    all_ = [abs(i) for i in stance_values]
-                    return round(np.sum(stance_values) / np.sum(all_), 2)
-
-                force_of_democratic = ic(longs_democratic(stance_values))
-                printer("Force of long democratic votes:", force_of_democratic)
-                try:
-                    fx = ic(longs(stance_values))
-                    printer("Percent of long votes:", fx)
-                except Exception:
-                    pass
-                if sum_of_position != 0:
-                    position = 0 if sum_of_position > 0 else 1
-                else:
-                    position = self.pos_creator()
-
-
+            if 'model' in strategy[0]:
+                dfx, position = self.model_position(number_of_bars, backtest=False)
+                printer(f'Position from {strategy[0]}:')
+                printer("MA position:", position)
             else:
-                if use_moving_averages:
-                    dfx = get_data_for_model(self.symbol, self.interval, 1, int(self.ma_factor_slow + 100)) # how_many_bars
-                    dfx["stance"] = function_when_model_not_work(dfx, self.ma_factor_fast, self.ma_factor_slow)
-                    position = 0 if dfx.stance.iloc[-1] == 1 else 1
-                else:
-                    dfx = get_data(self.symbol, self.interval, 1, int(self.ma_factor_slow * self.ma_factor_fast + 100)) # how_many_bars
-                    dfx, position = technique3(dfx, self.ma_factor_slow, self.ma_factor_fast)
-                    position = 0 if position == 1 else 1
+                dfx = get_data(self.symbol, self.interval, 1, int(strategy[-2] * strategy[-3] + 100)) # how_many_bars
+                dfx, position = strategy[1](dfx, strategy[-2], strategy[-3])
+                position = 0 if position == 1 else 1
 
-                printer('Position from moving averages:', f'fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
+                printer(f'Position from {strategy[0]}:', f'fast={strategy[-3]} slow={strategy[-2]}')
                 printer("MA position:", position)
 
             # deactivate position change for new technical technique and reverse position making by reverse_it_all
-            if self.reverse == 'normal':
-                pass
-            elif self.reverse == 'reverse' and self.trigger == 'model':
-                position = changer(position, 0, 1)
+            # if self.reverse == 'normal':
+            #     pass
+            # elif self.reverse == 'reverse' and self.trigger == 'model':
+            #     position = changer(position, 0, 1)
 
             # if self.reverse_it_all:
             # position = changer(position, 0, 1)
@@ -705,7 +721,6 @@ class Bot:
         except KeyError:
             return self.actual_position_democracy(number_of_bars=number_of_bars*2)
         self.pos_time = interval_time(self.interval)
-
 
         return position
 
@@ -767,7 +782,7 @@ class Bot:
             letter = "t"
         else:
             letter = "f"
-        self.comment = f'{self.reverse[0]}_{self.trigger[-1]}_{self.ma_factor_fast}_{self.ma_factor_slow}_{letter}_{self.market}_{self.tiktok}'
+        self.comment = f'{self.strategies[self.strategy_number][0]}_{letter}_{self.market}_{self.tiktok}'
 
         request = {
             "action": action,
@@ -935,7 +950,7 @@ class Bot:
                     result = float(result.iloc[-1])
                     print(result)
                 except Exception as e:
-                    print(e)
+                    print("reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check", e)
                 try:
                     if isinstance(result, float):
                         if result < 0:
@@ -943,19 +958,21 @@ class Bot:
                             self.reverse_it_all = changer(self.reverse_it_all, True, False)
                             print("CHANGER WAS CHANGED")
                 except Exception as e:
-                    print(e)
+                    print("reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check", e)
             else:
                 print("NOT CHECK")
 
     @class_errors
-    def trend_backtest(self):
+    def trend_backtest(self, strategy):
+
+        print(strategy.__name__)
         def strategy3(df):
             z = [len(str(x).split(".")[1])+1 for x in list(df["close"][:101])]
             divider = 10**round((sum(z)/len(z))-1)
             spread_mean = df.spread/divider
             spread_mean = spread_mean.mean()
             df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
-                                            ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
+                                    ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
             df['mkt_move'] = np.log(df.close/df.close.shift(1))
             df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open))*leverage
             df['strategy'] = (1+df['return']).cumprod() - 1
@@ -963,28 +980,59 @@ class Bot:
 
         def calc_result(df):
             df = strategy3(df)
-            df.set_index(df['numbers'], inplace=True)
+            df.reset_index(drop=True, inplace=True)
             df = df.dropna()
             cross = df['cross'].sum()/len(df)
             sharpe = round(((df['return'].mean()/df['return'].std()))/cross, 2)
             return sharpe
 
-        df_raw = get_data(self.symbol, self.interval, 1, 20000)
-        df_raw2 = df_raw.copy()[-8000:]
-        results = []
-        for factor in trange(3, 50):
-            for factor2 in range(2, 21):
-                if factor == factor2:
-                    continue
-                df1, position = technique3(df_raw, factor, factor2)
-                sharpe = calc_result(df1)
-                df2, position = technique3(df_raw2, factor, factor2)
-                sharpe2 = calc_result(df2)
-                results.append((factor2, factor, sharpe+sharpe2))
-        f_result = sorted(results, key=lambda x: x[2], reverse=True)[0]
-        print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
-        return f_result[0], f_result[1]
+        if strategy.__name__ == 'model':
+            interval = self.model_interval
+        else:
+            interval = strategy.__name__.split('_')[-1]
 
+        df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
+        small_bt_bars = 8000
+        df_raw2 = df_raw.copy()[-small_bt_bars:]
+
+        if not 'model' in strategy.__name__:
+            results = []
+            for slow in trange(3, 50):
+                for fast in range(2, 21):
+                    if fast == slow:
+                        continue
+                    df1, position = strategy(df_raw, slow, fast)
+                    sharpe = calc_result(df1)
+                    df2, position = strategy(df_raw2, slow, fast)
+                    sharpe2 = calc_result(df2)
+                    results.append((fast, slow, round(sharpe+sharpe2, 3)))
+            f_result = sorted(results, key=lambda x: x[2], reverse=True)[0]
+            print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
+            return f_result[0], f_result[1], f_result[2]
+        else:
+            df1 = self.model_position(500, backtest=True)
+            sharpe = calc_result(df1)
+            self.number_of_bars_for_backtest = small_bt_bars
+            df2 = self.model_position(500, backtest=True)
+            sharpe2 = calc_result(df2)
+            self.number_of_bars_for_backtest = 20000
+            return 0, 0, round(sharpe+sharpe2, 3)
+
+
+    @class_errors
+    def test_strategies(self):
+        strategies = import_strategies([])
+        self.strategies = []
+        for strategy in strategies:
+            if strategy.__name__ == 'model':
+                interval = self.model_interval
+            else:
+                interval = strategy.__name__.split('_')[-1]
+            fast, slow, sharpe = self.trend_backtest(strategy)
+            print(strategy.__name__, strategy, interval, fast, slow, sharpe)
+            self.strategies.append((strategy.__name__, strategy, interval, fast, slow, sharpe))
+        self.strategies = sorted(self.strategies, key=lambda x: x[-1], reverse=True)
+        print(self.strategies)
 
 if __name__ == '__main__':
     print('Yo, wtf?')

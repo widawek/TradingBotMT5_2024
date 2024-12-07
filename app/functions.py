@@ -380,3 +380,16 @@ def marker(df):
             idx, df.loc[idx]["close"],
             "rv", markersize=8
         )
+
+
+def import_strategies(to_delate: list) -> list:
+    import inspect
+    to_delate += ['np', 'dt', 'pd', 'ta']
+    import app.strategies
+    atrybuty = inspect.getmembers(app.strategies)
+    funkcje = [element for element in atrybuty if
+               inspect.isfunction(element[1])]
+    strategiesList = [i[1] for i in funkcje if i[0] not in to_delate]
+    # for i in strategiesList:
+    #     print(i.__name__)
+    return strategiesList

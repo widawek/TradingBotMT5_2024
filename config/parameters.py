@@ -19,7 +19,7 @@ symbols:                                list = [
                                             ]
 
 #                                       model_generator_params
-intervals: list                         = ['M20']
+intervals: list                         = ['M10']
 leverage: int                           = 20
 delete_old_models: bool                 = True
 min_factor: int                         = 6
@@ -37,12 +37,12 @@ ts_list: list                           = [0.3]
 factors: list                           = [_ for _ in range(min_factor, max_factor, range_)]
 n_splits: int                           = 2
 bars: int                               = 30000
-change_hour: int                        = 15
+change_hour: int                        = 24 # 15
 
 #                                       bot params
 tz_diff                                 = get_timezone_difference()
 game_system: str                        = 'weighted_democracy'
-max_number_of_models: int               = 75
+max_number_of_models: int               = 1
 trigger_mode: str                       = 'on'
 profit_factor: float                    = 1.5
 position_size: int                      = int((100/len(symbols))*0.8)  # percent of balance

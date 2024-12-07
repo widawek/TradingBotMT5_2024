@@ -3,7 +3,12 @@ import numpy as np
 import pandas as pd
 
 
-def technique3(df_raw, slow, fast):
+
+def model_M20():
+    pass
+
+
+def technique3_M10(df_raw, slow, fast):
     df = df_raw.copy()
     df.set_index(df['time'], inplace=True)
     df['numbers'] = [1+i for i in range(len(df))]
@@ -26,7 +31,7 @@ def technique3(df_raw, slow, fast):
     return df, position
 
 
-def rsi_divergence_strategy(df_raw, slow, fast):
+def rsi_divergence_strategy_M10(df_raw, slow, fast):
     df = df_raw.copy()
     df['rsi'] = ta.rsi(df['close'], length=slow)
     df['price_peak'] = df['high'].rolling(fast).max()
@@ -54,7 +59,7 @@ def rsi_divergence_strategy(df_raw, slow, fast):
     return df, position
 
 
-def moving_averages(df_raw, slow, fast):
+def moving_averages_M10(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
     ma1 = df.ta.vwma(length=fast)
@@ -63,3 +68,4 @@ def moving_averages(df_raw, slow, fast):
     df['stance'] = np.where(ma1<ma2, -1, df['stance'])
     position = df['stance'].iloc[-1]
     return df, position
+

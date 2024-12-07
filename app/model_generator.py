@@ -266,40 +266,7 @@ def strategy_with_chart_(d_buy, d_sell, df, leverage, interval, symbol, factor,
     final = int(final + (1+drawdown))
     summary_status = "YES" if (status == "YES" and status2 == "YES" and density_status) else "NO"
 
-    # def trend_backtest(df, spread_mean, leverage):
-    #     range2 = 50
-    #     a = list(range(2, range2))
-    #     b = list(range(8, range2))
-    #     z = list(product(a, b))
-    #     z = [i for i in z if i[0] < i[1]]
-    #     results = []
-    #     for a, b in tqdm(z):
-    #         dfx = df.copy()[int(-len(df)/2):]
-    #         dfx['stance2'] = function_when_model_not_work(dfx, a, b)
-    #         # dfx['return2'] = np.where(#(dfx['time2'].dt.date == dfx['time2'].dt.date.shift(1)) &
-    #         #                           (dfx['return'] < 0), (dfx.mkt_move * dfx.stance2.shift(1) -\
-    #         #                             (dfx.cross *(spread_mean)/dfx.open))*leverage, 0)
-    #         dfx['return2'] = np.where((dfx['time2'].dt.date == dfx['time2'].dt.date.shift(1)),
-    #                                   (dfx.mkt_move * dfx.stance2.shift(1) -\
-    #                         (dfx.cross *(spread_mean)/dfx.open))*leverage, 0)
-    #         dfx['strategy2'] = (1+dfx['return2']).cumprod() - 1
-    #         sharpe = sharpe_multiplier * dfx['return2'].mean()/dfx['return2'].std()
-    #         omega = omega_ratio(dfx['return2'].dropna().to_list())
-    #         #mean_return = sharpe_multiplier * np.mean(dfx['return2'].dropna().to_list())
-    #         #result_ = round(((dfx['strategy2'].iloc[-1] + mean_return) / 2)*sharpe*omega, 2)
-    #         result_ = round(sharpe*omega, 2)
-    #         results.append((a, b, result_))
-    #     f_result = sorted(results, key=lambda x: x[2], reverse=True)[0]
-    #     print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
-    #     return f_result[0], f_result[1]
-
-    ma_factor1 = 0
-    ma_factor2 = 0
-    # if summary_status == "YES":
-    #     ma_factor1, ma_factor2 = trend_backtest(df, spread_mean, leverage)
-
-    #return result, summary_status, density, how_it_grow, sqrt_error, final
-    return result, summary_status, density, 1, sqrt_error, final, ma_factor1, ma_factor2
+    return result, summary_status, density, 1, sqrt_error, final, 1, 1
 
 
 def generate_my_models(
@@ -324,7 +291,7 @@ def generate_my_models(
         for symbol in symbols:
             from config.parameters import leverage
             if symbol in ['BTCUSD', 'DE40', 'EURCAD', 'ETHUSD']:
-                leverage = 2
+                leverage = 1
             df_raw = get_data_for_model(symbol, interval, 1, bars)
             for factor in factors:
                 print("\nDF length: ", len(df_raw))
