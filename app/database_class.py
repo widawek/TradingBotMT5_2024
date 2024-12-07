@@ -52,7 +52,6 @@ class Profit(Base):
     profit0 = Column(Float, nullable=False)
     mean_profit = Column(Float, nullable=False)
     spread = Column(Float, nullable=False)
-    volume_condition = Column(Boolean, nullable=False)
     ticket = Column(Integer, ForeignKey('positions.ticket'), nullable=False)
     fake_position = Column(Boolean, nullable=False)
     fake_position_counter = Column(Integer, nullable=False)
@@ -110,7 +109,7 @@ class DatabaseManager:
 
         session.close()
 
-    def add_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread, volume_condition,
+    def add_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread,
                    fake_position,fake_position_counter,fake_position_stoploss):
         session = self.Session()
         position = session.query(Position).filter_by(ticket=ticket).first()
@@ -122,7 +121,6 @@ class DatabaseManager:
                 mean_profit=mean_profit,
                 spread=spread,
                 ticket=ticket,
-                volume_condition=volume_condition,
                 position=position,
                 fake_position=fake_position,
                 fake_position_counter=fake_position_counter,
@@ -166,7 +164,7 @@ class TradingProcessor:
             full_reverse=full_reverse
         )
 
-    def process_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread, volume_condition,
+    def process_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread,
                        fake_position,fake_position_counter,fake_position_stoploss):
         # Przetwarzanie profitu
         # Dodajemy profit do bazy danych
@@ -177,7 +175,6 @@ class TradingProcessor:
             profit0=profit0,
             mean_profit=mean_profit,
             spread=spread,
-            volume_condition=volume_condition,
             fake_position=fake_position,
             fake_position_counter=fake_position_counter,
             fake_position_stoploss=fake_position_stoploss)

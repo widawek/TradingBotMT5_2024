@@ -32,7 +32,6 @@ class Bot:
     def __init__(self, symbol):
         self.reverse_it_all = reverse_it_all
         self.changer_reverse = False
-        self.interval = master_interval if symbol not in ['AUDUSD'] else 'M10'
         printer(dt.now(), symbol)
         self.symbol = symbol
         self.magic = magic_(symbol, 'bot_2024')
@@ -65,10 +64,10 @@ class Bot:
         self.avg_daily_vol()
         self.round_number = round_number_(symbol)
         self.volume_calc(position_size, True)
-        self.pos_time = interval_time(self.interval)
         self.positions_()
         self.load_models_democracy(catalog)
-        self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_(self.interval), 0, 1)[0][0]
+        self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_(self.model_interval), 0, 1)[0][0]
+        self.interval = self.model_interval
         self.active_session()
 
     @class_errors
@@ -307,7 +306,7 @@ class Bot:
 
     @class_errors
     def self_decline_factor(self, multiplier: int=3):
-        min_val = 0.45
+        min_val = 0.55
         max_val = 0.85
         min_value = 0
         max_value = self.profit_needed*multiplier
@@ -425,7 +424,6 @@ class Bot:
 
     @class_errors
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
-
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
         price = mt.symbol_info_tick(self.symbol)._asdict()
@@ -547,6 +545,7 @@ class Bot:
         self.buy_models = []
         self.sell_models = []
         self.factors = []
+        intervals = []
         ma_list = []
         for model_name in model_names:
             if model_name[0].split('_')[-10] == self.market:
@@ -559,6 +558,7 @@ class Bot:
                 self.buy_models.append((model_buy, f'{model_name[0]}_{model_name[1]}'))
                 self.sell_models.append((model_sell, f'{model_name[0]}_{model_name[1]}'))
                 self.factors.append(int(model_name[0].split('_')[-2])) # factor
+                intervals.append(model_name[0].split('_')[-3]) # interval
                 ma_list.append((int(model_name[0].split('_')[-8]), int(model_name[0].split('_')[-7])))
             else:
                 continue
@@ -572,6 +572,7 @@ class Bot:
             self.ma_factor_fast, self.ma_factor_slow = self.trend_backtest()
         self.mdv = self.mdv_() / 4
         printer("MA values:", f"fast={self.ma_factor_fast}, slow={self.ma_factor_slow}")
+        self.model_interval = sorted(list(set(intervals)), key=lambda i: int(i[1:]))[0]
 
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
@@ -650,10 +651,6 @@ class Bot:
                 else:
                     position = self.pos_creator()
 
-                volume_10 = ((df['high']-df['low'])*df['volume']).rolling(8).mean().iloc[-1]
-                volume_2 = ((df['high']-df['low'])*df['volume']).rolling(2).mean().iloc[-1]
-                print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
-                self.check_volume_condition = volume_2 > volume_10
 
             else:
                 if use_moving_averages:
@@ -665,12 +662,8 @@ class Bot:
                     dfx, position = technique3(dfx, self.ma_factor_slow, self.ma_factor_fast)
                     position = 0 if position == 1 else 1
 
-                volume_10 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(8).mean().iloc[-1]
-                volume_2 = ((dfx['high']-dfx['low'])*dfx['volume']).rolling(2).mean().iloc[-1]
                 printer('Position from moving averages:', f'fast={self.ma_factor_fast} slow={self.ma_factor_slow}')
                 printer("MA position:", position)
-                print(f"Vol 10: {round(volume_10, 2)} Vol 2: {round(volume_2, 2)}")
-                self.check_volume_condition = volume_2 > volume_10
 
             # deactivate position change for new technical technique and reverse position making by reverse_it_all
             if self.reverse == 'normal':
@@ -711,6 +704,8 @@ class Bot:
 
         except KeyError:
             return self.actual_position_democracy(number_of_bars=number_of_bars*2)
+        self.pos_time = interval_time(self.interval)
+
 
         return position
 
@@ -893,7 +888,6 @@ class Bot:
                 profit0=self.profit0,
                 mean_profit=mean_profit,
                 spread=spread,
-                volume_condition=self.check_volume_condition,
                 fake_position=self.fake_position,
                 fake_position_counter=self.fake_counter,
                 fake_position_stoploss=self.fake_stoploss
@@ -901,16 +895,6 @@ class Bot:
         except Exception as e:
             print(e)
             pass
-
-    # def multi_voltage(self, interval, factor):
-    #     df = get_data(self.symbol, interval, 1, factor*3)
-    #     df['atr'] = df.ta.atr(length=factor)
-    #     df['atr_ma'] = df.ta.atr(length=factor*2)
-    #     df['atr_vol_1'] = df['atr'] * df['volume'].rolling(window=factor).mean()
-    #     df['atr_vol_2'] = df['atr_ma'] * df['volume'].rolling(window=factor*2).mean()
-    #     df['xxx'] = (1 - (df['atr_vol_1'] / df['atr_vol_2']))#*-1
-    #     return df['xxx'].iloc[-1]
-
 
     @class_errors
     def reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check(self):
@@ -988,7 +972,7 @@ class Bot:
         df_raw = get_data(self.symbol, self.interval, 1, 20000)
         df_raw2 = df_raw.copy()[-8000:]
         results = []
-        for factor in trange(2, 50):
+        for factor in trange(3, 50):
             for factor2 in range(2, 21):
                 if factor == factor2:
                     continue
@@ -1000,7 +984,6 @@ class Bot:
         f_result = sorted(results, key=lambda x: x[2], reverse=True)[0]
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
         return f_result[0], f_result[1]
-
 
 
 if __name__ == '__main__':

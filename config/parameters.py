@@ -5,16 +5,17 @@ from app.functions import get_timezone_difference
 # global params
 
 symbols:                                list = [
-                                            'EURJPY',
-                                            'EURUSD',
-                                            'GBPUSD',
-                                            'USDCAD',
-                                            'USDCHF',
-                                            'USDJPY',
-                                            'US30',
-                                            'XAUUSD',
+                                            # 'EURJPY',
+                                            # 'EURUSD',
+                                            # 'GBPUSD',
+                                            # 'USDCAD',
+                                            # 'USDCHF',
+                                            # 'USDJPY',
+                                            # 'US30',
+                                            # 'XAUUSD',
                                             'BTCUSD',
-                                            'XAGUSD',
+                                            'ETHUSD'
+                                            # 'XAGUSD',
                                             ]
 
 #                                       model_generator_params
