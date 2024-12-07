@@ -393,3 +393,10 @@ def import_strategies(to_delate: list) -> list:
     # for i in strategiesList:
     #     print(i.__name__)
     return strategiesList
+
+
+def interval_time_sharpe(interval):
+    match interval[0]:
+        case 'D': return np.sqrt(252)
+        case 'H': return np.sqrt(252 * 24 / int(interval[1:]))
+        case 'M': return np.sqrt(252 * 24 * 60 / int(interval[1:]))

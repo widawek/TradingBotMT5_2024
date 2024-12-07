@@ -31,7 +31,7 @@ def technique3_M10(df_raw, slow, fast):
     return df, position
 
 
-def rsi_divergence_strategy_M10(df_raw, slow, fast):
+def rsi_divergence_strategy_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df['rsi'] = ta.rsi(df['close'], length=slow)
     df['price_peak'] = df['high'].rolling(fast).max()
@@ -52,8 +52,8 @@ def rsi_divergence_strategy_M10(df_raw, slow, fast):
 
     # Generate trading signals
     df['stance'] = np.NaN
-    df.loc[df['bullish_div'] == 1, 'stance'] = 1.0  # Buy signal on bullish divergence
-    df.loc[df['bearish_div'] == 1, 'stance'] = -1.0  # Sell signal on bearish divergence
+    df.loc[df['bullish_div'] == 1, 'stance'] = 1  # Buy signal on bullish divergence
+    df.loc[df['bearish_div'] == 1, 'stance'] = -1  # Sell signal on bearish divergence
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position

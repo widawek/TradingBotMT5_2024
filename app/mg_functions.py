@@ -192,13 +192,6 @@ def primal(df, direction, factor):
     return df
 
 
-def interval_time_sharpe(interval):
-    match interval[0]:
-        case 'D': return np.sqrt(252)
-        case 'H': return np.sqrt(252 * 24 / int(interval[1:]))
-        case 'M': return np.sqrt(252 * 24 * 60 / int(interval[1:]))
-
-
 def delete_model(path, fragment):
     for filename in os.listdir(path):
         if fragment in filename:

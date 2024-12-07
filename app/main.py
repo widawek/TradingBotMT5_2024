@@ -333,8 +333,8 @@ class Bot:
     def request_get(self):
         if not self.positions:
             checkout_report(self.symbol, self.reverse, self.trigger, self.reverse_it_all)
-            posType = self.actual_position_democracy()
-            self.request(actions['deal'], posType)
+            pos_type = self.actual_position_democracy()
+            self.request(actions['deal'], pos_type)
         self.positions_()
 
     @class_errors
@@ -667,34 +667,32 @@ class Bot:
                 self.load_models_democracy(catalog)
 
             strategy = self.strategies[self.strategy_number]
-            print(strategy[0])
+            print("Strategia", strategy[0])
+            self.interval = strategy[0].split('_')[-1]
+            print("Interwał", self.interval)
 
             if 'model' in strategy[0]:
                 dfx, position = self.model_position(number_of_bars, backtest=False)
                 printer(f'Position from {strategy[0]}:')
                 printer("MA position:", position)
             else:
-                dfx = get_data(self.symbol, self.interval, 1, int(strategy[-2] * strategy[-3] + 100)) # how_many_bars
+                dfx = get_data(self.symbol, self.interval, 1, int(strategy[-2] * strategy[-3] + 1440)) # how_many_bars
                 dfx, position = strategy[1](dfx, strategy[-2], strategy[-3])
-                position = 0 if position == 1 else 1
+                if position not in [-1, 1]:
+                    dfx = get_data(self.symbol, self.interval, 1, int(strategy[-2] * strategy[-3] + 10000)) # how_many_bars
+                    dfx, position = strategy[1](dfx, strategy[-2], strategy[-3])
 
                 printer(f'Position from {strategy[0]}:', f'fast={strategy[-3]} slow={strategy[-2]}')
                 printer("MA position:", position)
 
-            # deactivate position change for new technical technique and reverse position making by reverse_it_all
-            # if self.reverse == 'normal':
-            #     pass
-            # elif self.reverse == 'reverse' and self.trigger == 'model':
-            #     position = changer(position, 0, 1)
+            position = int(0) if position == 1 else int(1)
 
-            # if self.reverse_it_all:
-            # position = changer(position, 0, 1)
-
-            # finding the last opening price as strategy_pos_open_price
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
             self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
             cross = dfx[dfx['cross'] == 1]
             self.strategy_pos_open_price = cross['open'].iloc[-1]
+            print("Position", position)
+            print(f"Last open position time by MetaTrader {cross['time'].iloc[-1]}")
 
             positions_ = mt.positions_get(symbol=self.symbol)
             if len(positions_) == 0:
@@ -717,10 +715,10 @@ class Bot:
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
                     printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
                     time.sleep(5)
-
         except KeyError:
             return self.actual_position_democracy(number_of_bars=number_of_bars*2)
         self.pos_time = interval_time(self.interval)
+        print("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
 
         return position
 
@@ -782,7 +780,7 @@ class Bot:
             letter = "t"
         else:
             letter = "f"
-        self.comment = f'{self.strategies[self.strategy_number][0]}_{letter}_{self.market}_{self.tiktok}'
+        self.comment = f'{self.strategies[self.strategy_number][0][:3]}_{letter}_{self.market}_{self.tiktok}'
 
         request = {
             "action": action,
@@ -913,54 +911,55 @@ class Bot:
 
     @class_errors
     def reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check(self):
-        if dt.now().hour >= morning_hour + 3:
-            if not self.changer_reverse:
-                try:
-                    from_date = dt.today().date()
-                    to_date = dt.today().date() + timedelta(days=1)
-                    from_date = dt(from_date.year, from_date.month, from_date.day)
-                    to_date = dt(to_date.year, to_date.month, to_date.day)
-                    data = mt.history_deals_get(from_date, to_date)
-                    df = pd.DataFrame(list(data), columns=data[0]._asdict().keys())
-                    df["time"] = pd.to_datetime(df["time"], unit="s")
-                    df = df[df['symbol'] != '']
-                    df['profit'] = df['profit'] + df['commission'] * 2 + df['swap']
-                    df['reason'] = df['reason'].shift(1)
-                    df = df.drop(columns=['time_msc', 'commission', 'external_id', 'swap'])
-                    df = df[df['time'].dt.date >= from_date.date()]
-                    df = df[df.groupby('position_id')['position_id'].transform('count') == 2]
-                    df = df.sort_values(by=['position_id', 'time'])
-                    df.reset_index(drop=True, inplace=True)
-                    df['profit'] = df['profit'].shift(-1)
-                    df['time_close'] = df['time'].shift(-1)
-                    df = df.rename(columns={'time': 'time_open'})
-                    df['sl'] = df.comment.shift(-1).str.contains('sl', na=False)
-                    df['tp'] = df.comment.shift(-1).str.contains('tp', na=False)
-                    df = df.iloc[::2]
-                    df['hour_open'] = df['time_open'].dt.hour
-                    df['hour_close'] = df['time_close'].dt.hour
-                    df = df[df['symbol'] == self.symbol]
-                    df.reset_index(drop=True, inplace=True)
-                    df = df.groupby('hour_close').agg(
-                        profit=('profit', 'sum'),
-                        count_sum=('profit', 'size')
-                    ).reset_index()
-                    df = df.sort_values('hour_close')
-                    result = df['profit'].dropna().rolling(3).mean()
-                    result = float(result.iloc[-1])
-                    print(result)
-                except Exception as e:
-                    print("reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check", e)
-                try:
-                    if isinstance(result, float):
-                        if result < 0:
-                            self.changer_reverse = True
-                            self.reverse_it_all = changer(self.reverse_it_all, True, False)
-                            print("CHANGER WAS CHANGED")
-                except Exception as e:
-                    print("reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check", e)
-            else:
-                print("NOT CHECK")
+        if len(self.close_profits) < 3: 
+            if dt.now().hour >= morning_hour + 3:
+                if not self.changer_reverse:
+                    try:
+                        from_date = dt.today().date()
+                        to_date = dt.today().date() + timedelta(days=1)
+                        from_date = dt(from_date.year, from_date.month, from_date.day)
+                        to_date = dt(to_date.year, to_date.month, to_date.day)
+                        data = mt.history_deals_get(from_date, to_date)
+                        df = pd.DataFrame(list(data), columns=data[0]._asdict().keys())
+                        df["time"] = pd.to_datetime(df["time"], unit="s")
+                        df = df[df['symbol'] != '']
+                        df['profit'] = df['profit'] + df['commission'] * 2 + df['swap']
+                        df['reason'] = df['reason'].shift(1)
+                        df = df.drop(columns=['time_msc', 'commission', 'external_id', 'swap'])
+                        df = df[df['time'].dt.date >= from_date.date()]
+                        df = df[df.groupby('position_id')['position_id'].transform('count') == 2]
+                        df = df.sort_values(by=['position_id', 'time'])
+                        df.reset_index(drop=True, inplace=True)
+                        df['profit'] = df['profit'].shift(-1)
+                        df['time_close'] = df['time'].shift(-1)
+                        df = df.rename(columns={'time': 'time_open'})
+                        df['sl'] = df.comment.shift(-1).str.contains('sl', na=False)
+                        df['tp'] = df.comment.shift(-1).str.contains('tp', na=False)
+                        df = df.iloc[::2]
+                        df['hour_open'] = df['time_open'].dt.hour
+                        df['hour_close'] = df['time_close'].dt.hour
+                        df = df[df['symbol'] == self.symbol]
+                        df.reset_index(drop=True, inplace=True)
+                        df = df.groupby('hour_close').agg(
+                            profit=('profit', 'sum'),
+                            count_sum=('profit', 'size')
+                        ).reset_index()
+                        df = df.sort_values('hour_close')
+                        result = df['profit'].dropna().rolling(3).mean()
+                        result = float(result.iloc[-1])
+                        print(result)
+                    except Exception as e:
+                        print("reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check", e)
+                    try:
+                        if isinstance(result, float):
+                            if result < 0:
+                                self.changer_reverse = True
+                                self.reverse_it_all = changer(self.reverse_it_all, True, False)
+                                print("CHANGER WAS CHANGED")
+                    except Exception as e:
+                        print("reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check", e)
+                else:
+                    print("NOT CHECK")
 
     @class_errors
     def trend_backtest(self, strategy):
@@ -978,12 +977,12 @@ class Bot:
             df['strategy'] = (1+df['return']).cumprod() - 1
             return df
 
-        def calc_result(df):
+        def calc_result(df, sharpe_multiplier):
             df = strategy3(df)
             df.reset_index(drop=True, inplace=True)
             df = df.dropna()
             cross = df['cross'].sum()/len(df)
-            sharpe = round(((df['return'].mean()/df['return'].std()))/cross, 2)
+            sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 2)
             return sharpe
 
         if strategy.__name__ == 'model':
@@ -991,6 +990,7 @@ class Bot:
         else:
             interval = strategy.__name__.split('_')[-1]
 
+        sharpe_multiplier = interval_time_sharpe(interval)
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
         small_bt_bars = 8000
         df_raw2 = df_raw.copy()[-small_bt_bars:]
@@ -1002,19 +1002,19 @@ class Bot:
                     if fast == slow:
                         continue
                     df1, position = strategy(df_raw, slow, fast)
-                    sharpe = calc_result(df1)
+                    sharpe = calc_result(df1, sharpe_multiplier)
                     df2, position = strategy(df_raw2, slow, fast)
-                    sharpe2 = calc_result(df2)
+                    sharpe2 = calc_result(df2, sharpe_multiplier)
                     results.append((fast, slow, round(sharpe+sharpe2, 3)))
             f_result = sorted(results, key=lambda x: x[2], reverse=True)[0]
             print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
             return f_result[0], f_result[1], f_result[2]
         else:
             df1 = self.model_position(500, backtest=True)
-            sharpe = calc_result(df1)
+            sharpe = calc_result(df1, sharpe_multiplier)
             self.number_of_bars_for_backtest = small_bt_bars
             df2 = self.model_position(500, backtest=True)
-            sharpe2 = calc_result(df2)
+            sharpe2 = calc_result(df2, sharpe_multiplier)
             self.number_of_bars_for_backtest = 20000
             return 0, 0, round(sharpe+sharpe2, 3)
 
