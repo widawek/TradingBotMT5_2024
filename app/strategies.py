@@ -31,6 +31,29 @@ def technique3_M10(df_raw, slow, fast):
     return df, position
 
 
+def technique3_M1(df_raw, slow, fast):
+    df = df_raw.copy()
+    df.set_index(df['time'], inplace=True)
+    df['numbers'] = [1+i for i in range(len(df))]
+    df['vwap_D'] = df.ta.vwap(anchor="D")
+    df['adj'] = (df['close'] + df['high'] + df['low'])/3
+    df['ma'] = ta.sma(df['adj'], length=slow)
+    df['super_new_indicator'] = (df['close'] - df['close'].shift(1)) * df['volume']
+    df['super_new_indicator'] = df['super_new_indicator'].rolling(slow).mean()
+    df['super_max'] = df['super_new_indicator'].rolling(slow*fast).max()
+    df['super_min'] = df['super_new_indicator'].rolling(slow*fast).min()
+    df['median'] = (df['super_max'] + df['super_min']) / 2
+    df['super_ma'] = df['ma'] + df['ma']*df['median']
+    df['k1'] = df.ta.stoch(k=fast).iloc[:,0]
+    df['k2'] = df.ta.stoch(k=slow).iloc[:,0]
+    df['stance'] = np.where((df['super_ma'] < df['ma']) & (df.close > df.vwap_D), 1, 0)
+    df['stance'] = np.where((df['super_ma'] > df['ma']) & (df.close < df.vwap_D), -1, df['stance'])
+    df['stance'] = np.where((df.k1>df.k2)&(df.stance==0), 1, df['stance'])
+    df['stance'] = np.where((df.k1<df.k2)&(df.stance==0), -1, df['stance'])
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
 def rsi_divergence_strategy_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df['rsi'] = ta.rsi(df['close'], length=slow)
@@ -69,3 +92,13 @@ def moving_averages_M10(df_raw, slow, fast):
     position = df['stance'].iloc[-1]
     return df, position
 
+
+def moving_averages_M1(df_raw, slow, fast):
+    df = df_raw.copy()
+    df['adj'] = (df['close'] + df['high'] + df['low']) / 3
+    ma1 = df.ta.vwma(length=fast)
+    ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
+    df['stance'] = np.where(ma1>=ma2, 1, 0)
+    df['stance'] = np.where(ma1<ma2, -1, df['stance'])
+    position = df['stance'].iloc[-1]
+    return df, position

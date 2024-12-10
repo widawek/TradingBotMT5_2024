@@ -3,19 +3,17 @@ from app.functions import timer, want_to_delete_old_models, printer, import_stra
 from app.model_generator import generate_my_models
 from config.parameters import *
 
-# x = import_strategies([])
-# print([i.__name__ for i in x])
 
-# printer("Symbols", symbols)
-# generate_my_models(symbols, intervals, leverage, want_to_delete_old_models())
-# timer(6)
+printer("Symbols", symbols)
+generate_my_models(symbols, intervals, leverage, want_to_delete_old_models())
+timer(6)
 
-from app.main import Bot;
-bot = Bot('BTCUSD')
-bot.report()
+# from app.main import Bot;
+# bot = Bot('BTCUSD')
+# bot.report()
 
-# for symbol in symbols:
-#     command = 'start cmd /k python -c "from app.main import Bot; bot = Bot(\'{}\'); bot.report()"'.format(symbol)
-#     subprocess.Popen(command, shell=True)
+for symbol in symbols:
+    command = 'start cmd /k python -c "from app.main import Bot; bot = Bot(\'{}\'); bot.report()"'.format(symbol)
+    subprocess.Popen(command, shell=True)
 
-# input()
+input()

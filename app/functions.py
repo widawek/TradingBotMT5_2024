@@ -400,3 +400,8 @@ def interval_time_sharpe(interval):
         case 'D': return np.sqrt(252)
         case 'H': return np.sqrt(252 * 24 / int(interval[1:]))
         case 'M': return np.sqrt(252 * 24 * 60 / int(interval[1:]))
+
+
+if __name__ == '__main__':
+    print(interval_time_sharpe('M1'))
+    

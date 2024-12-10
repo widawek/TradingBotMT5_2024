@@ -122,13 +122,14 @@ class Bot:
         else:
             last_two = 0
 
+
         if self.tiktok < 3:
             if profit_ > 0 and last_two >= 0:
                 self.tiktok -= 1
             elif (profit_ < 0 and self.tiktok in [0, 2]) or (last_two < 0):
                 self.tiktok += 1
             elif (profit_ < 0 and self.tiktok == 1) or (last_two < 0):
-                self.change_trigger_or_reverse('trigger')
+                #self.change_trigger_or_reverse('trigger')
                 self.tiktok += 1
             else:
                 pass
@@ -136,7 +137,7 @@ class Bot:
             if profit_ > 0 and last_two >= 0:
                 self.tiktok -= 1
             else:
-                self.change_trigger_or_reverse('both')
+                self.strategy_number += 1
                 self.tiktok = 0
 
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
@@ -236,7 +237,7 @@ class Bot:
                 self.self_decline_factor()
                 if self.print_condition():
                     printer("Change value:", f"{round(self.profit_needed, 2):.2f} $")
-                    printer("Actual trigger:", self.trigger)
+                    #printer("Actual trigger:", self.trigger)
                     printer("Max profit:", f"{self.profit_max:.2f} $")
                     printer("Profit zero aka spread:", f"{self.profit0:.2f} $")
                     printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2):.2f} $")
@@ -357,8 +358,7 @@ class Bot:
 
     @class_errors
     def data(self, report=True):
-        profit = sum([i.profit for i in self.positions if
-            ((i.comment == self.comment) and (i.magic == self.magic))])
+        profit = sum([i.profit for i in self.positions if (i.magic == self.magic)])
         if self.check_new_bar():
             self.pos_type = self.actual_position_democracy()
         try:
@@ -492,10 +492,11 @@ class Bot:
         printer("Ilość modeli:", self.model_counter)
         if self.model_counter > max_number_of_models:
             self.model_counter = max_number_of_models
-        if len(df) < 5:
+        if len(df) < 1:
             print(f"Za mało modeli --> ({self.model_counter})")
-            input("Wciśnij cokolwek żeby wyjść.")
-            sys.exit(1)
+            return []
+            # input("Wciśnij cokolwek żeby wyjść.")
+            # sys.exit(1)
         names = []
         create_df = []
         for i in range(0, len(df)):
@@ -567,7 +568,10 @@ class Bot:
         assert len(self.buy_models) == len(self.sell_models)
 
         self.mdv = self.mdv_() / 4
-        self.model_interval = sorted(list(set(intervals)), key=lambda i: int(i[1:]))[0]
+        if len(intervals) == 0:
+            self.model_interval = 'M1'
+        else:
+            self.model_interval = sorted(list(set(intervals)), key=lambda i: int(i[1:]))[0]
 
     @class_errors
     def model_position(self, number_of_bars, backtest=False):
@@ -888,7 +892,8 @@ class Bot:
                 tiktok=self.tiktok,
                 number_of_models = self.model_counter,
                 market=self.market,
-                full_reverse=self.reverse_it_all
+                full_reverse=self.reverse_it_all,
+                strategy=self.strategies[self.strategy_number][0]
             )
 
             mean_profit = np.mean(self.profits)
@@ -1025,6 +1030,8 @@ class Bot:
         self.strategies = []
         for strategy in strategies:
             if strategy.__name__ == 'model':
+                if self.model_counter == 0:
+                    continue
                 interval = self.model_interval
             else:
                 interval = strategy.__name__.split('_')[-1]
@@ -1032,6 +1039,7 @@ class Bot:
             print(strategy.__name__, strategy, interval, fast, slow, sharpe)
             self.strategies.append((strategy.__name__, strategy, interval, fast, slow, sharpe))
         self.strategies = sorted(self.strategies, key=lambda x: x[-1], reverse=True)
+        self.strategies = [i for i in self.strategies if i[5] != np.inf]
         print(self.strategies)
 
 if __name__ == '__main__':

@@ -37,6 +37,7 @@ class Position(Base):
     number_of_models = Column(Integer, nullable=False)
     market = Column(String, nullable=False)
     full_reverse = Column(Boolean, nullable=False)
+    strategy = Column(String, nullable=False)
 
     # Relacja do tabeli Profit
     profits = relationship("Profit", back_populates="position")
@@ -70,7 +71,7 @@ class DatabaseManager:
 
     def add_position(self, ticket, symbol, pos_type, open_time, volume, price_open, comment, reverse_mode, trigger, trigger_divider,
                      decline_factor, profit_factor, calculated_profit, minutes, weekday, trend, tiktok, number_of_models, market,
-                     full_reverse):
+                     full_reverse, strategy):
         session = self.Session()
 
         # Sprawdzenie, czy pozycja z danym ticket już istnieje
@@ -101,7 +102,8 @@ class DatabaseManager:
                 tiktok=tiktok,
                 number_of_models=number_of_models,
                 market=market,
-                full_reverse=full_reverse
+                full_reverse=full_reverse,
+                strategy=strategy
             )
             session.add(new_position)
             session.commit()
@@ -138,7 +140,7 @@ class TradingProcessor:
 
     def process_new_position(self, ticket, symbol, pos_type, open_time, volume, price_open, comment, reverse_mode, trigger,
                              trigger_divider, decline_factor, profit_factor, calculated_profit, minutes, weekday, trend, tiktok,
-                             number_of_models, market, full_reverse):
+                             number_of_models, market, full_reverse, strategy):
         # Przetwarzanie danych pozycji - np. tutaj możesz dodać logikę obliczeń, walidacji itp.
         # Dodajemy pozycję do bazy danych
         self.db_manager.add_position(
@@ -161,7 +163,8 @@ class TradingProcessor:
             tiktok=tiktok,
             number_of_models=number_of_models,
             market=market,
-            full_reverse=full_reverse
+            full_reverse=full_reverse,
+            strategy=strategy
         )
 
     def process_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread,
