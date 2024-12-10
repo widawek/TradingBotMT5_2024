@@ -427,8 +427,6 @@ class Bot:
     @class_errors
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
         
-
-
         def atr():
             df = get_data(self.symbol, 'M5', 1, 100)
             df['atr'] = df.ta.atr()
@@ -706,8 +704,8 @@ class Bot:
             self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
             cross = dfx[dfx['cross'] == 1]
             self.strategy_pos_open_price = cross['open'].iloc[-1]
-            print("Position", position)
-            print(f"Last open position time by MetaTrader {cross['time'].iloc[-1]}")
+
+            printer("Last open position time by MetaTrader", f"{cross['time'].iloc[-1]}", base_just=60)
             if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
                 self.strategy_number += 1
                 print("Next strategy.")
@@ -803,7 +801,11 @@ class Bot:
             letter = "t"
         else:
             letter = "f"
-        self.comment = f'{self.strategies[self.strategy_number][0][:3]}_{letter}_{self.market}_{self.tiktok}'
+
+        name_ = self.strategies[self.strategy_number][0][:4]
+        fast = self.strategies[self.strategy_number][-3]
+        slow = self.strategies[self.strategy_number][-2]
+        self.comment = f'{name_}_{fast}_{slow}_{self.tiktok}'
 
         request = {
             "action": action,
@@ -883,7 +885,8 @@ class Bot:
     @class_errors
     def pos_creator(self):
         try:
-            return self.pos_type
+            self.strategy_number += 1
+            return self.actual_position_democracy()
         except NameError:
             return random.randint(0, 1)
 
@@ -1058,7 +1061,7 @@ class Bot:
             print(strategy.__name__, strategy, interval, fast, slow, sharpe)
             self.strategies.append((strategy.__name__, strategy, interval, fast, slow, sharpe))
         self.strategies = sorted(self.strategies, key=lambda x: x[-1], reverse=True)
-        self.strategies = [i for i in self.strategies if (i[5] != np.inf) or (i[5] > 0)]
+        self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
 
         if len(self.strategies) == 0:
             sleep(3600)
