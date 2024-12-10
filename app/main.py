@@ -122,15 +122,14 @@ class Bot:
         else:
             last_two = 0
 
-
-        if self.tiktok < 3:
+        if self.tiktok < 2:
             if profit_ > 0 and last_two >= 0:
                 self.tiktok -= 1
-            elif (profit_ < 0 and self.tiktok in [0, 2]) or (last_two < 0):
+            elif (profit_ < 0) or (last_two < 0):
                 self.tiktok += 1
-            elif (profit_ < 0 and self.tiktok == 1) or (last_two < 0):
-                #self.change_trigger_or_reverse('trigger')
-                self.tiktok += 1
+            # elif (profit_ < 0 and self.tiktok == 1) or (last_two < 0):
+            #     #self.change_trigger_or_reverse('trigger')
+            #     self.tiktok += 1
             else:
                 pass
         else:
@@ -140,6 +139,9 @@ class Bot:
                 self.strategy_number += 1
                 self.tiktok = 0
 
+        if self.strategy_number > len(self.strategies)-1:
+            self.test_strategies()
+            self.strategy_number = 0
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
     @class_errors
@@ -174,7 +176,6 @@ class Bot:
         except Exception as e:
             print(e)
             pass
-
 
         def fake_position_on():
             self.fake_position = True
@@ -425,6 +426,16 @@ class Bot:
 
     @class_errors
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
+        
+
+
+        def atr():
+            df = get_data(self.symbol, 'M5', 1, 100)
+            df['atr'] = df.ta.atr()
+            df['atr_osc'] = (df['atr']-df['atr'].rolling(14).min())/(df['atr'].rolling(14).max()-df['atr'].rolling(14).min()) + 0.5
+            return df['atr_osc'].iloc[-1]
+
+        max_pos_margin = int(round(max_pos_margin * atr()))
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
         price = mt.symbol_info_tick(self.symbol)._asdict()
@@ -697,6 +708,10 @@ class Bot:
             self.strategy_pos_open_price = cross['open'].iloc[-1]
             print("Position", position)
             print(f"Last open position time by MetaTrader {cross['time'].iloc[-1]}")
+            if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
+                self.strategy_number += 1
+                print("Next strategy.")
+                return self.actual_position_democracy()
 
             positions_ = mt.positions_get(symbol=self.symbol)
             if len(positions_) == 0:
@@ -722,6 +737,10 @@ class Bot:
         except KeyError:
             return self.actual_position_democracy(number_of_bars=number_of_bars*2)
         self.pos_time = interval_time(self.interval)
+
+        # if self.reverse_it_all:
+        #     position = changer(position, 0, 1)
+
         print("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
 
         return position
@@ -1039,8 +1058,13 @@ class Bot:
             print(strategy.__name__, strategy, interval, fast, slow, sharpe)
             self.strategies.append((strategy.__name__, strategy, interval, fast, slow, sharpe))
         self.strategies = sorted(self.strategies, key=lambda x: x[-1], reverse=True)
-        self.strategies = [i for i in self.strategies if i[5] != np.inf]
-        print(self.strategies)
+        self.strategies = [i for i in self.strategies if (i[5] != np.inf) or (i[5] > 0)]
+
+        if len(self.strategies) == 0:
+            sleep(3600)
+            self.test_strategies()
+        for i in self.strategies:
+            print(i[0], i[2], i[3], i[4], i[5])
 
 if __name__ == '__main__':
     print('Yo, wtf?')

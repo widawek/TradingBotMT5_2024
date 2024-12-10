@@ -63,14 +63,14 @@ def rsi_divergence_strategy_M1(df_raw, slow, fast):
     df['rsi_trough'] = df['rsi'].rolling(fast).min()
 
     df['bullish_div'] = np.where(
-        (df['price_trough'] < df['price_trough'].shift(1)) &  # Price makes a lower low
-        (df['rsi_trough'] > df['rsi_trough'].shift(1)),  # RSI makes a higher low
+        ((df['price_trough'] < df['price_trough'].shift(1)) &  # Price makes a lower low
+        (df['rsi_trough'] > df['rsi_trough'].shift(1))),  # RSI makes a higher low
         1, 0)
 
     # Identify bearish divergence
     df['bearish_div'] = np.where(
-        (df['price_peak'] > df['price_peak'].shift(1)) &  # Price makes a higher high
-        (df['rsi_peak'] < df['rsi_peak'].shift(1)),  # RSI makes a lower high
+        ((df['price_peak'] > df['price_peak'].shift(1)) &  # Price makes a higher high
+        (df['rsi_peak'] < df['rsi_peak'].shift(1))),  # RSI makes a lower high
         1, 0)
 
     # Generate trading signals
@@ -100,5 +100,23 @@ def moving_averages_M1(df_raw, slow, fast):
     ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
     df['stance'] = np.where(ma1>=ma2, 1, 0)
     df['stance'] = np.where(ma1<ma2, -1, df['stance'])
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def stoch_M1(df_raw, slow, fast):
+    df = df_raw.copy()
+    df['k1'] = df.ta.stoch(k=fast).iloc[:,0]
+    df['k2'] = df.ta.stoch(k=slow).iloc[:,0]
+    df['stance'] = np.where(df['k1']>=df['k2'], 1, -1)
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def rsi_M1(df_raw, slow, fast):
+    df = df_raw.copy()
+    df['k1'] = df.ta.rsi(length=fast)
+    df['k2'] = df.ta.rsi(length=slow)
+    df['stance'] = np.where(df['k1']>=df['k2'], 1, -1)
     position = df['stance'].iloc[-1]
     return df, position
