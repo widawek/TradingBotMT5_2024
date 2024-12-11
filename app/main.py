@@ -466,7 +466,6 @@ class Bot:
         printer("Target:", f"{self.tp_miner:.2f} $")
         printer("Killer:", f"{-self.kill_position_profit:.2f} $")
 
-
     @class_errors
     def find_files(self, directory):
         """
@@ -695,7 +694,7 @@ class Bot:
                     dfx = get_data(self.symbol, self.interval, 1, int(strategy[-2] * strategy[-3] + 10000)) # how_many_bars
                     dfx, position = strategy[1](dfx, strategy[-2], strategy[-3])
 
-                printer(f'Position from {strategy[0]}:', f'fast={strategy[-3]} slow={strategy[-2]}')
+                printer(f'Position from {strategy[0]}:', f'fast={strategy[-3]} slow={strategy[-2]}', base_just=60)
                 printer("MA position:", position)
 
             position = int(0) if position == 1 else int(1)
@@ -703,7 +702,7 @@ class Bot:
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
             self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
             cross = dfx[dfx['cross'] == 1]
-            self.strategy_pos_open_price = cross['open'].iloc[-1]
+            self.strategy_pos_open_price = cross['close'].iloc[-1]
 
             printer("Last open position time by MetaTrader", f"{cross['time'].iloc[-1]}", base_just=60)
             if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
@@ -1044,7 +1043,6 @@ class Bot:
             sharpe2 = calc_result(df2, sharpe_multiplier)
             self.number_of_bars_for_backtest = 20000
             return 0, 0, round(sharpe+sharpe2, 3)
-
 
     @class_errors
     def test_strategies(self):
