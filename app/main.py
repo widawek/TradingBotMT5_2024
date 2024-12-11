@@ -121,7 +121,7 @@ class Bot:
         else:
             last_two = 0
 
-        if self.tiktok < 1:
+        if self.tiktok < 2:
             if (profit_ > 0) and (last_two >= 0):
                 self.tiktok -= 1
             elif (profit_ < 0) or (last_two < 0):
@@ -246,7 +246,7 @@ class Bot:
                     _ = self.fake_position_robot()
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif profit < -self.profit_needed and profit > 0.91 * self.profit_min:
+                elif profit < -self.profit_needed*0.9:# and profit > 0.91 * self.profit_min:
                     self.clean_orders()
 
                 # Jeżeli strata mniejsza od straty granicznej
