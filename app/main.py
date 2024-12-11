@@ -30,7 +30,6 @@ class Bot:
     weekday = dt.now().weekday()
 
     def __init__(self, symbol):
-        self.strategy_number = 0
         self.number_of_bars_for_backtest = 20000
         self.reverse_it_all = reverse_it_all
         self.changer_reverse = False
@@ -122,8 +121,8 @@ class Bot:
         else:
             last_two = 0
 
-        if self.tiktok < 2:
-            if profit_ > 0 and last_two >= 0:
+        if self.tiktok < 1:
+            if (profit_ > 0) and (last_two >= 0):
                 self.tiktok -= 1
             elif (profit_ < 0) or (last_two < 0):
                 self.tiktok += 1
@@ -141,7 +140,6 @@ class Bot:
 
         if self.strategy_number > len(self.strategies)-1:
             self.test_strategies()
-            self.strategy_number = 0
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
     @class_errors
@@ -251,16 +249,20 @@ class Bot:
                 elif profit < -self.profit_needed and profit > 0.91 * self.profit_min:
                     self.clean_orders()
 
-                # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
-                elif (profit < (-self.profit_needed/profit_factor)) \
-                    and (position_time > self.pos_time) \
-                    and (mean_profits < (-self.profit_needed/profit_factor)):
+                # Jeżeli strata mniejsza od straty granicznej
+                elif profit > self.profit_needed * 2 and profit < 0.91 * self.profit_max:
                     self.clean_orders()
 
-                # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz zysk mniejszy niż zysk maksymalny pomnożony przez współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
-                elif (self.profit_max > self.profit_needed) \
-                    and (profit < self.profit_max*self.profit_decline_factor):
-                    self.clean_orders()
+                # # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
+                # elif (profit < (-self.profit_needed/profit_factor)) \
+                #     and (position_time > self.pos_time) \
+                #     and (mean_profits < (-self.profit_needed/profit_factor)):
+                #     self.clean_orders()
+
+                # # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz zysk mniejszy niż zysk maksymalny pomnożony przez współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
+                # elif (self.profit_max > self.profit_needed) \
+                #     and (profit < self.profit_max*self.profit_decline_factor):
+                #     self.clean_orders()
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
                 elif (profit > self.profit_needed/(profit_factor*1.5) and not self.reverse_it_all) or \
                     (profit < -self.profit_needed/(profit_factor*1.5) and self.reverse_it_all):
@@ -426,7 +428,7 @@ class Bot:
 
     @class_errors
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
-        
+
         def atr():
             df = get_data(self.symbol, 'M5', 1, 100)
             df['atr'] = df.ta.atr()
@@ -460,7 +462,7 @@ class Bot:
         self.kill_position_profit = round(self.kill_position_profit, 2)# * (1+self.multi_voltage('M5', 33)), 2)
         self.tp_miner = round(self.kill_position_profit * tp_miner / kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
-        self.reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check()
+        #self.reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check()
         printer('Min volume:', min_volume)
         printer('Calculated volume:', volume)
         printer("Target:", f"{self.tp_miner:.2f} $")
@@ -739,49 +741,51 @@ class Bot:
         #     position = changer(position, 0, 1)
 
         print("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
-
         return position
 
     @class_errors
     def what_trend_is_it(self, posType):
-        smallest = int(self.position_size/2)
-        smaller = int(self.position_size/1.5)
-        normal = self.position_size
-        bigger = int(self.position_size*1.5)
-        biggest = int(self.position_size*2)
-        wow = int(self.position_size*3)
+        # test neutral trend
+        return self.position_size
 
-        self.trend = vwap_std(self.symbol)
+        # smallest = int(self.position_size/2)
+        # smaller = int(self.position_size/1.5)
+        # normal = self.position_size
+        # bigger = int(self.position_size*1.5)
+        # biggest = int(self.position_size*2)
+        # wow = int(self.position_size*3)
 
-        # BotReverse
-        if self.reverse_it_all:
-            posType = changer(posType, 0, 1)
+        # self.trend = vwap_std(self.symbol)
 
-        if posType == (0 if not self.trend_or_not else 1):
-            match self.trend:
-                case 'sold_out': return wow  # price is low
-                case 'long_strong': return normal  # price is high
-                case 'long_normal': return smaller
-                case 'long_weak': return bigger  # price is low
-                case 'long_super_weak': return biggest  # price is low
-                case 'short_strong': return normal  # price is low
-                case 'short_normal': return smaller
-                case 'short_weak': return smaller  # price is high
-                case 'short_super_weak': return smallest
+        # # BotReverse
+        # if self.reverse_it_all:
+        #     posType = changer(posType, 0, 1)
 
-        elif posType == (1 if not self.trend_or_not else 0):
-            match self.trend:
-                case 'overbought': return wow
-                case 'long_strong': return normal
-                case 'long_normal': return smaller
-                case 'long_weak': return smaller
-                case 'long_super_weak': return smallest
-                case 'short_strong': return normal
-                case 'short_normal': return smaller
-                case 'short_weak': return bigger
-                case 'short_super_weak': return biggest
+        # if posType == (0 if not self.trend_or_not else 1):
+        #     match self.trend:
+        #         case 'sold_out': return wow  # price is low
+        #         case 'long_strong': return normal  # price is high
+        #         case 'long_normal': return smaller
+        #         case 'long_weak': return bigger  # price is low
+        #         case 'long_super_weak': return biggest  # price is low
+        #         case 'short_strong': return normal  # price is low
+        #         case 'short_normal': return smaller
+        #         case 'short_weak': return smaller  # price is high
+        #         case 'short_super_weak': return smallest
 
-        return position_size
+        # elif posType == (1 if not self.trend_or_not else 0):
+        #     match self.trend:
+        #         case 'overbought': return wow
+        #         case 'long_strong': return normal
+        #         case 'long_normal': return smaller
+        #         case 'long_weak': return smaller
+        #         case 'long_super_weak': return smallest
+        #         case 'short_strong': return normal
+        #         case 'short_normal': return smaller
+        #         case 'short_weak': return bigger
+        #         case 'short_super_weak': return biggest
+
+        # return position_size
 
     @class_errors
     def request(self, action, posType, price=None):
@@ -937,7 +941,7 @@ class Bot:
 
     @class_errors
     def reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check(self):
-        if len(self.close_profits) < 3: 
+        if len(self.close_profits) < 3:
             if dt.now().hour >= morning_hour + 3:
                 if not self.changer_reverse:
                     try:
@@ -1064,8 +1068,11 @@ class Bot:
         if len(self.strategies) == 0:
             sleep(3600)
             self.test_strategies()
-        for i in self.strategies:
-            print(i[0], i[2], i[3], i[4], i[5])
+        else:
+            for i in self.strategies:
+                print(i[0], i[2], i[3], i[4], i[5])
+            self.strategy_number = 0
+
 
 if __name__ == '__main__':
     print('Yo, wtf?')

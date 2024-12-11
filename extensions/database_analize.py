@@ -22,13 +22,16 @@ def report_(by_, from_, to_, excel=False):
     db_manager = ReadDatabase()
 
     # Odczyt danych z tabeli 'Position' do pandas DataFrame
-    positions_profits = get_raw_close_positions_data(from_, to_)
+    positions_profits, _ = get_raw_close_positions_data(from_, to_)
     def give_me_profit(ticket):
-        df = positions_profits[positions_profits['position_id']==ticket]
+        try:
+            df = positions_profits[positions_profits['position_id']==ticket]
+        except TypeError:
+            return 0.0
         try:
             return df['profit'].iloc[-1]
         except IndexError:
-            return 0
+            return 0.0
 
     vectorize_ = vectorize(give_me_profit)
     df_positions = db_manager.read_positions_to_df()
@@ -71,6 +74,7 @@ def report_(by_, from_, to_, excel=False):
         a['counter'] = c['counter']
         a['pos_counter'] = c['fake_position_counter']
         a['pos_mean'] = c['fake_position_mean']
+        a = a[a['pos_counter'] > 0]
         if to_excel:
             a.to_excel("results.xlsx")
         print(a)
@@ -142,4 +146,4 @@ def report_(by_, from_, to_, excel=False):
     group_profit_by(by_, False)
     #group_profit_by('tiktok')
     plot_profits(df_profits, 'all', 0, condition='')
-report_(['tiktok'], 2, -2)
+report_(['tiktok'], 0, -2)
