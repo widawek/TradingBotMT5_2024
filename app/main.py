@@ -121,7 +121,7 @@ class Bot:
         else:
             last_two = 0
 
-        if self.tiktok < 2:
+        if self.tiktok < 1:
             if (profit_ > 0) and (last_two >= 0):
                 self.tiktok -= 1
             elif (profit_ < 0) or (last_two < 0):
@@ -132,7 +132,7 @@ class Bot:
             else:
                 pass
         else:
-            if profit_ > 0 and last_two >= 0:
+            if (profit_ > 0) and (last_two >= 0):
                 self.tiktok -= 1
             else:
                 self.strategy_number += 1
@@ -430,9 +430,10 @@ class Bot:
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
 
         def atr():
+            length = 20
             df = get_data(self.symbol, 'M5', 1, 100)
-            df['atr'] = df.ta.atr()
-            df['atr_osc'] = (df['atr']-df['atr'].rolling(14).min())/(df['atr'].rolling(14).max()-df['atr'].rolling(14).min()) + 0.5
+            df['atr'] = df.ta.atr(length=length)
+            df['atr_osc'] = (df['atr']-df['atr'].rolling(length).min())/(df['atr'].rolling(length).max()-df['atr'].rolling(length).min()) + 0.5
             return df['atr_osc'].iloc[-1]
 
         max_pos_margin = int(round(max_pos_margin * atr()))
