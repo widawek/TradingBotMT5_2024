@@ -16,6 +16,7 @@ from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import *
 from app.database_class import TradingProcessor
 from app.bot_functions import *
+from extensions.clean_pending_orders import close_request_
 from tqdm import trange
 sys.path.append("..")
 mt.initialize()
@@ -26,10 +27,49 @@ catalog = f'{parent_catalog}\\models'
 processor = TradingProcessor()
 
 
+class GlobalProfitTracker:
+    mt.initialize()
+    def __init__(self, symbols: list, multiplier: float):
+        self.barrier = round((len(symbols)*multiplier)/100, 4)
+        self.global_profit_to_margin = None
+        self.condition = False
+        self.positions = []
+        
+    def checkout(self):
+        account = mt.account_info()
+        printer("Global profit", account.profit)
+        global_profit_to_margin = round(account.profit/account.balance, 4)
+        printer("Global profit to margin", global_profit_to_margin)
+        if not self.condition:
+            if global_profit_to_margin > self.barrier:
+                self.condition = True
+                self.global_profit_to_margin = global_profit_to_margin
+                self.positions = [i.ticket for i in mt.positions_get()]
+                printer("Barrier switch", self.condition)
+        else:
+            if global_profit_to_margin > self.global_profit_to_margin * profit_decrease_barrier:
+                if global_profit_to_margin > self.global_profit_to_margin:
+                    self.global_profit_to_margin = global_profit_to_margin
+                pass
+            else:
+                if self.positions == [i.ticket for i in mt.positions_get()]:
+                    close_request_("ALL")
+                    self.reset()
+                else:
+                    self.global_profit_to_margin = global_profit_to_margin
+                    self.positions = [i.ticket for i in mt.positions_get()]
+
+    def reset(self):
+        self.global_profit_to_margin = None
+        self.condition = False
+        self.positions = []
+
+
 class Bot:
     weekday = dt.now().weekday()
-
     def __init__(self, symbol):
+        self.use_tracker = True if symbol == symbols[0] else False
+        self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
         self.number_of_bars_for_backtest = 20000
         self.reverse_it_all = reverse_it_all
         self.changer_reverse = False
@@ -246,11 +286,11 @@ class Bot:
                     _ = self.fake_position_robot()
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif profit < -self.profit_needed*0.9:# and profit > 0.91 * self.profit_min:
+                elif profit < -self.profit_needed*profit_decrease_barrier:# and profit > 0.91 * self.profit_min:
                     self.clean_orders()
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif profit > self.profit_needed * 2 and profit < 0.91 * self.profit_max:
+                elif profit > self.profit_needed * profit_increase_barrier and profit < profit_decrease_barrier * self.profit_max:
                     self.clean_orders()
 
                 # # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
@@ -357,6 +397,10 @@ class Bot:
                 printer("Czas:", time.strftime("%H:%M:%S"))
             self.check_trigger(trigger_mode=trigger_mode)
             self.data()
+            # track global profit
+            if self.use_tracker:
+                self.positionTracker.checkout()
+    
             time.sleep(time_sleep)
 
     @class_errors
@@ -733,6 +777,10 @@ class Bot:
                     pos = 'LONG' if position==0 else "SHORT"
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
                     printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
+
+                    if self.use_tracker:
+                        self.positionTracker.checkout()
+
                     time.sleep(5)
         except KeyError:
             return self.actual_position_democracy(number_of_bars=number_of_bars*2)
