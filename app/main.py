@@ -37,9 +37,8 @@ class GlobalProfitTracker:
         
     def checkout(self):
         account = mt.account_info()
-        printer("Global profit", account.profit)
         global_profit_to_margin = round(account.profit/account.balance, 4)
-        printer("Global profit to margin", global_profit_to_margin)
+        printer("Global profit to barrier", round(global_profit_to_margin/self.barrier, 3))
         if not self.condition:
             if global_profit_to_margin > self.barrier:
                 self.condition = True
@@ -1113,6 +1112,10 @@ class Bot:
             self.strategies.append((strategy.__name__, strategy, interval, fast, slow, sharpe))
         self.strategies = sorted(self.strategies, key=lambda x: x[-1], reverse=True)
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
+
+        # use only three best strategies
+        if len(self.strategies) > 3:
+            self.strategies = self.strategies[:3]
 
         if len(self.strategies) == 0:
             sleep(3600)
