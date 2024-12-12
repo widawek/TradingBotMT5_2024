@@ -212,25 +212,25 @@ def trend_or_not(symbol):
     return False
 
 
-def technique3(df_raw, factor, factor2):
-    df = df_raw.copy()
-    df.set_index(df['time'], inplace=True)
-    df['numbers'] = [1+i for i in range(len(df))]
-    df['vwap_D'] = df.ta.vwap(anchor="D")
-    df['adj'] = (df['close'] + df['high'] + df['low'])/3
-    df['ma'] = ta.sma(df['adj'], length=factor)
-    df['super_new_indicator'] = (df['close'] - df['close'].shift(1)) * df['volume']
-    df['super_new_indicator'] = df['super_new_indicator'].rolling(factor).mean()
-    df['super_max'] = df['super_new_indicator'].rolling(factor*factor2).max()
-    df['super_min'] = df['super_new_indicator'].rolling(factor*factor2).min()
-    df['median'] = (df['super_max'] + df['super_min']) / 2
-    df['super_ma'] = df['ma'] + df['ma']*df['median']
-    df['k1'] = df.ta.stoch(k=factor2).iloc[:,0]
-    df['k2'] = df.ta.stoch(k=factor).iloc[:,0]
-    df['stance'] = np.where((df['super_ma'] < df['ma']) & (df.close > df.vwap_D), 1, 0)
-    df['stance'] = np.where((df['super_ma'] > df['ma']) & (df.close < df.vwap_D), -1, df['stance'])
-    df['stance'] = np.where((df.k1>df.k2)&(df.stance==0), 1, df['stance'])
-    df['stance'] = np.where((df.k1<df.k2)&(df.stance==0), -1, df['stance'])
-    position = df['stance'].iloc[-1]
-    return df, position
+def close_request_(symbol: str, only_profitable: bool=False):
+    if symbol == "ALL":
+        positions_ = mt.positions_get()
+    else:
+        positions_ = mt.positions_get(symbol=symbol)
+    for i in positions_ :
+        if only_profitable:
+            if i.profit <= 0:
+                continue
+        request = {"action": mt.TRADE_ACTION_DEAL,
+                    "symbol": i.symbol,
+                    "volume": float(i.volume),
+                    "type": 1 if (i.type == 0) else 0,
+                    "position": i.ticket,
+                    "magic": i.magic,
+                    'deviation': 20,
+                    "type_time": mt.ORDER_TIME_GTC,
+                    "type_filling": mt.ORDER_FILLING_IOC
+                    }
+        order_result = mt.order_send(request)
+        print(order_result)
 

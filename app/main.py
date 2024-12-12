@@ -16,7 +16,6 @@ from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import *
 from app.database_class import TradingProcessor
 from app.bot_functions import *
-from extensions.clean_pending_orders import close_request_
 from tqdm import trange
 sys.path.append("..")
 mt.initialize()
@@ -52,7 +51,7 @@ class GlobalProfitTracker:
                 pass
             else:
                 if self.positions == [i.ticket for i in mt.positions_get()]:
-                    close_request_("ALL")
+                    close_request_("ALL", True)
                     self.reset()
                 else:
                     self.global_profit_to_margin = global_profit_to_margin
