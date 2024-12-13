@@ -723,7 +723,11 @@ class Bot:
                 self.market = market
                 self.load_models_democracy(catalog)
 
-            strategy = self.strategies[self.strategy_number]
+            try:
+                strategy = self.strategies[self.strategy_number]
+            except IndexError:
+                self.test_strategies(add_number=3)
+                strategy = self.strategies[self.strategy_number]
             print("Strategia", strategy[0])
             self.interval = strategy[0].split('_')[-1]
             print("Interwał", self.interval)
@@ -1096,7 +1100,7 @@ class Bot:
             return 0, 0, round(sharpe+sharpe2, 3)
 
     @class_errors
-    def test_strategies(self):
+    def test_strategies(self, add_number=0):
         strategies = import_strategies([])
         self.strategies = []
         for strategy in strategies:
@@ -1113,8 +1117,8 @@ class Bot:
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
 
         # use only three best strategies
-        if len(self.strategies) > 3:
-            self.strategies = self.strategies[:3]
+        if len(self.strategies) > 3+add_number:
+            self.strategies = self.strategies[:3+add_number]
 
         if len(self.strategies) == 0:
             sleep(3600)
