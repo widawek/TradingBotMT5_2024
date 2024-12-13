@@ -212,7 +212,22 @@ def trend_or_not(symbol):
     return False
 
 
-def close_request_(symbol: str, only_profitable: bool=False):
+def close_request_only(position):
+    request = {"action": mt.TRADE_ACTION_DEAL,
+            "symbol": position.symbol,
+            "volume": float(position.volume),
+            "type": 1 if (position.type == 0) else 0,
+            "position": position.ticket,
+            "magic": position.magic,
+            'deviation': 20,
+            "type_time": mt.ORDER_TIME_GTC,
+            "type_filling": mt.ORDER_FILLING_IOC
+            }
+    order_result = mt.order_send(request)
+    print(order_result)
+
+
+def close_request_(symbol: str, tickets_list, only_profitable: bool=False):
     if symbol == "ALL":
         positions_ = mt.positions_get()
     else:
@@ -221,16 +236,6 @@ def close_request_(symbol: str, only_profitable: bool=False):
         if only_profitable:
             if i.profit <= 0:
                 continue
-        request = {"action": mt.TRADE_ACTION_DEAL,
-                    "symbol": i.symbol,
-                    "volume": float(i.volume),
-                    "type": 1 if (i.type == 0) else 0,
-                    "position": i.ticket,
-                    "magic": i.magic,
-                    'deviation': 20,
-                    "type_time": mt.ORDER_TIME_GTC,
-                    "type_filling": mt.ORDER_FILLING_IOC
-                    }
-        order_result = mt.order_send(request)
-        print(order_result)
+        if i.ticket in tickets_list:
+            close_request_only(i)
 

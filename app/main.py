@@ -33,6 +33,7 @@ class GlobalProfitTracker:
         self.global_profit_to_margin = None
         self.condition = False
         self.positions = []
+        self.primal_tickets_list = []
         
     def checkout(self):
         account = mt.account_info()
@@ -43,6 +44,7 @@ class GlobalProfitTracker:
                 self.condition = True
                 self.global_profit_to_margin = global_profit_to_margin
                 self.positions = [i.ticket for i in mt.positions_get()]
+                self.primal_tickets_list = self.positions
                 printer("Barrier switch", self.condition)
         else:
             if global_profit_to_margin > self.global_profit_to_margin * profit_decrease_barrier:
@@ -51,7 +53,7 @@ class GlobalProfitTracker:
                 pass
             else:
                 if self.positions == [i.ticket for i in mt.positions_get()]:
-                    close_request_("ALL", True)
+                    close_request_("ALL", self.primal_tickets_list, True)
                     self.reset()
                 else:
                     self.global_profit_to_margin = global_profit_to_margin
