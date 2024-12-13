@@ -8,29 +8,6 @@ import pandas as pd
 #     pass
 
 
-# def technique3_M10(df_raw, slow, fast):
-#     df = df_raw.copy()
-#     df.set_index(df['time'], inplace=True)
-#     df['numbers'] = [1+i for i in range(len(df))]
-#     df['vwap_D'] = df.ta.vwap(anchor="D")
-#     df['adj'] = (df['close'] + df['high'] + df['low'])/3
-#     df['ma'] = ta.sma(df['adj'], length=slow)
-#     df['super_new_indicator'] = (df['close'] - df['close'].shift(1)) * df['volume']
-#     df['super_new_indicator'] = df['super_new_indicator'].rolling(slow).mean()
-#     df['super_max'] = df['super_new_indicator'].rolling(slow*fast).max()
-#     df['super_min'] = df['super_new_indicator'].rolling(slow*fast).min()
-#     df['median'] = (df['super_max'] + df['super_min']) / 2
-#     df['super_ma'] = df['ma'] + df['ma']*df['median']
-#     df['k1'] = df.ta.stoch(k=fast).iloc[:,0]
-#     df['k2'] = df.ta.stoch(k=slow).iloc[:,0]
-#     df['stance'] = np.where((df['super_ma'] < df['ma']) & (df.close > df.vwap_D), 1, 0)
-#     df['stance'] = np.where((df['super_ma'] > df['ma']) & (df.close < df.vwap_D), -1, df['stance'])
-#     df['stance'] = np.where((df.k1>df.k2)&(df.stance==0), 1, df['stance'])
-#     df['stance'] = np.where((df.k1<df.k2)&(df.stance==0), -1, df['stance'])
-#     position = df['stance'].iloc[-1]
-#     return df, position
-
-
 def technique3_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df.set_index(df['time'], inplace=True)
@@ -67,13 +44,11 @@ def rsi_divergence_strategy_M1(df_raw, slow, fast):
         (df['rsi_trough'] > df['rsi_trough'].shift(1))),  # RSI makes a higher low
         1, 0)
 
-    # Identify bearish divergence
     df['bearish_div'] = np.where(
         ((df['price_peak'] > df['price_peak'].shift(1)) &  # Price makes a higher high
         (df['rsi_peak'] < df['rsi_peak'].shift(1))),  # RSI makes a lower high
         1, 0)
 
-    # Generate trading signals
     df['stance'] = np.NaN
     df.loc[df['bullish_div'] == 1, 'stance'] = 1  # Buy signal on bullish divergence
     df.loc[df['bearish_div'] == 1, 'stance'] = -1  # Sell signal on bearish divergence
@@ -95,13 +70,11 @@ def stoch_divergence_strategy_M1(df_raw, slow, fast):
         (df['rsi_trough'] > df['rsi_trough'].shift(1))),  # RSI makes a higher low
         1, 0)
 
-    # Identify bearish divergence
     df['bearish_div'] = np.where(
         ((df['price_peak'] > df['price_peak'].shift(1)) &  # Price makes a higher high
         (df['rsi_peak'] < df['rsi_peak'].shift(1))),  # RSI makes a lower high
         1, 0)
 
-    # Generate trading signals
     df['stance'] = np.NaN
     df.loc[df['bullish_div'] == 1, 'stance'] = 1  # Buy signal on bullish divergence
     df.loc[df['bearish_div'] == 1, 'stance'] = -1  # Sell signal on bearish divergence
@@ -123,29 +96,17 @@ def cci_divergence_strategy_M1(df_raw, slow, fast):
         (df['rsi_trough'] > df['rsi_trough'].shift(1))),  # RSI makes a higher low
         1, 0)
 
-    # Identify bearish divergence
     df['bearish_div'] = np.where(
         ((df['price_peak'] > df['price_peak'].shift(1)) &  # Price makes a higher high
         (df['rsi_peak'] < df['rsi_peak'].shift(1))),  # RSI makes a lower high
         1, 0)
 
-    # Generate trading signals
     df['stance'] = np.NaN
     df.loc[df['bullish_div'] == 1, 'stance'] = 1  # Buy signal on bullish divergence
     df.loc[df['bearish_div'] == 1, 'stance'] = -1  # Sell signal on bearish divergence
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
-
-# def moving_averages_M10(df_raw, slow, fast):
-#     df = df_raw.copy()
-#     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
-#     ma1 = df.ta.vwma(length=fast)
-#     ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
-#     df['stance'] = np.where(ma1>=ma2, 1, 0)
-#     df['stance'] = np.where(ma1<ma2, -1, df['stance'])
-#     position = df['stance'].iloc[-1]
-#     return df, position
 
 
 def moving_averages_M1(df_raw, slow, fast):
@@ -173,7 +134,6 @@ def macd_signal_M1(df_raw, slow, fast):
     df = df_raw.copy()
     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
     df['macd'] = macd.iloc[:,0]
-    #df['histogram'] = macd.iloc[:,1]
     df['signal'] = macd.iloc[:,2]
     df['stance'] = np.where((df['macd']>=df['signal']), 1, -1)
     position = df['stance'].iloc[-1]
@@ -183,9 +143,7 @@ def macd_signal_M1(df_raw, slow, fast):
 def macd_histogram0_M1(df_raw, slow, fast):
     df = df_raw.copy()
     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
-    #df['macd'] = macd.iloc[:,0]
     df['histogram'] = macd.iloc[:,1]
-    #df['signal'] = macd.iloc[:,2]
     df['stance'] = np.where((df['histogram']>0), 1, -1)
     position = df['stance'].iloc[-1]
     return df, position
@@ -194,9 +152,7 @@ def macd_histogram0_M1(df_raw, slow, fast):
 def macd_histogram1_M1(df_raw, slow, fast):
     df = df_raw.copy()
     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
-    #df['macd'] = macd.iloc[:,0]
     df['histogram'] = macd.iloc[:,1]
-    #df['signal'] = macd.iloc[:,2]
     df['stance'] = np.where((df['histogram']>df['histogram'].shift(1)), 1, -1)
     position = df['stance'].iloc[-1]
     return df, position
@@ -225,13 +181,11 @@ def macd_divergence_strategy_M1(df_raw, slow, fast):
         (df['rsi_trough'] > df['rsi_trough'].shift(1))),  # RSI makes a higher low
         1, 0)
 
-    # Identify bearish divergence
     df['bearish_div'] = np.where(
         ((df['price_peak'] > df['price_peak'].shift(1)) &  # Price makes a higher high
         (df['rsi_peak'] < df['rsi_peak'].shift(1))),  # RSI makes a lower high
         1, 0)
 
-    # Generate trading signals
     df['stance'] = np.NaN
     df.loc[df['bullish_div'] == 1, 'stance'] = 1  # Buy signal on bullish divergence
     df.loc[df['bearish_div'] == 1, 'stance'] = -1  # Sell signal on bearish divergence
@@ -247,7 +201,7 @@ def avs_aka_atr_vol_stoch_M1(df_raw, slow, fast):
     df['atr'] = df.ta.atr(length=factor) * df['vol_sum']
     df['my_atr'] = (df.high-df.low).rolling(factor).sum() * df['vol_sum']
     df['atr_up'] = df['atr'] + df['atr'].rolling(round(factor)).std()
-    df['atr_down'] = df['atr'] - df['atr'].rolling(round(factor)).std() 
+    df['atr_down'] = df['atr'] - df['atr'].rolling(round(factor)).std()
     df['atr_norm'] = ((df['atr'] - df['atr_down'].rolling(factor).min())/ \
         (df['atr_up'].rolling(factor).max() - df['atr_down'].rolling(factor).min()))
     df['atr_norm'] = df['atr_norm'] - 0.5
@@ -256,7 +210,7 @@ def avs_aka_atr_vol_stoch_M1(df_raw, slow, fast):
     d = df.ta.stoch(k=factor, d=factor).iloc[:,1]
     df['k'] = k * df['atr_norm']
     df['d'] = d * df['atr_norm']
-    # Generate trading signals
+
     df['stance'] = np.where((df['k']<0)&(df['k'].shift(factor)>0)&(df['k']<df['d']), -1, np.NaN)
     df['stance'] = np.where((df['k']>0)&(df['k'].shift(factor)<0)&(df['k']>df['d']), 1, df.stance)
     df['stance'] = df['stance'].ffill()
