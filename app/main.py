@@ -191,6 +191,8 @@ class Bot:
         elif self.fake_counter <= 14:
             interval = 'M15'
         elif self.fake_counter <= 16:
+            interval = 'M20'
+        else:
             interval = 'M30'
 
         interval_df = get_data(self.symbol, interval, 1, 3)
@@ -734,8 +736,7 @@ class Bot:
 
             if 'model' in strategy[0]:
                 dfx, position = self.model_position(number_of_bars, backtest=False)
-                printer(f'Position from {strategy[0]}:')
-                printer("MA position:", position)
+                printer(f'Position from {strategy[0]}:', position)
             else:
                 dfx = get_data(self.symbol, self.interval, 1, int(strategy[-2] * strategy[-3] + 1440)) # how_many_bars
                 dfx, position = strategy[1](dfx, strategy[-2], strategy[-3])
@@ -744,7 +745,7 @@ class Bot:
                     dfx, position = strategy[1](dfx, strategy[-2], strategy[-3])
 
                 printer(f'Position from {strategy[0]}:', f'fast={strategy[-3]} slow={strategy[-2]}', base_just=60)
-                printer("MA position:", position)
+                printer(f'Position from {strategy[0]}:', position)
 
             position = int(0) if position == 1 else int(1)
 
