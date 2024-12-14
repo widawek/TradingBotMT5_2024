@@ -311,7 +311,7 @@ class Bot:
             pass
 
     @class_errors
-    def clean_orders(self, position=False):
+    def clean_orders(self):
         self.if_tiktok()
         self.close_request()
         orders = mt.orders_get(symbol=self.symbol)
@@ -334,7 +334,7 @@ class Bot:
                     counter += 1
             print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
             time.sleep(1)
-        self.reset_bot(position)
+        self.reset_bot()
         self.report()
 
     @class_errors
@@ -403,7 +403,7 @@ class Bot:
         try:
             act_pos = self.positions[0].type
             if self.pos_type != act_pos:
-                self.clean_orders(position=True)
+                self.clean_orders()
         except (IndexError, NameError) as e:
             print(e)
             self.clean_orders()
@@ -449,9 +449,8 @@ class Bot:
         print()
 
     @class_errors
-    def reset_bot(self, position=False):
-        if not position:
-            self.pos_type = None
+    def reset_bot(self):
+        self.pos_type = None
         self.positions = None
         self.profits = []
         self.profit0 = None
@@ -462,7 +461,7 @@ class Bot:
         self.fake_stoploss = 0
         self.fake_counter = 0
         self.base_fake_interval = base_fake_interval
-        print(f"The bot was reset in position {position} mode.")
+        print(f"The bot was reset.")
 
 
     @class_errors
