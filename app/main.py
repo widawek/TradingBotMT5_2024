@@ -295,16 +295,6 @@ class Bot:
                 elif profit > self.profit_needed * profit_increase_barrier and profit < profit_decrease_barrier * self.profit_max:
                     self.clean_orders()
 
-                # # Jeżeli strata większa niż strata graniczna podzielona przez współczynnik zysku oraz czas pozycji większy niz czas interwału oraz średni zysk mniejszy niż strata graniczna podzielona przez współczynnik zysku
-                # elif (profit < (-self.profit_needed/profit_factor)) \
-                #     and (position_time > self.pos_time) \
-                #     and (mean_profits < (-self.profit_needed/profit_factor)):
-                #     self.clean_orders()
-
-                # # Jeżeli zysk większy niż zysk graniczny pomnożony przez współczynnik zysku oraz zysk mniejszy niż zysk maksymalny pomnożony przez współczynik spadku dla danej pozycji i tiktok mniejszy równy 3
-                # elif (self.profit_max > self.profit_needed) \
-                #     and (profit < self.profit_max*self.profit_decline_factor):
-                #     self.clean_orders()
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
                 elif (profit > self.profit_needed/(profit_factor*1.5) and not self.reverse_it_all) or \
                     (profit < -self.profit_needed/(profit_factor*1.5) and self.reverse_it_all):
@@ -321,7 +311,7 @@ class Bot:
             pass
 
     @class_errors
-    def clean_orders(self):
+    def clean_orders(self, position=False):
         self.if_tiktok()
         self.close_request()
         orders = mt.orders_get(symbol=self.symbol)
@@ -344,7 +334,7 @@ class Bot:
                     counter += 1
             print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
             time.sleep(1)
-        self.reset_bot()
+        self.reset_bot(position)
         self.report()
 
     @class_errors
@@ -413,8 +403,8 @@ class Bot:
         try:
             act_pos = self.positions[0].type
             if self.pos_type != act_pos:
-                self.clean_orders()
-        except Exception as e:
+                self.clean_orders(position=True)
+        except (IndexError, NameError) as e:
             print(e)
             self.clean_orders()
 
@@ -459,12 +449,21 @@ class Bot:
         print()
 
     @class_errors
-    def reset_bot(self):
-        self.pos_type = None
+    def reset_bot(self, position=False):
+        if not position:
+            self.pos_type = None
         self.positions = None
         self.profits = []
         self.profit0 = None
         self.profit_max = 0
+        # add reset fake_robot parameters
+        self.fake_position = False
+        self.max_close = None
+        self.fake_stoploss = 0
+        self.fake_counter = 0
+        self.base_fake_interval = base_fake_interval
+        print(f"The bot was reset in position {position} mode.")
+
 
     @class_errors
     def avg_daily_vol(self):
@@ -911,7 +910,6 @@ class Bot:
 
     @class_errors
     def active_session(self):
-        #from model_generator import morning_hour
         df = get_data(self.symbol, 'D1', 0, 1)
         today_date_tuple = time.localtime()
         formatted_date = time.strftime("%Y-%m-%d", today_date_tuple)
@@ -941,11 +939,12 @@ class Bot:
 
     @class_errors
     def pos_creator(self):
-        try:
-            self.strategy_number += 1
-            return self.actual_position_democracy()
-        except NameError:
-            return random.randint(0, 1)
+        # try:
+        self.strategy_number += 1
+        return self.actual_position_democracy()
+        # except NameError as e:
+        #     print(e)
+        #     return random.randint(0, 1)
 
     @class_errors
     def write_to_database(self, profit, spread):
@@ -992,58 +991,6 @@ class Bot:
         except Exception as e:
             print(e)
             pass
-
-    @class_errors
-    def reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check(self):
-        if len(self.close_profits) < 3:
-            if dt.now().hour >= morning_hour + 3:
-                if not self.changer_reverse:
-                    try:
-                        from_date = dt.today().date()
-                        to_date = dt.today().date() + timedelta(days=1)
-                        from_date = dt(from_date.year, from_date.month, from_date.day)
-                        to_date = dt(to_date.year, to_date.month, to_date.day)
-                        data = mt.history_deals_get(from_date, to_date)
-                        df = pd.DataFrame(list(data), columns=data[0]._asdict().keys())
-                        df["time"] = pd.to_datetime(df["time"], unit="s")
-                        df = df[df['symbol'] != '']
-                        df['profit'] = df['profit'] + df['commission'] * 2 + df['swap']
-                        df['reason'] = df['reason'].shift(1)
-                        df = df.drop(columns=['time_msc', 'commission', 'external_id', 'swap'])
-                        df = df[df['time'].dt.date >= from_date.date()]
-                        df = df[df.groupby('position_id')['position_id'].transform('count') == 2]
-                        df = df.sort_values(by=['position_id', 'time'])
-                        df.reset_index(drop=True, inplace=True)
-                        df['profit'] = df['profit'].shift(-1)
-                        df['time_close'] = df['time'].shift(-1)
-                        df = df.rename(columns={'time': 'time_open'})
-                        df['sl'] = df.comment.shift(-1).str.contains('sl', na=False)
-                        df['tp'] = df.comment.shift(-1).str.contains('tp', na=False)
-                        df = df.iloc[::2]
-                        df['hour_open'] = df['time_open'].dt.hour
-                        df['hour_close'] = df['time_close'].dt.hour
-                        df = df[df['symbol'] == self.symbol]
-                        df.reset_index(drop=True, inplace=True)
-                        df = df.groupby('hour_close').agg(
-                            profit=('profit', 'sum'),
-                            count_sum=('profit', 'size')
-                        ).reset_index()
-                        df = df.sort_values('hour_close')
-                        result = df['profit'].dropna().rolling(3).mean()
-                        result = float(result.iloc[-1])
-                        print(result)
-                    except Exception as e:
-                        print("reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check", e)
-                    try:
-                        if isinstance(result, float):
-                            if result < 0:
-                                self.changer_reverse = True
-                                self.reverse_it_all = changer(self.reverse_it_all, True, False)
-                                print("CHANGER WAS CHANGED")
-                    except Exception as e:
-                        print("reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check", e)
-                else:
-                    print("NOT CHECK")
 
     @class_errors
     def trend_backtest(self, strategy):
