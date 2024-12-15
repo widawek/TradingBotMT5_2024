@@ -9,9 +9,9 @@ generate_my_models(symbols, intervals, leverage, want_to_delete_old_models())
 timer(6)
 
 # from app.main import Bot;
-# bot = Bot('BTCUSD')
+# bot = Bot('ETHUSD')
 # bot.report()
-symbols = ['ETHUSD', 'BTCUSD', 'LTCUSD', 'SOLUSD']
+
 for symbol in symbols:
     command = 'start cmd /k python -c "from app.main import Bot; bot = Bot(\'{}\'); bot.report()"'.format(symbol)
     subprocess.Popen(command, shell=True)

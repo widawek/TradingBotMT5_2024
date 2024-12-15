@@ -2,13 +2,13 @@ import pandas_ta as ta
 import numpy as np
 import pandas as pd
 
-
+# FIRST SIX CHARACTERS IS a MARK OF STRATEGY SO THEY SHOULD BE UNIQE
 
 # def model_M20():
 #     pass
 
 
-def technique3_M1(df_raw, slow, fast):
+def techn1ique3_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df.set_index(df['time'], inplace=True)
     df['numbers'] = [1+i for i in range(len(df))]
@@ -31,7 +31,7 @@ def technique3_M1(df_raw, slow, fast):
     return df, position
 
 
-def rsi_divergence_strategy_M1(df_raw, slow, fast):
+def rsi1_divergence_strategy_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df['rsi'] = ta.rsi(df['close'], length=slow)
     df['price_peak'] = df['high'].rolling(fast).max()
@@ -57,7 +57,7 @@ def rsi_divergence_strategy_M1(df_raw, slow, fast):
     return df, position
 
 
-def stoch_divergence_strategy_M1(df_raw, slow, fast):
+def stoch1_divergence_strategy_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df['rsi'] = df.ta.stoch(k=slow).iloc[:,0]
     df['price_peak'] = df['high'].rolling(fast).max()
@@ -83,7 +83,7 @@ def stoch_divergence_strategy_M1(df_raw, slow, fast):
     return df, position
 
 
-def cci_divergence_strategy_M1(df_raw, slow, fast):
+def cci1_divergence_strategy_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df['rsi'] = df.ta.cci(length=slow)
     df['price_peak'] = df['high'].rolling(fast).max()
@@ -109,7 +109,7 @@ def cci_divergence_strategy_M1(df_raw, slow, fast):
     return df, position
 
 
-def moving_averages_M1(df_raw, slow, fast):
+def a_moving_averages_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
     ma1 = df.ta.vwma(length=fast)
@@ -120,7 +120,7 @@ def moving_averages_M1(df_raw, slow, fast):
     return df, position
 
 
-def moving_averages_close_M1(df_raw, slow, fast):
+def b_moving_averages_close_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
     ma1 = df.ta.vwma(length=fast)
@@ -130,7 +130,7 @@ def moving_averages_close_M1(df_raw, slow, fast):
     return df, position
 
 
-def macd_signal_M1(df_raw, slow, fast):
+def macd1_signal_M1(df_raw, slow, fast):
     df = df_raw.copy()
     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
     df['macd'] = macd.iloc[:,0]
@@ -140,7 +140,7 @@ def macd_signal_M1(df_raw, slow, fast):
     return df, position
 
 
-def macd_histogram0_M1(df_raw, slow, fast):
+def macd2_histogram0_M1(df_raw, slow, fast):
     df = df_raw.copy()
     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
     df['histogram'] = macd.iloc[:,1]
@@ -149,7 +149,7 @@ def macd_histogram0_M1(df_raw, slow, fast):
     return df, position
 
 
-def macd_histogram1_M1(df_raw, slow, fast):
+def macd3_histogram1_M1(df_raw, slow, fast):
     df = df_raw.copy()
     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
     df['histogram'] = macd.iloc[:,1]
@@ -158,7 +158,7 @@ def macd_histogram1_M1(df_raw, slow, fast):
     return df, position
 
 
-def stoch_M1(df_raw, slow, fast):
+def stoch2_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df['k1'] = df.ta.stoch(k=fast).iloc[:,0]
     df['k2'] = df.ta.stoch(k=slow).iloc[:,0]
@@ -167,7 +167,7 @@ def stoch_M1(df_raw, slow, fast):
     return df, position
 
 
-def macd_divergence_strategy_M1(df_raw, slow, fast):
+def macd4_divergence_strategy_M1(df_raw, slow, fast):
     df = df_raw.copy()
     macd = df.ta.macd(fast=round(slow), slow=round(slow*2), signal=round(slow*3/4))
     df['rsi'] = macd.iloc[:,0]
@@ -194,7 +194,7 @@ def macd_divergence_strategy_M1(df_raw, slow, fast):
     return df, position
 
 
-def avs_aka_atr_vol_stoch_M1(df_raw, slow, fast):
+def avs1_aka_atr_vol_stoch_M1(df_raw, slow, fast):
     df = df_raw.copy()
     factor = slow*(fast-1)
     df['vol_sum'] = df.volume.rolling(factor).sum()
