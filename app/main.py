@@ -1034,14 +1034,14 @@ class Bot:
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
         small_bt_bars = 8000
         df_raw2 = df_raw.copy()[-small_bt_bars:]
-        df_raw3 = df_raw.copy()[:2000]
+        df_raw3 = df_raw2.copy()[:2000]
 
         if not 'model' in strategy.__name__:
             results = []
             for slow in trange(3, 50):
                 for fast in range(2, 21):
-                    # if fast == slow:
-                    #     continue
+                    if fast == slow:
+                        continue
                     df1, position = strategy(df_raw, slow, fast)
                     sharpe, calmar = calc_result(df1, sharpe_multiplier)
                     df2, position = strategy(df_raw2, slow, fast)
