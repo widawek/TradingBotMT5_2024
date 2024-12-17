@@ -1007,13 +1007,23 @@ class Bot:
             df['strategy'] = (1+df['return']).cumprod() - 1
             return df
 
+        def calmar_ratio(returns, periods_per_year=252):
+            avg_return = np.mean(returns)
+            annualized_return = (1 + avg_return) ** periods_per_year - 1
+            cumulative_returns = np.cumsum(returns)
+            running_max = np.maximum.accumulate(cumulative_returns)
+            drawdowns = running_max - cumulative_returns
+            max_drawdown = np.max(drawdowns)
+            return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
+        
         def calc_result(df, sharpe_multiplier):
             df = strategy3(df)
             df.reset_index(drop=True, inplace=True)
             df = df.dropna()
             cross = df['cross'].sum()/len(df)
             sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 2)
-            return sharpe
+            calmar = calmar_ratio(df['returns'])
+            return sharpe, calmar
 
         if strategy.__name__ == 'model':
             interval = self.model_interval
@@ -1024,6 +1034,7 @@ class Bot:
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
         small_bt_bars = 8000
         df_raw2 = df_raw.copy()[-small_bt_bars:]
+        df_raw3 = df_raw.copy()[:2000]
 
         if not 'model' in strategy.__name__:
             results = []
@@ -1032,11 +1043,13 @@ class Bot:
                     if fast == slow:
                         continue
                     df1, position = strategy(df_raw, slow, fast)
-                    sharpe = calc_result(df1, sharpe_multiplier)
+                    sharpe, calmar = calc_result(df1, sharpe_multiplier)
                     df2, position = strategy(df_raw2, slow, fast)
-                    sharpe2 = calc_result(df2, sharpe_multiplier)
-                    results.append((fast, slow, round(sharpe+sharpe2, 3)))
-            f_result = sorted(results, key=lambda x: x[2], reverse=True)[0]
+                    sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
+                    df3, position = strategy(df_raw3, slow, fast)
+                    sharpe3, calmar3 = calc_result(df3, sharpe_multiplier)
+                    results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2+calmar3)))
+            f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
             print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
             return f_result[0], f_result[1], f_result[2]
         else:
