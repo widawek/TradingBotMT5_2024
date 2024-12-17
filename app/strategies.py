@@ -134,7 +134,9 @@ def t3_moving_average_close_trend_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
     ma1 = ta.t3(df['adj'], length=round(fast*slow/5), a=0.95)
-    df['stance'] = np.where((df['close']>=ma1), 1, -1)
+    df['stance'] = np.where((df['close']>ma1), 1, np.NaN)
+    df['stance'] = np.where((df['close']<ma1), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
 
