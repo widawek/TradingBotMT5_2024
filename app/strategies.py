@@ -130,6 +130,15 @@ def b_moving_averages_close_trend_M1(df_raw, slow, fast):
     return df, position
 
 
+def t3_moving_average_close_trend_M1(df_raw, slow, fast):
+    df = df_raw.copy()
+    df['adj'] = (df['close'] + df['high'] + df['low']) / 3
+    ma1 = ta.t3(df['adj'], length=round(fast*slow/5), a=0.95)
+    df['stance'] = np.where((df['close']>=ma1), 1, -1)
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
 def macd1_signal_trend_M1(df_raw, slow, fast):
     df = df_raw.copy()
     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
