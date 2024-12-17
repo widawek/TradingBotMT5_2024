@@ -1053,15 +1053,17 @@ class Bot:
         strategies = import_strategies([])
         self.strategies = []
         for strategy in strategies:
-            if strategy.__name__ == 'model':
+            name_ = strategy.__name__
+            if name_ == 'model':
                 if self.model_counter == 0:
                     continue
                 interval = self.model_interval
             else:
-                interval = strategy.__name__.split('_')[-1]
+                interval = name_.split('_')[-1]
+            marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
             fast, slow, sharpe = self.trend_backtest(strategy)
-            print(strategy.__name__, strategy, interval, fast, slow, sharpe)
-            self.strategies.append((strategy.__name__, strategy, interval, fast, slow, sharpe))
+            print(name_, strategy, interval, fast, slow, sharpe)
+            self.strategies.append((name_, strategy, interval, fast, slow, sharpe))
         self.strategies = sorted(self.strategies, key=lambda x: x[-1], reverse=True)
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
 
