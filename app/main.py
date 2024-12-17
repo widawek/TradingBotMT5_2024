@@ -179,7 +179,7 @@ class Bot:
                 self.tiktok = 0
 
         if self.strategy_number > len(self.strategies)-1:
-            self.test_strategies()
+            self.test_strategies(add_number=10)
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
     @class_errors
@@ -408,6 +408,10 @@ class Bot:
             print(e)
             self.clean_orders()
 
+        # force of strategy condition
+        if self.force < 1 and self.actual_force < 1 and profit < 0:
+            self.strategy_number += 1
+
         self.number_of_positions = len(self.positions)
         account = mt.account_info()
         sym_inf = mt.symbol_info(self.symbol)
@@ -446,6 +450,10 @@ class Bot:
         printer("Fake position:", self.fake_position)
         printer("Fake counter:", self.fake_counter)
         printer("Trend:", self.trend)
+        try:
+            printer("Strategy name:", self.strategies[self.strategy_number][0])
+        except IndexError:
+            pass
         print()
 
     @class_errors
@@ -722,9 +730,11 @@ class Bot:
             df['return'] = df['mkt_move'] * df.stance.shift()
             df['strategy'] = (1+df['return']).cumprod() - 1
             df['strategy_mean'] = df['strategy'].rolling(window_).mean()
-            df['cond'] = np.where(df['strategy']>df['strategy_mean'], 1, -2)
+            df['strategy_std'] = df['strategy'].rolling(window_).std()
+            df['strategy_cond'] = df['strategy_mean'] - df['strategy_std']
+            df['cond'] = np.where(df['strategy']>df['strategy_cond'], 1, -1)
             cond = df['cond'].rolling(window_).sum()
-            return cond.iloc[-1]
+            return cond.iloc[-1], df['cond'].iloc[-1]
 
         try:
             if self.fake_position:
@@ -738,7 +748,7 @@ class Bot:
             try:
                 strategy = self.strategies[self.strategy_number]
             except IndexError:
-                self.test_strategies(add_number=3)
+                self.test_strategies(add_number=10)
                 strategy = self.strategies[self.strategy_number]
             print("Strategia", strategy[0])
             self.interval = strategy[0].split('_')[-1]
@@ -757,12 +767,15 @@ class Bot:
                 printer(f'Position from {strategy[0]}:', f'fast={strategy[-3]} slow={strategy[-2]}', base_just=60)
                 printer(f'Position from {strategy[0]}:', position)
 
-            force = calc_pos_condition(dfx)
-            printer("Strategy force", force)
-            if force < 1:
-                self.strategy_number += 1
-                print("Next strategy, because the strategy is too weak.")
-                return self.actual_position_democracy()
+            self.force, self.actual_force = calc_pos_condition(dfx)
+            printer("Strategy force", self.force)
+            printer("Strategy actual position", self.actual_force)
+            print("Next strategy, because the strategy is too weak.")
+
+            # if force < 1:
+            #     self.strategy_number += 1
+            #     
+            #     return self.actual_position_democracy()
 
             position = int(0) if position == 1 else int(1)
 
@@ -1039,7 +1052,7 @@ class Bot:
             df = df.dropna()
             cross = df['cross'].sum()/len(df)
             sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 2)
-            calmar = calmar_ratio(df['returns'])
+            calmar = calmar_ratio(df['return'])
             return sharpe, calmar
 
         if strategy.__name__ == 'model':
@@ -1049,9 +1062,9 @@ class Bot:
 
         sharpe_multiplier = interval_time_sharpe(interval)
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
-        small_bt_bars = 8000
+        small_bt_bars = 10000
         df_raw2 = df_raw.copy()[-small_bt_bars:]
-        df_raw3 = df_raw2.copy()[:2000]
+        df_raw3 = df_raw2.copy()[:5000]
 
         if not 'model' in strategy.__name__:
             results = []
@@ -1065,7 +1078,7 @@ class Bot:
                     sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
                     df3, position = strategy(df_raw3, slow, fast)
                     sharpe3, calmar3 = calc_result(df3, sharpe_multiplier)
-                    results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2+calmar3)))
+                    results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2)))
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
             print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
             return f_result[0], f_result[1], f_result[2]*f_result[3]

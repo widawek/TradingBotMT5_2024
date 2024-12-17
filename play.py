@@ -1,11 +1,11 @@
 import subprocess
-from app.functions import timer, want_to_delete_old_models, printer, import_strategies
+from app.functions import timer, want_to_delete_old_models, printer
 from app.model_generator import generate_my_models
 from config.parameters import *
 
 
 printer("Symbols", symbols)
-generate_my_models(symbols, intervals, leverage, want_to_delete_old_models())
+#generate_my_models(symbols, intervals, leverage, want_to_delete_old_models())
 timer(6)
 
 # from app.main import Bot;
