@@ -1059,7 +1059,7 @@ class Bot:
             df2 = self.model_position(500, backtest=True)
             sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
             self.number_of_bars_for_backtest = 20000
-            return 0, 0, round(sharpe+sharpe2, 3), round(calmar+calmar2, 3)
+            return 0, 0, round((sharpe+sharpe2)/2)*(calmar+calmar2)/2, 3)
 
     @class_errors
     def test_strategies(self, add_number=0):
