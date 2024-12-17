@@ -716,6 +716,16 @@ class Bot:
 
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
+
+        def calc_pos_condition(df, window_=120):
+            df['mkt_move'] = np.log(df.close/df.close.shift())
+            df['return'] = df['mkt_move'] * df.stance.shift()
+            df['strategy'] = (1+df['return']).cumprod() - 1
+            df['strategy_mean'] = df['strategy'].rolling(window_).mean()
+            df['cond'] = np.where(df['strategy']>df['strategy_mean'], 1, -2)
+            cond = df['cond'].rolling(window_).sum()
+            return cond.iloc[-1]
+
         try:
             if self.fake_position:
                 return self.fake_position_robot()
@@ -747,6 +757,13 @@ class Bot:
                 printer(f'Position from {strategy[0]}:', f'fast={strategy[-3]} slow={strategy[-2]}', base_just=60)
                 printer(f'Position from {strategy[0]}:', position)
 
+            force = calc_pos_condition(dfx)
+            printer("Strategy force", force)
+            if force < 1:
+                self.strategy_number += 1
+                print("Next strategy, because the strategy is too weak.")
+                return self.actual_position_democracy()
+
             position = int(0) if position == 1 else int(1)
 
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
@@ -757,7 +774,7 @@ class Bot:
             printer("Last open position time by MetaTrader", f"{cross['time'].iloc[-1]}", base_just=60)
             if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
                 self.strategy_number += 1
-                print("Next strategy.")
+                print("Next strategy because the position is from last working day.")
                 return self.actual_position_democracy()
 
             positions_ = mt.positions_get(symbol=self.symbol)
@@ -1059,7 +1076,7 @@ class Bot:
             df2 = self.model_position(500, backtest=True)
             sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
             self.number_of_bars_for_backtest = 20000
-            return 0, 0, round((sharpe+sharpe2)/2)*(calmar+calmar2)/2, 3)
+            return 0, 0, round(((sharpe+sharpe2)/2)*(calmar+calmar2)/2, 3)
 
     @class_errors
     def test_strategies(self, add_number=0):
@@ -1081,8 +1098,8 @@ class Bot:
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
 
         # use only three best strategies
-        if len(self.strategies) > 3+add_number:
-            self.strategies = self.strategies[:3+add_number]
+        if len(self.strategies) > 6+add_number:
+            self.strategies = self.strategies[:6+add_number]
 
         if len(self.strategies) == 0:
             sleep(3600)
