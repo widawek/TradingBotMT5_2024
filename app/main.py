@@ -1051,15 +1051,15 @@ class Bot:
                     results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2+calmar3)))
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
             print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
-            return f_result[0], f_result[1], f_result[2]
+            return f_result[0], f_result[1], f_result[2]*f_result[3]
         else:
             df1 = self.model_position(500, backtest=True)
-            sharpe = calc_result(df1, sharpe_multiplier)
+            sharpe, calmar = calc_result(df1, sharpe_multiplier)
             self.number_of_bars_for_backtest = small_bt_bars
             df2 = self.model_position(500, backtest=True)
-            sharpe2 = calc_result(df2, sharpe_multiplier)
+            sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
             self.number_of_bars_for_backtest = 20000
-            return 0, 0, round(sharpe+sharpe2, 3)
+            return 0, 0, round(sharpe+sharpe2, 3), round(calmar+calmar2, 3)
 
     @class_errors
     def test_strategies(self, add_number=0):
@@ -1074,9 +1074,9 @@ class Bot:
             else:
                 interval = name_.split('_')[-1]
             marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
-            fast, slow, sharpe = self.trend_backtest(strategy)
-            print(name_, strategy, interval, fast, slow, sharpe)
-            self.strategies.append((name_, strategy, interval, fast, slow, sharpe))
+            fast, slow, result = self.trend_backtest(strategy)
+            print(name_, strategy, interval, fast, slow, round(result, 4))
+            self.strategies.append((name_, strategy, interval, fast, slow, round(result, 4)))
         self.strategies = sorted(self.strategies, key=lambda x: x[-1], reverse=True)
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
 
