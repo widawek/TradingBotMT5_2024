@@ -474,7 +474,7 @@ class Bot:
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
 
         def atr():
-            length = 20
+            length = 14
             df = get_data(self.symbol, 'M5', 1, 100)
             df['atr'] = df.ta.atr(length=length)
             df['atr_osc'] = (df['atr']-df['atr'].rolling(length).min())/(df['atr'].rolling(length).max()-df['atr'].rolling(length).min()) + 0.5

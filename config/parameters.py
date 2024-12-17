@@ -54,7 +54,7 @@ trigger_model_divider_factor: int       = 7
 base_fake_interval: str                 = 'M2'
 use_moving_averages: bool               = False
 start_trigger: str                      = 'moving_averages'
-global_tracker_multiplier: float        = 1.6
+global_tracker_multiplier: float        = 1.1
 profit_decrease_barrier: float          = 0.93
 profit_increase_barrier: float          = 1.6
 
