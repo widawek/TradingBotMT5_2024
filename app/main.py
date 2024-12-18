@@ -70,7 +70,7 @@ class Bot:
     def __init__(self, symbol):
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
-        self.number_of_bars_for_backtest = 20000
+        self.number_of_bars_for_backtest = 23000
         self.reverse_it_all = reverse_it_all
         self.changer_reverse = False
         printer(dt.now(), symbol)
@@ -1052,11 +1052,15 @@ class Bot:
         
         def calc_result(df, sharpe_multiplier, check_week_ago=False):
             df = strategy3(df)
+            df['date'] = df['time'].dt.date
+            x = list(set(np.unique(df['date'])))
+            df = df[df['date'] != x[0]]
+
             if check_week_ago:
                 today = dt.now().date()
                 week_ago_date = dt.now().date() - timedelta(days=7)
                 two_weeks_ago_date = dt.now().date() - timedelta(days=14)
-                df['date'] = df['time'].dt.date
+                
                 df = df[(df['date'] == today)|
                         (df['date'] == week_ago_date)|
                         (df['date'] == two_weeks_ago_date)]
@@ -1078,7 +1082,7 @@ class Bot:
         df_dates = df_raw.copy()
         df_dates['date'] = df_dates['time'].dt.date
         if any([True for i in np.unique(df_dates['date']) if i.weekday() in [5,6]]):
-            small_bt_bars = 13000
+            small_bt_bars = 12000
         else:
             small_bt_bars = 10000
         df_raw2 = df_raw.copy()[-small_bt_bars:]
@@ -1123,7 +1127,7 @@ class Bot:
                 interval = name_.split('_')[-1]
             marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
             fast, slow, result = self.trend_backtest(strategy)
-            print(name_, strategy, interval, fast, slow, round(result, 4))
+            print(name_, interval, fast, slow, round(result, 4))
             self.strategies.append((name_, strategy, interval, fast, slow, round(result, 4)))
         self.strategies = sorted(self.strategies, key=lambda x: x[-1], reverse=True)
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
