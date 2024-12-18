@@ -20,6 +20,8 @@ from tqdm import trange
 sys.path.append("..")
 mt.initialize()
 
+print("Evening hour: ", evening_hour)
+
 catalog = os.path.dirname(__file__)
 parent_catalog = os.path.dirname(catalog)
 catalog = f'{parent_catalog}\\models'
@@ -380,7 +382,8 @@ class Bot:
         self.positions_()
         # vvv key component vvv
         while True:
-            if dt.now().hour >= evening_hour:# and now_.minute >= 45:
+            now_ = dt.now()
+            if now_.hour == evening_hour-1 and now_.minute >= 50:
                 self.clean_orders()
                 sys.exit()
             self.request_get()
@@ -1115,6 +1118,8 @@ class Bot:
 
     @class_errors
     def test_strategies(self, add_number=0):
+        self.close_request()
+        self.tiktok = 0
         strategies = import_strategies([])
         self.strategies = []
         for strategy in strategies:
