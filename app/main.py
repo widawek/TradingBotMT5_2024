@@ -214,7 +214,7 @@ class Bot:
                 self.base_fake_interval = interval
                 return pos_type
         except Exception as e:
-            print(e)
+            print("fake_position_robot", e)
             pass
 
         def fake_position_on():
@@ -305,7 +305,7 @@ class Bot:
                     printer("TIKTOK:", self.tiktok)
 
             except Exception as e:
-                print("no positions", e)
+                print("check_trigger", e)
                 pass
         else:
             pass
@@ -405,7 +405,7 @@ class Bot:
             if self.pos_type != act_pos:
                 self.clean_orders()
         except (IndexError, NameError) as e:
-            print(e)
+            print("data", e)
             self.clean_orders()
 
         # force of strategy condition
@@ -452,7 +452,8 @@ class Bot:
         printer("Trend:", self.trend)
         try:
             printer("Strategy name:", self.strategies[self.strategy_number][0])
-        except IndexError:
+        except IndexError as e:
+            print("info", e)
             pass
         print()
 
@@ -747,7 +748,8 @@ class Bot:
 
             try:
                 strategy = self.strategies[self.strategy_number]
-            except IndexError:
+            except IndexError as e:
+                print("actual_position_democracy", e)
                 self.test_strategies(add_number=10)
                 strategy = self.strategies[self.strategy_number]
             print("Strategia", strategy[0])
@@ -770,7 +772,8 @@ class Bot:
             self.force, self.actual_force = calc_pos_condition(dfx)
             printer("Strategy force", self.force)
             printer("Strategy actual position", self.actual_force)
-            print("Next strategy, because the strategy is too weak.")
+            if self.force < 1 and self.actual_force < 1:
+                print("Next strategy, because the strategy is too weak.")
 
             # if force < 1:
             #     self.strategy_number += 1
@@ -815,7 +818,8 @@ class Bot:
                         self.positionTracker.checkout()
 
                     time.sleep(5)
-        except KeyError:
+        except KeyError as e:
+            print("actual_position_democracy", e)
             return self.actual_position_democracy(number_of_bars=number_of_bars*2)
         self.pos_time = interval_time(self.interval)
 
@@ -1018,7 +1022,7 @@ class Bot:
                 fake_position_stoploss=self.fake_stoploss
             )
         except Exception as e:
-            print(e)
+            print("write_to_database", e)
             pass
 
     @class_errors
