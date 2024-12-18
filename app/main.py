@@ -261,7 +261,7 @@ class Bot:
     @class_errors
     def check_trigger(self, trigger_mode='on'):
         if trigger_mode == 'on':
-            position_time = self.position_time()
+            #position_time = self.position_time()
             try:
                 profit = sum([i[-4] for i in self.positions])
 
@@ -368,7 +368,7 @@ class Bot:
     @class_errors
     def request_get(self):
         if not self.positions:
-            checkout_report(self.symbol, self.reverse, self.trigger, self.reverse_it_all)
+            #checkout_report(self.symbol, self.reverse, self.trigger, self.reverse_it_all)
             pos_type = self.actual_position_democracy()
             self.request(actions['deal'], pos_type)
         self.positions_()
@@ -763,7 +763,7 @@ class Bot:
                 dfx = get_data(self.symbol, self.interval, 1, int(strategy[-2] * strategy[-3] + 1440)) # how_many_bars
                 dfx, position = strategy[1](dfx, strategy[-2], strategy[-3])
                 if position not in [-1, 1]:
-                    dfx = get_data(self.symbol, self.interval, 1, int(strategy[-2] * strategy[-3] + 10000)) # how_many_bars
+                    dfx = get_data(self.symbol, self.interval, 1, int(strategy[-2] * strategy[-3] + number_of_bars*20)) # how_many_bars
                     dfx, position = strategy[1](dfx, strategy[-2], strategy[-3])
 
                 printer(f'Position from {strategy[0]}:', f'fast={strategy[-3]} slow={strategy[-2]}', base_just=60)
@@ -1050,8 +1050,13 @@ class Bot:
             max_drawdown = np.max(drawdowns)
             return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
         
-        def calc_result(df, sharpe_multiplier):
+        def calc_result(df, sharpe_multiplier, check_week_ago=False):
             df = strategy3(df)
+            if check_week_ago:
+                week_ago_date = dt.now().date() - timedelta(days=7)
+                two_weeks_ago_date = dt.now().date() - timedelta(days=14)
+                df['date'] = df['time'].dt.date
+                df = df[(df['date'] == week_ago_date)|(df['date'] == two_weeks_ago_date)]
             df.reset_index(drop=True, inplace=True)
             df = df.dropna()
             cross = df['cross'].sum()/len(df)
@@ -1066,9 +1071,15 @@ class Bot:
 
         sharpe_multiplier = interval_time_sharpe(interval)
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
-        small_bt_bars = 10000
+
+        df_dates = df_raw.copy()
+        df_dates['date'] = df_dates['time'].dt.date
+        if any([True for i in np.unique(df_dates['date']) if i.weekday() in [5,6]]):
+            small_bt_bars = 13000
+        else:
+            small_bt_bars = 10000
         df_raw2 = df_raw.copy()[-small_bt_bars:]
-        df_raw3 = df_raw2.copy()[:5000]
+        #df_raw3 = df_raw2.copy()[:5000]
 
         if not 'model' in strategy.__name__:
             results = []
@@ -1080,8 +1091,8 @@ class Bot:
                     sharpe, calmar = calc_result(df1, sharpe_multiplier)
                     df2, position = strategy(df_raw2, slow, fast)
                     sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
-                    df3, position = strategy(df_raw3, slow, fast)
-                    sharpe3, calmar3 = calc_result(df3, sharpe_multiplier)
+                    df3, position = strategy(df_raw, slow, fast)
+                    sharpe3, calmar3 = calc_result(df3, sharpe_multiplier, True)
                     results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2)))
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
             print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")

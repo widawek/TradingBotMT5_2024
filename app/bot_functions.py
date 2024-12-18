@@ -78,7 +78,7 @@ def checkout_report(symbol, reverse, trigger, condition):
                 return all([all([i<0 for i in prof_lst]),
                             all([i==comm_lst[0] for i in comm_lst])])
     except Exception as e:
-        print(e)
+        print("checkout_report", e)
         return False
 
     return False
