@@ -1090,12 +1090,14 @@ class Bot:
         self.strategies = sorted(self.strategies, key=lambda x: x[-1], reverse=True)
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0) and (i[6] > 0))]
 
-        # use only three best strategies
+        # use only six best strategies
         if len(self.strategies) > 6+add_number:
             self.strategies = self.strategies[:6+add_number]
 
         if len(self.strategies) == 0:
-            sleep(3600)
+            self.close_request()
+            print("You don't have any strategy to open position right now. Waiting a half an hour for backtest."
+            sleep(1800)
             self.test_strategies()
         else:
             for i in self.strategies:
