@@ -727,19 +727,20 @@ class Bot:
         return main_df, position
 
     @class_errors
+    def calc_pos_condition(self, df1, window_=50):
+        df = df1.copy()[-window_*10:] 
+        df['mkt_move'] = np.log(df.close/df.close.shift())
+        df['return'] = df['mkt_move'] * df.stance.shift()
+        df['strategy'] = (1+df['return']).cumprod() - 1
+        df['strategy_mean'] = df['strategy'].rolling(window_).mean()
+        df['strategy_std'] = df['strategy'].rolling(window_).std()/2
+        df['strategy_cond'] = df['strategy_mean'] - df['strategy_std']
+        df['cond'] = np.where(df['strategy']>df['strategy_cond'], 1, -2)
+        cond = df['cond'].rolling(window_).sum()
+        return cond.iloc[-1], df['cond'].iloc[-1]
+    
+    @class_errors
     def actual_position_democracy(self, number_of_bars=250):
-
-        def calc_pos_condition(df, window_=50):
-            df['mkt_move'] = np.log(df.close/df.close.shift())
-            df['return'] = df['mkt_move'] * df.stance.shift()
-            df['strategy'] = (1+df['return']).cumprod() - 1
-            df['strategy_mean'] = df['strategy'].rolling(window_).mean()
-            df['strategy_std'] = df['strategy'].rolling(window_).std()/2
-            df['strategy_cond'] = df['strategy_mean'] - df['strategy_std']
-            df['cond'] = np.where(df['strategy']>df['strategy_cond'], 1, -2)
-            cond = df['cond'].rolling(window_).sum()
-            return cond.iloc[-1], df['cond'].iloc[-1]
-
         try:
             if self.fake_position:
                 return self.fake_position_robot()
@@ -772,7 +773,7 @@ class Bot:
                 printer(f'Position from {strategy[0]}:', f'fast={strategy[-3]} slow={strategy[-2]}', base_just=60)
                 printer(f'Position from {strategy[0]}:', position)
 
-            self.force, self.actual_force = calc_pos_condition(dfx)
+            self.force, self.actual_force = self.calc_pos_condition(dfx)
             printer("Strategy force", self.force)
             printer("Strategy actual position", self.actual_force)
             if self.actual_force < 1:
