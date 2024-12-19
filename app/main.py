@@ -482,7 +482,6 @@ class Bot:
         self.base_fake_interval = base_fake_interval
         print(f"The bot was reset.")
 
-
     @class_errors
     def avg_daily_vol(self):
         df = self.df_d1
