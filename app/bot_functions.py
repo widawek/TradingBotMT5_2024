@@ -283,7 +283,7 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
         calmar = 0
     return sharpe, calmar
 
-def delete_last_day(df, morning_hour, evening_hour, respect_overnight=True):
+def delete_last_day_and_clean_returns(df, morning_hour, evening_hour, respect_overnight=True):
     df = df.dropna()
     df['date_xy'] = df['time'].dt.date
     x = list(set(np.unique(df['date_xy'])))
