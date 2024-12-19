@@ -240,7 +240,7 @@ def close_request_(symbol: str, tickets_list, only_profitable: bool=False):
             close_request_only(i)
 
 
-def calculate_strategy_returns(df):
+def calculate_strategy_returns(df, leverage):
     """The dataframe has to have a 'stance' column."""
     z = [len(str(x).split(".")[1])+1 for x in list(df["close"][:101])]
     divider = 10**round((sum(z)/len(z))-1)

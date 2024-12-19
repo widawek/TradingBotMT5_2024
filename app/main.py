@@ -1049,7 +1049,7 @@ class Bot:
                     if fast == slow:
                         continue
                     df1, position = strategy(df_raw, slow, fast)
-                    df1 = calculate_strategy_returns(df1)
+                    df1 = calculate_strategy_returns(df1, leverage)
                     df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
                     df2 = df1.copy()[-small_bt_bars:]
                     
@@ -1096,7 +1096,7 @@ class Bot:
 
         if len(self.strategies) == 0:
             self.close_request()
-            print("You don't have any strategy to open position right now. Waiting a half an hour for backtest."
+            print("You don't have any strategy to open position right now. Waiting a half an hour for backtest.")
             sleep(1800)
             self.test_strategies()
         else:
