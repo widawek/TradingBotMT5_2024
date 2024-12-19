@@ -1087,7 +1087,7 @@ class Bot:
             fast, slow, result, actual_condition = self.trend_backtest(strategy)
             print(name_, interval, fast, slow, round(result, 4))
             self.strategies.append((name_, strategy, interval, fast, slow, round(result, 4), actual_condition))
-        self.strategies = sorted(self.strategies, key=lambda x: x[-1], reverse=True)
+        self.strategies = sorted(self.strategies, key=lambda x: x[5], reverse=True)
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0) and (i[6] > 0))]
 
         # use only six best strategies
