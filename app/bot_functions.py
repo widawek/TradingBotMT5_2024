@@ -284,10 +284,12 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
     return sharpe, calmar
 
 def delete_last_day(df):
+    df = df.dropna()
     df['date_xy'] = df['time'].dt.date
     x = list(set(np.unique(df['date_xy'])))
     x.sort()
     df = df[df['date_xy'] != x[0]]
+    df.reset_index(drop=True, inplace=True)
     return df
 
 def calculate_bars_to_past(df):
