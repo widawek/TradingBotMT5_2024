@@ -1048,7 +1048,7 @@ class Bot:
                     if fast == slow:
                         continue
                     df1, position = strategy(df_raw, slow, fast)
-                    df1 = calculate_strategy_returns(df1)
+                    df1 = calculate_strategy_returns(df1, morning_hour, evening_hour, respect_overnight)
                     df1 = delete_last_day(df1)
                     df2 = df1.copy()[-small_bt_bars:]
                     
