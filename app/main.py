@@ -896,8 +896,8 @@ class Bot:
             letter = "f"
 
         name_ = self.strategies[self.strategy_number][0][:6]
-        fast = self.strategies[self.strategy_number][-3]
-        slow = self.strategies[self.strategy_number][-2]
+        fast = self.strategies[self.strategy_number][3]
+        slow = self.strategies[self.strategy_number][4]
         self.comment = f'{name_}_{fast}_{slow}_{self.tiktok}'
 
         request = {
