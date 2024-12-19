@@ -1055,11 +1055,6 @@ class Bot:
             return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
         
         def calc_result(df, sharpe_multiplier, check_week_ago=False):
-            df = calculate_strategy_returns(df)
-            df['date'] = df['time'].dt.date
-            x = list(set(np.unique(df['date'])))
-            df = df[df['date'] != x[0]]
-
             if check_week_ago:
                 today = dt.now().date()
                 week_ago_date = dt.now().date() - timedelta(days=7)
@@ -1068,13 +1063,35 @@ class Bot:
                 df = df[(df['date'] == today)|
                         (df['date'] == week_ago_date)|
                         (df['date'] == two_weeks_ago_date)]
+            
             df.reset_index(drop=True, inplace=True)
             df = df.dropna()
             cross = df['cross'].sum()/len(df)
             sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 2)
-            calmar = calmar_ratio(df['return'])
+            
+            if not check_week_ago:
+                calmar = calmar_ratio(df['return'])
+            else:
+                calmar = 0
             return sharpe, calmar
 
+        def delete_last_day(df):
+            df['date_xy'] = df['time'].dt.date
+            x = list(set(np.unique(df['date_xy'])))
+            x.sort()
+            df = df[df['date_xy'] != x[0]]
+            return df
+
+        def calculate_bars_to_past(df):
+            df_dates = df.copy()
+            df_dates['date'] = df_dates['time'].dt.date
+            if any([True for i in np.unique(df_dates['date']) if i.weekday() in [5,6]]):
+                small_bt_bars = 12000
+            else:
+                small_bt_bars = 10000
+            return small_bt_bars
+
+        
         if strategy.__name__ == 'model':
             interval = self.model_interval
         else:
@@ -1082,15 +1099,7 @@ class Bot:
 
         sharpe_multiplier = interval_time_sharpe(interval)
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
-
-        df_dates = df_raw.copy()
-        df_dates['date'] = df_dates['time'].dt.date
-        if any([True for i in np.unique(df_dates['date']) if i.weekday() in [5,6]]):
-            small_bt_bars = 12000
-        else:
-            small_bt_bars = 10000
-        df_raw2 = df_raw.copy()[-small_bt_bars:]
-        #df_raw3 = df_raw2.copy()[:5000]
+        small_bt_bars = calculate_bars_to_past(df_raw)
 
         if not 'model' in strategy.__name__:
             results = []
@@ -1099,12 +1108,15 @@ class Bot:
                     if fast == slow:
                         continue
                     df1, position = strategy(df_raw, slow, fast)
+                    df1 = calculate_strategy_returns(df1)
+                    df1 = delete_last_day(df1)
+                    df2 = df1.copy()[-small_bt_bars:]
+                    
                     sharpe, calmar = calc_result(df1, sharpe_multiplier)
-                    df2, position = strategy(df_raw2, slow, fast)
                     sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
-                    df3, position = strategy(df_raw, slow, fast)
-                    sharpe3, calmar3 = calc_result(df3, sharpe_multiplier, True)
+                    sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
                     results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2)))
+                    
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
             print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
             return f_result[0], f_result[1], f_result[2]*f_result[3]
