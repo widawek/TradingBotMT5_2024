@@ -283,12 +283,16 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
         calmar = 0
     return sharpe, calmar
 
-def delete_last_day(df):
+def delete_last_day(df, morning_hour, evening_hour, respect_overnight=True):
     df = df.dropna()
     df['date_xy'] = df['time'].dt.date
     x = list(set(np.unique(df['date_xy'])))
     x.sort()
     df = df[df['date_xy'] != x[0]]
+    if not respect_overnight:
+        df['return'] = np.where((df['time'].dt.hour < morning_hour-1) | (df['time'].dt.hour > evening_hour+1), np.NaN, df['return'])
+        df = df.dropna()
+    df['return'] = np.where(df['date_xy'] != df['date_xy'].shift(1), 0, df['return'])
     df.reset_index(drop=True, inplace=True)
     return df
 
