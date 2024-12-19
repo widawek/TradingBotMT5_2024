@@ -729,14 +729,14 @@ class Bot:
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
 
-        def calc_pos_condition(df, window_=120):
+        def calc_pos_condition(df, window_=50):
             df['mkt_move'] = np.log(df.close/df.close.shift())
             df['return'] = df['mkt_move'] * df.stance.shift()
             df['strategy'] = (1+df['return']).cumprod() - 1
             df['strategy_mean'] = df['strategy'].rolling(window_).mean()
-            df['strategy_std'] = df['strategy'].rolling(window_).std()
+            df['strategy_std'] = df['strategy'].rolling(window_).std()/2
             df['strategy_cond'] = df['strategy_mean'] - df['strategy_std']
-            df['cond'] = np.where(df['strategy']>df['strategy_cond'], 1, -1)
+            df['cond'] = np.where(df['strategy']>df['strategy_cond'], 1, -2)
             cond = df['cond'].rolling(window_).sum()
             return cond.iloc[-1], df['cond'].iloc[-1]
 
