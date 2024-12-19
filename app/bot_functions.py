@@ -271,9 +271,9 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
         df = df[(df['date'] == today)|
                 (df['date'] == week_ago_date)]#|
                 #(df['date'] == two_weeks_ago_date)]
-    
-    df.reset_index(drop=True, inplace=True)
+
     df = df.dropna()
+    df.reset_index(drop=True, inplace=True)
     cross = df['cross'].sum()/len(df)
     sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 2)
     
