@@ -1056,7 +1056,7 @@ class Bot:
                     sharpe, calmar = calc_result(df1, sharpe_multiplier)
                     sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
                     sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
-                    actual_condition = self.calc_pos_condition(df2)
+                    _, actual_condition = self.calc_pos_condition(df2)
                     results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2)), actual_condition)
                     
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
