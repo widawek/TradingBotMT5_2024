@@ -226,3 +226,35 @@ def avs1_aka_atr_vol_stoch_trend_M1(df_raw, slow, fast):
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
+
+
+def momen1tum_divergence_strategy(df, slow, fast):
+    df['momentum'] = df['close'] / df.close.rolling(slow).mean()
+    df['std'] = df['close'].rolling(slow).std()
+    df['lambda'] = df['std'] / df['std'].rolling(slow).mean()
+    df['velocity'] = df['momentum'] * df['lambda']
+    df['velocity_mean'] = ta.t3(df['velocity'], length=fast)
+    df['rsi'] = ta.rsi(df['close'], length=slow)
+    df['price_peak'] = df['high'].rolling(fast).max()
+    df['price_trough'] = df['low'].rolling(fast).min()
+    df['rsi_peak'] = df['velocity_mean'].rolling(fast).max()
+    df['rsi_trough'] = df['velocity_mean'].rolling(fast).min()
+
+    df['bullish_div'] = np.where(
+        (df['price_trough'] < df['price_trough'].shift(1)) &  # Price makes a lower low
+        (df['rsi_trough'] > df['rsi_trough'].shift(1)),  # RSI makes a higher low
+        1, 0)
+
+    # Identify bearish divergence
+    df['bearish_div'] = np.where(
+        (df['price_peak'] > df['price_peak'].shift(1)) &  # Price makes a higher high
+        (df['rsi_peak'] < df['rsi_peak'].shift(1)),  # RSI makes a lower high
+        1, 0)
+
+    # Generate trading signals
+    df['stance'] = np.NaN
+    df.loc[df['bullish_div'] == 1, 'stance'] = 1.0  # Buy signal on bullish divergence
+    df.loc[df['bearish_div'] == 1, 'stance'] = -1.0  # Sell signal on bearish divergence
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
