@@ -1042,7 +1042,7 @@ class Bot:
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
         small_bt_bars = calculate_bars_to_past(df_raw)
 
-        if not 'model' in strategy.__name__:
+        if strategy.__name__.startswith('model'):
             results = []
             for slow in trange(3, 50):
                 for fast in range(2, 21):
