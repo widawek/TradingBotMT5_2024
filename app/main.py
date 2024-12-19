@@ -1071,8 +1071,6 @@ class Bot:
 
     @class_errors
     def test_strategies(self, add_number=0):
-        self.close_request()
-        self.tiktok = 0
         strategies = import_strategies([])
         self.strategies = []
         for strategy in strategies:
