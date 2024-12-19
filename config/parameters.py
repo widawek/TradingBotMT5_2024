@@ -58,6 +58,7 @@ start_trigger: str                      = 'moving_averages'
 global_tracker_multiplier: float        = 1.1
 profit_decrease_barrier: float          = 0.93
 profit_increase_barrier: float          = 1.6
+respect_overnight: bool                 = True
 
 def reverse_(symbol):
     if symbol in []:
