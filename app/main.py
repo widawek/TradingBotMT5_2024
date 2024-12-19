@@ -1056,11 +1056,12 @@ class Bot:
                     sharpe, calmar = calc_result(df1, sharpe_multiplier)
                     sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
                     sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
-                    results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2)))
+                    actual_condition = self.calc_pos_condition(df2)
+                    results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2)), actual_condition)
                     
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
             print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
-            return f_result[0], f_result[1], f_result[2]*f_result[3]
+            return f_result[0], f_result[1], f_result[2]*f_result[3], f_result[4]
         else:
             df1 = self.model_position(500, backtest=True)
             sharpe, calmar = calc_result(df1, sharpe_multiplier)
@@ -1083,11 +1084,11 @@ class Bot:
             else:
                 interval = name_.split('_')[-1]
             marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
-            fast, slow, result = self.trend_backtest(strategy)
+            fast, slow, result, actual_condition = self.trend_backtest(strategy)
             print(name_, interval, fast, slow, round(result, 4))
-            self.strategies.append((name_, strategy, interval, fast, slow, round(result, 4)))
+            self.strategies.append((name_, strategy, interval, fast, slow, round(result, 4), actual_condition))
         self.strategies = sorted(self.strategies, key=lambda x: x[-1], reverse=True)
-        self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
+        self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0) and (i[6] > 0))]
 
         # use only three best strategies
         if len(self.strategies) > 6+add_number:
