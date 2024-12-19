@@ -412,7 +412,7 @@ class Bot:
             self.clean_orders()
 
         # force of strategy condition
-        if self.force < 1 and self.actual_force < 1 and profit < 0:
+        if self.actual_force < 1 and profit < 0:
             self.strategy_number += 1
 
         self.number_of_positions = len(self.positions)
@@ -775,7 +775,7 @@ class Bot:
             self.force, self.actual_force = calc_pos_condition(dfx)
             printer("Strategy force", self.force)
             printer("Strategy actual position", self.actual_force)
-            if self.force < 1 and self.actual_force < 1:
+            if self.actual_force < 1:
                 print("Next strategy, because the strategy is too weak.")
 
             # if force < 1:
