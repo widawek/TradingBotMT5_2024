@@ -266,11 +266,11 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
     if check_week_ago:
         today = dt.now().date()
         week_ago_date = dt.now().date() - timedelta(days=7)
-        two_weeks_ago_date = dt.now().date() - timedelta(days=14)
+        #two_weeks_ago_date = dt.now().date() - timedelta(days=14)
         
         df = df[(df['date'] == today)|
-                (df['date'] == week_ago_date)|
-                (df['date'] == two_weeks_ago_date)]
+                (df['date'] == week_ago_date)]#|
+                #(df['date'] == two_weeks_ago_date)]
     
     df.reset_index(drop=True, inplace=True)
     df = df.dropna()
