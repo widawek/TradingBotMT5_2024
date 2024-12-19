@@ -1042,7 +1042,7 @@ class Bot:
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
         small_bt_bars = calculate_bars_to_past(df_raw)
 
-        if strategy.__name__.startswith('model'):
+        if not strategy.__name__.startswith('model'):
             results = []
             for slow in trange(3, 50):
                 for fast in range(2, 21):
@@ -1057,7 +1057,7 @@ class Bot:
                     sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
                     sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
                     _, actual_condition = self.calc_pos_condition(df2)
-                    results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2)), actual_condition)
+                    results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2), actual_condition))
                     
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
             print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
@@ -1101,7 +1101,7 @@ class Bot:
             self.test_strategies()
         else:
             for i in self.strategies:
-                print(i[0], i[2], i[3], i[4], i[5])
+                print(i[0], i[2], i[3], i[4], i[5], i[6])
             self.strategy_number = 0
 
 
