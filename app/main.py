@@ -1030,68 +1030,8 @@ class Bot:
 
     @class_errors
     def trend_backtest(self, strategy):
-
         print(strategy.__name__)
-        def calculate_strategy_returns(df):
-            """The dataframe has to have a 'stance' column."""
-            z = [len(str(x).split(".")[1])+1 for x in list(df["close"][:101])]
-            divider = 10**round((sum(z)/len(z))-1)
-            spread_mean = df.spread/divider
-            spread_mean = spread_mean.mean()
-            df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
-                                    ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
-            df['mkt_move'] = np.log(df.close/df.close.shift(1))
-            df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open))*leverage
-            #df['strategy'] = (1+df['return']).cumprod() - 1
-            return df
 
-        def calmar_ratio(returns, periods_per_year=252):
-            avg_return = np.mean(returns)
-            annualized_return = (1 + avg_return) ** periods_per_year - 1
-            cumulative_returns = np.cumsum(returns)
-            running_max = np.maximum.accumulate(cumulative_returns)
-            drawdowns = running_max - cumulative_returns
-            max_drawdown = np.max(drawdowns)
-            return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
-        
-        def calc_result(df, sharpe_multiplier, check_week_ago=False):
-            if check_week_ago:
-                today = dt.now().date()
-                week_ago_date = dt.now().date() - timedelta(days=7)
-                two_weeks_ago_date = dt.now().date() - timedelta(days=14)
-                
-                df = df[(df['date'] == today)|
-                        (df['date'] == week_ago_date)|
-                        (df['date'] == two_weeks_ago_date)]
-            
-            df.reset_index(drop=True, inplace=True)
-            df = df.dropna()
-            cross = df['cross'].sum()/len(df)
-            sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 2)
-            
-            if not check_week_ago:
-                calmar = calmar_ratio(df['return'])
-            else:
-                calmar = 0
-            return sharpe, calmar
-
-        def delete_last_day(df):
-            df['date_xy'] = df['time'].dt.date
-            x = list(set(np.unique(df['date_xy'])))
-            x.sort()
-            df = df[df['date_xy'] != x[0]]
-            return df
-
-        def calculate_bars_to_past(df):
-            df_dates = df.copy()
-            df_dates['date'] = df_dates['time'].dt.date
-            if any([True for i in np.unique(df_dates['date']) if i.weekday() in [5,6]]):
-                small_bt_bars = 12000
-            else:
-                small_bt_bars = 10000
-            return small_bt_bars
-
-        
         if strategy.__name__ == 'model':
             interval = self.model_interval
         else:
