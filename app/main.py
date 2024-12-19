@@ -1032,7 +1032,8 @@ class Bot:
     def trend_backtest(self, strategy):
 
         print(strategy.__name__)
-        def strategy3(df):
+        def calculate_strategy_returns(df):
+            """The dataframe has to have a 'stance' column."""
             z = [len(str(x).split(".")[1])+1 for x in list(df["close"][:101])]
             divider = 10**round((sum(z)/len(z))-1)
             spread_mean = df.spread/divider
@@ -1041,7 +1042,7 @@ class Bot:
                                     ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
             df['mkt_move'] = np.log(df.close/df.close.shift(1))
             df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open))*leverage
-            df['strategy'] = (1+df['return']).cumprod() - 1
+            #df['strategy'] = (1+df['return']).cumprod() - 1
             return df
 
         def calmar_ratio(returns, periods_per_year=252):
@@ -1054,7 +1055,7 @@ class Bot:
             return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
         
         def calc_result(df, sharpe_multiplier, check_week_ago=False):
-            df = strategy3(df)
+            df = calculate_strategy_returns(df)
             df['date'] = df['time'].dt.date
             x = list(set(np.unique(df['date'])))
             df = df[df['date'] != x[0]]
