@@ -1004,8 +1004,6 @@ class Bot:
                 volume=self.positions[0].volume,
                 price_open=self.positions[0].price_open,
                 comment=self.positions[0].comment,
-                reverse_mode=self.reverse,
-                trigger=self.trigger,
                 trigger_divider=self.trigger_model_divider,
                 decline_factor=self.profit_decline_factor,
                 profit_factor=profit_factor,
@@ -1014,10 +1012,8 @@ class Bot:
                 weekday=Bot.weekday,
                 trend=self.trend,
                 tiktok=self.tiktok,
-                number_of_models = self.model_counter,
-                market=self.market,
-                full_reverse=self.reverse_it_all,
-                strategy=self.strategies[self.strategy_number][0]
+                strategy=self.strategies[self.strategy_number][0],
+                marker=self.strategies[self.strategy_number][7]
             )
 
             mean_profit = np.mean(self.profits)
