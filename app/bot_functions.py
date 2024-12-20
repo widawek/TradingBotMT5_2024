@@ -8,6 +8,7 @@ import numpy as np
 import sys
 sys.path.append("..")
 from app.functions import get_data
+from app.mg_functions import omega_ratio
 mt.initialize()
 
 
@@ -267,12 +268,8 @@ def calmar_ratio(returns, periods_per_year=252):
 def calc_result(df, sharpe_multiplier, check_week_ago=False):
     if check_week_ago:
         today = dt.now().date()
-        week_ago_date = dt.now().date() - timedelta(days=7)
-        #two_weeks_ago_date = dt.now().date() - timedelta(days=14)
-        
-        df = df[(df['date_xy'] == today)|
-                (df['date_xy'] == week_ago_date)]#|
-                #(df['date'] == two_weeks_ago_date)]
+        week_ago_date = today - timedelta(days=7)
+        df = df[(df['date_xy'] >= week_ago_date)][:3000]
 
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
@@ -280,9 +277,9 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
     sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 2)
     
     if not check_week_ago:
-        calmar = calmar_ratio(df['return'])
+        calmar = omega_ratio(df['return'])
     else:
-        calmar = 0
+        calmar = 1
     return sharpe, calmar
 
 
