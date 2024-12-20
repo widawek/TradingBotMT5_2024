@@ -130,9 +130,9 @@ class TradingProcessor:
         # Tworzymy instancję klasy DatabaseManager
         self.db_manager = DatabaseManager()
 
-    def process_new_position(self, ticket, symbol, pos_type, open_time, volume, price_open, comment, reverse_mode, trigger,
-                             trigger_divider, decline_factor, profit_factor, calculated_profit, minutes, weekday, trend, tiktok,
-                             number_of_models, market, full_reverse, strategy):
+    def process_new_position(self, ticket, symbol, pos_type, open_time, volume, price_open, comment, trigger_divider,
+                             decline_factor, profit_factor, calculated_profit, minutes, weekday, trend, tiktok,
+                             strategy, marker):
         # Przetwarzanie danych pozycji - np. tutaj możesz dodać logikę obliczeń, walidacji itp.
         # Dodajemy pozycję do bazy danych
         self.db_manager.add_position(
@@ -143,8 +143,6 @@ class TradingProcessor:
             volume=volume,
             price_open=price_open,
             comment=comment,
-            reverse_mode=reverse_mode,
-            trigger=trigger,
             trigger_divider=trigger_divider,
             decline_factor=decline_factor,
             profit_factor=profit_factor,
@@ -153,10 +151,8 @@ class TradingProcessor:
             weekday=weekday,
             trend=trend,
             tiktok=tiktok,
-            number_of_models=number_of_models,
-            market=market,
-            full_reverse=full_reverse,
-            strategy=strategy
+            strategy=strategy,
+            marker=marker
         )
 
     def process_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread,
