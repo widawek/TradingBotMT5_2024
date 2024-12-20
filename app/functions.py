@@ -390,8 +390,7 @@ def import_strategies(to_delate: list) -> list:
     funkcje = [element for element in atrybuty if
                inspect.isfunction(element[1])]
     strategiesList = [i[1] for i in funkcje if i[0] not in to_delate]
-    # for i in strategiesList:
-    #     print(i.__name__)
+    print(f"Number of strategies to check {len(strategiesList}")
     return strategiesList
 
 
