@@ -499,7 +499,10 @@ class Bot:
             df['atr_osc'] = (df['atr']-df['atr'].rolling(length).min())/(df['atr'].rolling(length).max()-df['atr'].rolling(length).min()) + 0.5
             return df['atr_osc'].iloc[-1]
 
-        another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
+        try:
+            another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
+        except AttributeError:
+            another_new_volume_multiplier_from_win_rate_condition = 0.6
         max_pos_margin = int(round(max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition))
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
@@ -744,7 +747,7 @@ class Bot:
         df['strategy_std'] = df['strategy'].rolling(window_).std()/2
         df['strategy_cond'] = df['strategy_mean'] - df['strategy_std']
         df['cond'] = np.where(df['strategy']>df['strategy_cond'], 1, -2)
-        df = win_ratio(df, window_)
+        df = win_ratio(df, 'return', window_)
         cond2 = df['win_ratio_fast'].iloc[-1] > df['win_ratio_slow'].iloc[-1]
         cond = df['cond'].rolling(window_).sum()
         return cond.iloc[-1], df['cond'].iloc[-1], cond2
@@ -765,7 +768,7 @@ class Bot:
             except IndexError as e:
                 print("actual_position_democracy", e)
                 self.test_strategies(add_number=10)
-                strategy = self.strategies[]
+                strategy = self.strategies[self.strategy_number]
             print("Strategia", strategy[0])
             self.interval = strategy[0].split('_')[-1]
             fast = strategy[3]

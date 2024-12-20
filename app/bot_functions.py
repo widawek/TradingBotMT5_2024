@@ -310,7 +310,7 @@ def calculate_bars_to_past(df):
     return small_bt_bars
 
 
-def win_ratio(df, column, window=200, threshold=0):
+def win_ratio(df, column, window=50, threshold=0):
     """
     :Oblicza wskaźnik Omega w sposób rolling dla określonej kolumny DataFrame.
     :param df: DataFrame zawierający dane.
