@@ -24,8 +24,6 @@ class Position(Base):
     volume = Column(Float, nullable=False)
     price_open = Column(Float, nullable=False)
     comment = Column(String, nullable=True)
-    reverse_mode = Column(String, nullable=False)
-    trigger = Column(String, nullable=False)
     trigger_divider = Column(Float, nullable=False)
     decline_factor = Column(Float, nullable=False)
     profit_factor = Column(Float, nullable=False)
@@ -34,10 +32,8 @@ class Position(Base):
     weekday = Column(Integer, nullable=False)
     trend = Column(String, nullable=False)
     tiktok = Column(Integer, nullable=False)
-    number_of_models = Column(Integer, nullable=False)
-    market = Column(String, nullable=False)
-    full_reverse = Column(Boolean, nullable=False)
     strategy = Column(String, nullable=False)
+    marker = Column(String, nullable=False)
 
     # Relacja do tabeli Profit
     profits = relationship("Profit", back_populates="position")
@@ -69,9 +65,9 @@ class DatabaseManager:
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
 
-    def add_position(self, ticket, symbol, pos_type, open_time, volume, price_open, comment, reverse_mode, trigger, trigger_divider,
-                     decline_factor, profit_factor, calculated_profit, minutes, weekday, trend, tiktok, number_of_models, market,
-                     full_reverse, strategy):
+    def add_position(self, ticket, symbol, pos_type, open_time, volume, price_open, comment, trigger_divider,
+                     decline_factor, profit_factor, calculated_profit, minutes, weekday, trend, tiktok,
+                     strategy, marker):
         session = self.Session()
 
         # Sprawdzenie, czy pozycja z danym ticket już istnieje
@@ -90,8 +86,6 @@ class DatabaseManager:
                 volume=volume,
                 price_open=price_open,
                 comment=comment,
-                reverse_mode=reverse_mode,
-                trigger=trigger,
                 trigger_divider=trigger_divider,
                 decline_factor=decline_factor,
                 profit_factor=profit_factor,
@@ -100,10 +94,8 @@ class DatabaseManager:
                 weekday=weekday,
                 trend=trend,
                 tiktok=tiktok,
-                number_of_models=number_of_models,
-                market=market,
-                full_reverse=full_reverse,
-                strategy=strategy
+                strategy=strategy,
+                marker=marker
             )
             session.add(new_position)
             session.commit()
