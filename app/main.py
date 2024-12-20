@@ -1082,6 +1082,21 @@ class Bot:
 
     @class_errors
     def test_strategies(self, add_number=0):
+
+        def sort_strategies(data):
+            sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
+            group_t = [item for item in sorted_data if item[7] == 'counter']
+            group_n = [item for item in sorted_data if item[7] == 'trend']
+            alternating_data = []
+            max_len = max(len(group_t), len(group_n))
+            
+            for i in range(max_len):
+                if i < len(group_t):
+                    alternating_data.append(group_t[i])
+                if i < len(group_n):
+                    alternating_data.append(group_n[i])
+            return alternating_data
+        
         strategies = import_strategies([])
         self.strategies = []
         for strategy in strategies:
@@ -1094,12 +1109,13 @@ class Bot:
                 interval = self.model_interval
             else:
                 interval = name_.split('_')[-1]
-            marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
+            marker = name_.split('_')[-2]
+            #marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
             fast, slow, result, actual_condition = self.trend_backtest(strategy)
             print(name_, interval, fast, slow, round(result, 4), actual_condition)
-            self.strategies.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition))
-        self.strategies = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
+            self.strategies.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, marker))
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
+        self.strategies = sort_strategies(self.strategies)
 
         # use only six best strategies
         if len(self.strategies) > 6+add_number:
@@ -1112,7 +1128,7 @@ class Bot:
             self.test_strategies()
         else:
             for i in self.strategies:
-                print(i[0], i[2], i[3], i[4], i[5], i[6])
+                print(i[0], i[2], i[3], i[4], i[5], i[6], i[7])
             self.strategy_number = 0
 
 
