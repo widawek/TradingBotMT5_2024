@@ -253,6 +253,7 @@ def calculate_strategy_returns(df, leverage):
     #df['strategy'] = (1+df['return']).cumprod() - 1
     return df
 
+
 def calmar_ratio(returns, periods_per_year=252):
     avg_return = np.mean(returns)
     annualized_return = (1 + avg_return) ** periods_per_year - 1
@@ -261,6 +262,7 @@ def calmar_ratio(returns, periods_per_year=252):
     drawdowns = running_max - cumulative_returns
     max_drawdown = np.max(drawdowns)
     return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
+
 
 def calc_result(df, sharpe_multiplier, check_week_ago=False):
     if check_week_ago:
@@ -283,6 +285,7 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
         calmar = 0
     return sharpe, calmar
 
+
 def delete_last_day_and_clean_returns(df, morning_hour, evening_hour, respect_overnight=True):
     df = df.dropna()
     df['date_xy'] = df['time'].dt.date
@@ -296,6 +299,7 @@ def delete_last_day_and_clean_returns(df, morning_hour, evening_hour, respect_ov
     df.reset_index(drop=True, inplace=True)
     return df
 
+
 def calculate_bars_to_past(df):
     df_dates = df.copy()
     df_dates['date'] = df_dates['time'].dt.date
@@ -304,3 +308,30 @@ def calculate_bars_to_past(df):
     else:
         small_bt_bars = 10000
     return small_bt_bars
+
+
+def win_ratio(df, column, window=200, threshold=0):
+    """
+    :Oblicza wskaźnik Omega w sposób rolling dla określonej kolumny DataFrame.
+    :param df: DataFrame zawierający dane.
+    :param column: Nazwa kolumny ze stopami zwrotu.
+    :param window: Wielkość kroczącego okna (domyślnie 200).
+    :param threshold: Minimalna oczekiwana stopa zwrotu (domyślnie 0).
+    :return: DataFrame z nową kolumną zawierającą rolling Omega ratio.
+    """
+    def win_ratio(returns, threshold):
+        # Liczymy liczniki i mianowniki wskaźnika Omega
+        gains = np.sum(returns[returns > threshold] - threshold)
+        losses = np.sum(threshold - returns[returns <= threshold])
+        win_count = np.sum(returns > threshold)
+        loss_count = np.sum(returns <= threshold)
+        return (win_count / loss_count) * (gains / losses) if (losses != 0)&(loss_count!=0) else np.nan  # Unikamy dzielenia przez zero
+        
+    # Obliczanie rolling Omega ratio
+    df['win_ratio'] = df[column].rolling(window).apply(
+        lambda x: win_ratio(x, threshold), raw=True
+    )
+    df['win_ratio_fast'] = df['win_ratio'].rolling(round(window/10)).mean()
+    df['win_ratio_slow'] = df['win_ratio'].rolling(window).mean()
+    return df
+
