@@ -106,6 +106,7 @@ class Bot:
         self.df_d1 = get_data(symbol, "D1", 1, 30)
         self.avg_daily_vol()
         self.round_number = round_number_(symbol)
+        self.mdv = self.mdv_() / 100
         self.volume_calc(position_size, True)
         self.positions_()
         self.load_models_democracy(catalog)
@@ -809,16 +810,17 @@ class Bot:
                     # check if price is nice to open
                     tick = mt.symbol_info_tick(self.symbol)
                     price = round((tick.ask + tick.bid) / 2, self.round_number)
+                    diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
                     match position:
                         case 0: self.good_price_to_open_pos = True if price <= self.strategy_pos_open_price else False
                         case 1: self.good_price_to_open_pos = True if price >= self.strategy_pos_open_price else False
+                        #case 2: self.good_price_to_open_pos = True if abs(diff) < self.mdv else False
                     if self.good_price_to_open_pos:
                         break
 
                     if self.check_new_bar():
                         return self.actual_position_democracy(number_of_bars=number_of_bars)
                     pos = 'LONG' if position==0 else "SHORT"
-                    diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
                     printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
 
                     if self.use_tracker:
