@@ -228,7 +228,7 @@ def avs1_aka_atr_vol_stoch_trend_M1(df_raw, slow, fast):
     return df, position
 
 
-def momen1tum_divergence_strategy_M1(df, slow, fast):
+def momen1tum_divergence_strategy_counter_M1(df, slow, fast):
     df['momentum'] = df['close'] / df.close.rolling(slow).mean()
     df['std'] = df['close'].rolling(slow).std()
     df['lambda'] = df['std'] / df['std'].rolling(slow).mean()
