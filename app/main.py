@@ -421,7 +421,7 @@ class Bot:
 
         # force of strategy condition
         if self.actual_force < 1 and profit < 0:
-            self.strategy_number += 1
+            print("Actual strategy is weak")
 
         self.number_of_positions = len(self.positions)
         account = mt.account_info()
@@ -491,7 +491,7 @@ class Bot:
 
     @class_errors
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
-
+        
         def atr():
             length = 14
             df = get_data(self.symbol, 'M5', 1, 100)
@@ -499,7 +499,8 @@ class Bot:
             df['atr_osc'] = (df['atr']-df['atr'].rolling(length).min())/(df['atr'].rolling(length).max()-df['atr'].rolling(length).min()) + 0.5
             return df['atr_osc'].iloc[-1]
 
-        max_pos_margin = int(round(max_pos_margin * atr()))
+        another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
+        max_pos_margin = int(round(max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition))
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
         price = mt.symbol_info_tick(self.symbol)._asdict()
@@ -743,8 +744,10 @@ class Bot:
         df['strategy_std'] = df['strategy'].rolling(window_).std()/2
         df['strategy_cond'] = df['strategy_mean'] - df['strategy_std']
         df['cond'] = np.where(df['strategy']>df['strategy_cond'], 1, -2)
+        df = win_ratio(df, window_)
+        cond2 = df['win_ratio_fast'].iloc[-1] > df['win_ratio_slow'].iloc[-1]
         cond = df['cond'].rolling(window_).sum()
-        return cond.iloc[-1], df['cond'].iloc[-1]
+        return cond.iloc[-1], df['cond'].iloc[-1], cond2
     
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
@@ -762,7 +765,7 @@ class Bot:
             except IndexError as e:
                 print("actual_position_democracy", e)
                 self.test_strategies(add_number=10)
-                strategy = self.strategies[self.strategy_number]
+                strategy = self.strategies[]
             print("Strategia", strategy[0])
             self.interval = strategy[0].split('_')[-1]
             fast = strategy[3]
@@ -782,7 +785,7 @@ class Bot:
                 printer(f'Position from {strategy[0]}:', f'fast={fast} slow={slow}', base_just=60)
                 printer(f'Position from {strategy[0]}:', position)
 
-            self.force, self.actual_force = self.calc_pos_condition(dfx)
+            self.force, self.actual_force, self.win_ratio_cond = self.calc_pos_condition(dfx)
             printer("Strategy force", self.force)
             printer("Strategy actual position", self.actual_force)
             if self.actual_force < 1:
@@ -1061,7 +1064,7 @@ class Bot:
                     sharpe, calmar = calc_result(df1, sharpe_multiplier)
                     sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
                     sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
-                    _, actual_condition = self.calc_pos_condition(df2)
+                    _, actual_condition, _ = self.calc_pos_condition(df2)
                     results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2), actual_condition))
                     
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
