@@ -319,7 +319,7 @@ def win_ratio(df, column, window=200, threshold=0):
     :param threshold: Minimalna oczekiwana stopa zwrotu (domyślnie 0).
     :return: DataFrame z nową kolumną zawierającą rolling Omega ratio.
     """
-    def win_ratio(returns, threshold):
+    def win_ratio_(returns, threshold):
         # Liczymy liczniki i mianowniki wskaźnika Omega
         gains = np.sum(returns[returns > threshold] - threshold)
         losses = np.sum(threshold - returns[returns <= threshold])
@@ -329,7 +329,7 @@ def win_ratio(df, column, window=200, threshold=0):
         
     # Obliczanie rolling Omega ratio
     df['win_ratio'] = df[column].rolling(window).apply(
-        lambda x: win_ratio(x, threshold), raw=True
+        lambda x: win_ratio_(x, threshold), raw=True
     )
     df['win_ratio_fast'] = df['win_ratio'].rolling(round(window/10)).mean()
     df['win_ratio_slow'] = df['win_ratio'].rolling(window).mean()
