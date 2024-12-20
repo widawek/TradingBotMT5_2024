@@ -72,8 +72,7 @@ class Bot:
     def __init__(self, symbol):
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
-        self.number_of_bars_for_backtest = 23000
-        self.reverse_it_all = reverse_it_all
+        self.number_of_bars_for_backtest = 20000
         self.changer_reverse = False
         printer(dt.now(), symbol)
         self.symbol = symbol
@@ -102,7 +101,6 @@ class Bot:
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
         self.trigger_model_divider = avg_daily_vol_for_divider(symbol, trigger_model_divider_factor)
         self.trend_or_not = trend_or_not(symbol)
-        self.reverse = reverse_(symbol)
         self.df_d1 = get_data(symbol, "D1", 1, 30)
         self.avg_daily_vol()
         self.round_number = round_number_(symbol)
@@ -123,19 +121,6 @@ class Bot:
             return 0
         return int((dt.now() - dt_from_timestamp - timedelta(hours=tz_diff)).seconds/60)
 
-    @class_errors
-    def change_trigger_or_reverse(self, what):
-        text_ = 'Model of position making is'
-        match what:
-            case 'trigger':
-                self.trigger = changer(self.trigger, 'moving_averages', 'model')
-            case 'reverse':
-                self.reverse = changer(self.reverse, 'reverse', 'normal')
-            case 'both':
-                self.trigger = changer(self.trigger, 'moving_averages', 'model')
-                self.reverse = changer(self.reverse, 'reverse', 'normal')
-        printer(text_, f'{self.trigger}, {self.reverse}')
-        self.change = 1
 
     @class_errors
     def if_tiktok(self):
@@ -169,9 +154,6 @@ class Bot:
                 self.tiktok -= 1
             elif (profit_ < 0) or (last_two < 0):
                 self.tiktok += 1
-            # elif (profit_ < 0 and self.tiktok == 1) or (last_two < 0):
-            #     #self.change_trigger_or_reverse('trigger')
-            #     self.tiktok += 1
             else:
                 pass
         else:
@@ -269,10 +251,6 @@ class Bot:
                 if len(self.positions) != 0:
                     profit = sum([i[-4] for i in self.positions])
 
-                    # BotReverse
-                    if self.reverse_it_all:
-                        profit = -profit
-
                     if self.profit0 is None:
                         self.profit0 = profit
                     self.profits.append(profit+self.profit0)
@@ -300,9 +278,7 @@ class Bot:
                         self.clean_orders()
 
                     # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                    elif (profit > self.profit_needed/(profit_factor*1.5) and not self.reverse_it_all) or \
-                        (profit < -self.profit_needed/(profit_factor*1.5) and self.reverse_it_all):
-                        #and (position_time > self.pos_time/(profit_factor*1.5))
+                    elif (profit > self.profit_needed/(profit_factor*1.5)):
                         _ = self.fake_position_robot()
 
                     if self.print_condition():
@@ -372,7 +348,6 @@ class Bot:
     @class_errors
     def request_get(self):
         if not self.positions:
-            #checkout_report(self.symbol, self.reverse, self.trigger, self.reverse_it_all)
             pos_type = self.actual_position_democracy()
             self.request(actions['deal'], pos_type)
         self.positions_()
@@ -457,7 +432,6 @@ class Bot:
         printer("Profit to margin:", f"{profit_to_margin:.2f} %")
         printer("Profit to balance:", f"{profit_to_balance:.2f} %")
         printer("Actual position from model:", self.pos_type)
-        printer("Mode:", self.reverse)
         printer("Fake position:", self.fake_position)
         printer("Fake counter:", self.fake_counter)
         printer("Trend:", self.trend)
@@ -530,7 +504,6 @@ class Bot:
         self.kill_position_profit = round(self.kill_position_profit, 2)# * (1+self.multi_voltage('M5', 33)), 2)
         self.tp_miner = round(self.kill_position_profit * tp_miner / kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
-        #self.reverse_full_reverse_from_reverse_to_no_reverse_but_no_reverse_position_only_check()
         printer('Min volume:', min_volume)
         printer('Calculated volume:', volume)
         printer("Target:", f"{self.tp_miner:.2f} $")
@@ -618,7 +591,6 @@ class Bot:
     @class_errors
     def load_models_democracy(self, directory, backtest=False):
         self.trigger = start_trigger
-        self.reverse = reverse_(self.symbol)
         self.tiktok = 0
         self.change = 0
         model_names = self.find_files(directory)
@@ -839,55 +811,8 @@ class Bot:
             return self.actual_position_democracy(number_of_bars=number_of_bars*2)
         self.pos_time = interval_time(self.interval)
 
-        # if self.reverse_it_all:
-        #     position = changer(position, 0, 1)
-
         print("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
         return position
-
-    @class_errors
-    def what_trend_is_it(self, posType):
-        # test neutral trend
-        return self.position_size
-
-        # smallest = int(self.position_size/2)
-        # smaller = int(self.position_size/1.5)
-        # normal = self.position_size
-        # bigger = int(self.position_size*1.5)
-        # biggest = int(self.position_size*2)
-        # wow = int(self.position_size*3)
-
-        # self.trend = vwap_std(self.symbol)
-
-        # # BotReverse
-        # if self.reverse_it_all:
-        #     posType = changer(posType, 0, 1)
-
-        # if posType == (0 if not self.trend_or_not else 1):
-        #     match self.trend:
-        #         case 'sold_out': return wow  # price is low
-        #         case 'long_strong': return normal  # price is high
-        #         case 'long_normal': return smaller
-        #         case 'long_weak': return bigger  # price is low
-        #         case 'long_super_weak': return biggest  # price is low
-        #         case 'short_strong': return normal  # price is low
-        #         case 'short_normal': return smaller
-        #         case 'short_weak': return smaller  # price is high
-        #         case 'short_super_weak': return smallest
-
-        # elif posType == (1 if not self.trend_or_not else 0):
-        #     match self.trend:
-        #         case 'overbought': return wow
-        #         case 'long_strong': return normal
-        #         case 'long_normal': return smaller
-        #         case 'long_weak': return smaller
-        #         case 'long_super_weak': return smallest
-        #         case 'short_strong': return normal
-        #         case 'short_normal': return smaller
-        #         case 'short_weak': return bigger
-        #         case 'short_super_weak': return biggest
-
-        # return position_size
 
     @class_errors
     def request(self, action, posType, price=None):
@@ -900,7 +825,6 @@ class Bot:
             else:
                 posType = pendings["short_stop"]
 
-        position_size = self.what_trend_is_it(posType)
         self.volume_calc(position_size, True)
         if self.trend_or_not:
             letter = "t"
@@ -1059,13 +983,12 @@ class Bot:
                     df1, position = strategy(df_raw, slow, fast)
                     df1 = calculate_strategy_returns(df1, leverage)
                     df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
-                    df2 = df1.copy()[-small_bt_bars:]
-                    
+                    #df2 = df1.copy()[-small_bt_bars:]
                     sharpe, calmar = calc_result(df1, sharpe_multiplier)
-                    sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
-                    sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
-                    _, actual_condition, _ = self.calc_pos_condition(df2)
-                    results.append((fast, slow, round(np.mean(sharpe+sharpe2+sharpe3), 3), np.mean(calmar+calmar2), actual_condition))
+                    sharpe2, calmar2 = calc_result(df1, sharpe_multiplier, True)
+                    #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
+                    _, actual_condition, _ = self.calc_pos_condition(df1)
+                    results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(calmar+calmar2), actual_condition))
                     
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
             print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")

@@ -269,18 +269,15 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
     if check_week_ago:
         today = dt.now().date()
         week_ago_date = today - timedelta(days=7)
-        df = df[(df['date_xy'] >= week_ago_date)][:3000]
+        df = df[(df['date_xy'] >= week_ago_date)]
 
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
     cross = df['cross'].sum()/len(df)
     sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 2)
-    
-    if not check_week_ago:
-        calmar = omega_ratio(df['return'])
-    else:
-        calmar = 1
-    return sharpe, calmar
+    omega = omega_ratio(df['return'])
+
+    return sharpe, omega
 
 
 def delete_last_day_and_clean_returns(df, morning_hour, evening_hour, respect_overnight=True):

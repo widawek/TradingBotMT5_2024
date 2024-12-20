@@ -50,7 +50,6 @@ position_size: int                      = int((100/len(symbols))*0.8)  # percent
 kill_multiplier: float                  = 1.5  # loss of daily volatility by one position multiplier
 tp_miner: int                           = 3
 master_interval: str                    = intervals[0]
-reverse_it_all: bool                    = False
 trigger_model_divider_factor: int       = 7
 base_fake_interval: str                 = 'M2'
 use_moving_averages: bool               = False
@@ -59,8 +58,3 @@ global_tracker_multiplier: float        = 1.1
 profit_decrease_barrier: float          = 0.93
 profit_increase_barrier: float          = 1.6
 respect_overnight: bool                 = True
-
-def reverse_(symbol):
-    if symbol in []:
-        return 'reverse'
-    return 'normal'
