@@ -1082,7 +1082,7 @@ class Bot:
 
     @class_errors
     def test_strategies(self, add_number=0):
-
+        
         def sort_strategies(data):
             sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
             group_t = [item for item in sorted_data if item[7] == 'counter']
@@ -1096,7 +1096,8 @@ class Bot:
                 if i < len(group_n):
                     alternating_data.append(group_n[i])
             return alternating_data
-        
+
+        super_start_time = time.time()
         strategies = import_strategies([])
         self.strategies = []
         for strategy in strategies:
@@ -1117,6 +1118,8 @@ class Bot:
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
         self.strategies = sort_strategies(self.strategies)
 
+        time_info(time.time()-super_start_time, 'Total duration')
+        
         # use only six best strategies
         if len(self.strategies) > 6+add_number:
             self.strategies = self.strategies[:6+add_number]
