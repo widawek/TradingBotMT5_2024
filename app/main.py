@@ -73,9 +73,9 @@ class Bot:
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
         self.number_of_bars_for_backtest = 20000
-        self.changer_reverse = False
         printer(dt.now(), symbol)
         self.symbol = symbol
+        self.active_session()
         self.magic = magic_(symbol, 'bot_2024')
         self.model_counter = None
         self.profit0 = None
@@ -111,7 +111,6 @@ class Bot:
         self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_(self.model_interval), 0, 1)[0][0]
         self.interval = self.model_interval
         self.test_strategies()
-        self.active_session()
 
     @class_errors
     def position_time(self):
