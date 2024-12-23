@@ -12,7 +12,7 @@ import sys
 from typing import Union, Tuple
 sys.path.append("..")
 from app.decorators import validate_input_types
-
+mt.initialize()
 
 
 def pandas_options() -> None:

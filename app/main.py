@@ -97,19 +97,19 @@ class Bot:
         self.global_positions_stats = []
         self.position_size = position_size
         self.trigger = start_trigger # 'model' 'moving_averages'
-        self.market = 'e' if dt.now().hour < change_hour else 'u'
+        #self.market = 'e' if dt.now().hour < change_hour else 'u'
         self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
         self.trigger_model_divider = avg_daily_vol_for_divider(symbol, trigger_model_divider_factor)
         self.trend_or_not = trend_or_not(symbol)
         self.df_d1 = get_data(symbol, "D1", 1, 30)
         self.avg_daily_vol()
         self.round_number = round_number_(symbol)
-        self.mdv = self.mdv_() / 100
+        #self.mdv = self.mdv_() / 100
         self.volume_calc(position_size, True)
         self.positions_()
         #self.load_models_democracy(catalog)
-        self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_(self.model_interval), 0, 1)[0][0]
-        self.interval = self.model_interval
+        self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_("M1"), 0, 1)[0][0]
+        self.interval = "M1"
         self.test_strategies()
 
     @class_errors
@@ -433,7 +433,7 @@ class Bot:
         printer("Actual position from model:", self.pos_type)
         printer("Fake position:", self.fake_position)
         printer("Fake counter:", self.fake_counter)
-        printer("Trend:", self.trend)
+        #printer("Trend:", self.trend)
         try:
             printer("Strategy name:", self.strategies[self.strategy_number][0])
         except IndexError as e:
@@ -471,7 +471,6 @@ class Bot:
             df['atr'] = df.ta.atr(length=length)
             df['atr_osc'] = (df['atr']-df['atr'].rolling(length).min())/(df['atr'].rolling(length).max()-df['atr'].rolling(length).min()) + 0.5
             return df['atr_osc'].iloc[-1]
-
         try:
             another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
         except AttributeError:
@@ -521,7 +520,10 @@ class Bot:
         df = win_ratio(df, 'return', window_)
         cond2 = df['win_ratio_fast'].iloc[-1] > df['win_ratio_slow'].iloc[-1]
         cond = df['cond'].rolling(window_).sum()
-        return cond.iloc[-1], df['cond'].iloc[-1], cond2
+        df['date_xc'] = df['time'].dt.date
+        df = df[df['date_xc'] == dt.now().date()]
+        ret = (1+df['return']).cumprod() - 1
+        return cond.iloc[-1], df['cond'].iloc[-1], cond2, round(ret.iloc[-1]*100, 2)
 
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
@@ -559,12 +561,13 @@ class Bot:
                 printer(f'Position from {strategy[0]}:', f'fast={fast} slow={slow}', base_just=60)
                 printer(f'Position from {strategy[0]}:', position)
 
-            self.force, self.actual_force, self.win_ratio_cond = self.calc_pos_condition(dfx)
+            self.force, self.actual_force, self.win_ratio_cond, daily_return = self.calc_pos_condition(dfx)
             self.actual_force = True if self.actual_force == 1 else False
             printer("Strategy force", self.force)
             printer("Strategy actual position", self.actual_force)
-            if self.actual_force < 1:
-                print("Next strategy, because the strategy is too weak.")
+            printer("Daily return", daily_return)
+            # if self.actual_force < 1:
+            #     print("Next strategy, because the strategy is too weak.")
 
             position = int(0) if position == 1 else int(1)
 
@@ -790,33 +793,33 @@ class Bot:
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
         small_bt_bars = calculate_bars_to_past(df_raw)
 
-        if not strategy.__name__.startswith('model'):
-            results = []
-            for slow in trange(3, 50):
-                for fast in range(2, 21):
-                    if fast == slow:
-                        continue
-                    df1, position = strategy(df_raw, slow, fast)
-                    df1 = calculate_strategy_returns(df1, leverage)
-                    df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
-                    #df2 = df1.copy()[-small_bt_bars:]
-                    sharpe, calmar = calc_result(df1, sharpe_multiplier)
-                    sharpe2, calmar2 = calc_result(df1, sharpe_multiplier, True)
-                    #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
-                    _, actual_condition, _ = self.calc_pos_condition(df1)
-                    results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(calmar+calmar2), actual_condition))
+        #if not strategy.__name__.startswith('model'):
+        results = []
+        for slow in trange(3, 50):
+            for fast in range(2, 21):
+                if fast == slow:
+                    continue
+                df1, position = strategy(df_raw, slow, fast)
+                df1 = calculate_strategy_returns(df1, leverage)
+                df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
+                #df2 = df1.copy()[-small_bt_bars:]
+                sharpe, calmar = calc_result(df1, sharpe_multiplier)
+                sharpe2, calmar2 = calc_result(df1, sharpe_multiplier, True)
+                #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
+                _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
+                results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(calmar+calmar2), actual_condition, daily_return))
 
-            f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
-            print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
-            return f_result[0], f_result[1], f_result[2]*f_result[3], f_result[4]
-        else:
-            df1 = self.model_position(500, backtest=True)
-            sharpe, calmar = calc_result(df1, sharpe_multiplier)
-            self.number_of_bars_for_backtest = small_bt_bars
-            df2 = self.model_position(500, backtest=True)
-            sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
-            self.number_of_bars_for_backtest = 20000
-            return 0, 0, round(((sharpe+sharpe2)/2)*(calmar+calmar2)/2, 3)
+        f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
+        print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
+        return f_result[0], f_result[1], f_result[2]*f_result[3], f_result[4], f_result[5]
+        # else:
+        #     df1 = self.model_position(500, backtest=True)
+        #     sharpe, calmar = calc_result(df1, sharpe_multiplier)
+        #     self.number_of_bars_for_backtest = small_bt_bars
+        #     df2 = self.model_position(500, backtest=True)
+        #     sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
+        #     self.number_of_bars_for_backtest = 20000
+        #     return 0, 0, round(((sharpe+sharpe2)/2)*(calmar+calmar2)/2, 3)
 
     @class_errors
     def test_strategies(self, add_number=0):
@@ -842,19 +845,19 @@ class Bot:
             self.is_this_the_end()
             self.check_trigger()
             name_ = strategy.__name__
-            if name_ == 'model':
-                if self.model_counter == 0:
-                    continue
-                interval = self.model_interval
-            else:
-                interval = name_.split('_')[-1]
+            # if name_ == 'model':
+            #     if self.model_counter == 0:
+            #         continue
+            #     interval = self.model_interval
+            # else:
+            interval = name_.split('_')[-1]
             kind = name_.split('_')[-2]
             #marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
-            fast, slow, result, actual_condition = self.trend_backtest(strategy)
-            print(name_, interval, fast, slow, round(result, 4), actual_condition)
-            self.strategies.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind))
+            fast, slow, result, actual_condition, daily_return = self.trend_backtest(strategy)
+            print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return)
+            self.strategies.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return))
 
-        for name_, _, interval, fast, slow, result, _, kind in self.strategies:
+        for name_, _, interval, fast, slow, result, _, kind, _ in self.strategies:
             self.write_to_backtest(name_, interval, result, kind, fast, slow)
 
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
@@ -873,7 +876,7 @@ class Bot:
             self.test_strategies()
         else:
             for i in self.strategies:
-                print(i[0], i[2], i[3], i[4], i[5], i[6], i[7])
+                print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8])
             self.strategy_number = 0
 
 
