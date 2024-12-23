@@ -1,6 +1,6 @@
 import subprocess
 from app.functions import timer, want_to_delete_old_models, printer
-from app.model_generator import generate_my_models
+#from app.model_generator import generate_my_models
 from config.parameters import *
 
 

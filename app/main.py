@@ -12,7 +12,7 @@ import xgboost as xgb
 from extensions.symbols_rank import symbol_stats
 from app.functions import *
 from app.decorators import class_errors
-from app.model_generator import data_operations, evening_hour, probability_edge
+#from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import *
 from app.database_class import TradingProcessor
 from app.bot_functions import *
@@ -107,7 +107,7 @@ class Bot:
         self.mdv = self.mdv_() / 100
         self.volume_calc(position_size, True)
         self.positions_()
-        self.load_models_democracy(catalog)
+        #self.load_models_democracy(catalog)
         self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_(self.model_interval), 0, 1)[0][0]
         self.interval = self.model_interval
         self.test_strategies()
@@ -509,206 +509,6 @@ class Bot:
         printer("Killer:", f"{-self.kill_position_profit:.2f} $")
 
     @class_errors
-    def find_files(self, directory):
-        """
-        Znajduje pliki w danym folderze, których nazwy zawierają określone słowo kluczowe.
-
-        Args:
-        - directory (str): Ścieżka do folderu, w którym mają być przeszukiwane pliki.
-        - symbol (str): Słowo kluczowe, które ma występować w nazwach plików.
-
-        Returns:
-        - list: Lista plików, których nazwy zawierają określone słowo kluczowe.
-        """
-        matching_files = []
-        for filename in os.listdir(directory):
-            if self.symbol in filename:
-                matching_files.append(filename[:-6].split('_')[:-1])
-        df = pd.DataFrame(matching_files, columns=['market', 'strategy', 'ma_fast', 'ma_slow',
-            'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result'])
-
-        df['ma_fast'] = df['ma_fast'].astype(int)
-        df['ma_slow'] = df['ma_slow'].astype(int)
-        df['factor'] = df['factor'].astype(int)
-        df['result'] = df['result'].astype(int)
-        df = df.sort_values(by='result', ascending=False)[::2]
-        df.reset_index(drop=True, inplace=True)
-        df['rank'] = df.index + 1
-        _ = df['rank'].to_list()
-        _.reverse()
-        df['rank'] = _
-        # print(df)
-        self.model_counter = len(df[df['market'] == self.market])
-        printer("Ilość modeli:", self.model_counter)
-        if self.model_counter > max_number_of_models:
-            self.model_counter = max_number_of_models
-        if len(df) < 1:
-            print(f"Za mało modeli --> ({self.model_counter})")
-            return []
-            # input("Wciśnij cokolwek żeby wyjść.")
-            # sys.exit(1)
-        names = []
-        create_df = []
-        for i in range(0, len(df)):
-            market = df['market'].iloc[i]
-            strategy = df['strategy'].iloc[i]
-            ma_fast = df['ma_fast'].iloc[i]
-            ma_slow = df['ma_slow'].iloc[i]
-            learning_rate = df['learning_rate'].iloc[i]
-            training_set = df['training_set'].iloc[i]
-            interval = df['interval'].iloc[i]
-            factor = df['factor'].iloc[i]
-            result = df['result'].iloc[i]
-            if game_system != 'invertedrank_democracy':
-                rank = df['rank'].iloc[i]
-            else:
-                rank = df['rank'].iloc[len(df)-i-1]
-            name = f'{market}_{strategy}_{ma_fast}_{ma_slow}_{learning_rate}_{training_set}_{self.symbol}_{interval}_{factor}_{result}'
-            names.append([name, rank])
-            create_df.append(f'{name}'.split('_'))
-
-        if game_system == 'weighted_democracy':
-            df_result_filter = pd.DataFrame(create_df, columns=['market', 'strategy', 'ma_fast', 'ma_slow',
-                    'learning_rate', 'training_set', 'symbol', 'interval', 'factor', 'result']
-                    )
-            df_result_filter['result'] = df_result_filter['result'].astype(int)
-            range_ = len(create_df)
-            for n in range(range_):
-                sum_ = int(df_result_filter.copy().drop(range(n, len(df_result_filter)))['result'].sum()/2)
-                result_ = df_result_filter['result'].iloc[n]
-                if result_ > sum_:
-                    old_list = names[n][0].split('_')
-                    index_ = int(len(df_result_filter)/2)-3 if int(len(df_result_filter)/2) > 6 else int(len(df_result_filter)/2)-1
-                    old_list[-1] = str(df_result_filter['result'].iloc[index_])
-                    new_str = '_'.join(old_list)
-                    rename_files_in_directory(names[n][0], new_str, catalog)
-                    names[n][0] = new_str
-                else:
-                    break
-        return names
-
-    @class_errors
-    def load_models_democracy(self, directory, backtest=False):
-        self.trigger = start_trigger
-        self.tiktok = 0
-        self.change = 0
-        model_names = self.find_files(directory)
-        self.buy_models = []
-        self.sell_models = []
-        self.factors = []
-        intervals = []
-        ma_list = []
-        print(self.market)
-        for model_name in model_names:
-            if model_name[0].split('_')[-10] == self.market or backtest:
-                model_path_buy = os.path.join(directory, f'{model_name[0]}_buy.model')
-                model_path_sell = os.path.join(directory, f'{model_name[0]}_sell.model')
-                model_buy = xgb.Booster()
-                model_sell = xgb.Booster()
-                model_buy.load_model(model_path_buy)
-                model_sell.load_model(model_path_sell)
-                self.buy_models.append((model_buy, f'{model_name[0]}_{model_name[1]}'))
-                self.sell_models.append((model_sell, f'{model_name[0]}_{model_name[1]}'))
-                self.factors.append(int(model_name[0].split('_')[-2])) # factor
-                intervals.append(model_name[0].split('_')[-3]) # interval
-                ma_list.append((int(model_name[0].split('_')[-8]), int(model_name[0].split('_')[-7])))
-            else:
-                continue
-        assert len(self.buy_models) == len(self.sell_models)
-
-        self.mdv = self.mdv_() / 4
-        if len(intervals) == 0:
-            self.model_interval = 'M1'
-        else:
-            self.model_interval = sorted(list(set(intervals)), key=lambda i: int(i[1:]))[0]
-
-    @class_errors
-    def model_position(self, number_of_bars, backtest=False):
-        if backtest:
-            #self.market = 'x'
-            self.load_models_democracy(catalog, True)
-            main_df = get_data_for_model(self.symbol, self.model_interval, 1, self.number_of_bars_for_backtest)
-            main_df['stance'] = 0
-        stance_values = []
-        dataframes = []
-        i = 0
-        start = time.time()
-        for mbuy, msell, factor in zip(self.buy_models, self.sell_models, self.factors):
-            name_ = f"{mbuy[1].split('_')[-4]}_{factor}"
-            if backtest:
-                number_of_bars = self.number_of_bars_for_backtest
-            else:
-                number_of_bars = int(factor**2 + number_of_bars)
-
-            if i==0:
-                df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, number_of_bars) # how_many_bars
-                df = data_operations(df, factor)
-                dataframes.append((df, name_))
-            else:
-                if any(nazwa == name_ for _, nazwa in dataframes):
-                    for dataframe, nazwa in dataframes:
-                        if nazwa == name_:
-                            df = dataframe
-                            break
-                else:
-                    df = get_data_for_model(self.symbol, mbuy[1].split('_')[-4], 1, number_of_bars) # how_many_bars
-                    df = data_operations(df, factor)
-                    dataframes.append((df, name_))
-            dfx = df.copy()
-            dtest_buy = xgb.DMatrix(df)
-            dtest_sell = xgb.DMatrix(df)
-            buy = mbuy[0].predict(dtest_buy)
-            sell = msell[0].predict(dtest_sell)
-            buy = np.where(buy > probability_edge, 1, 0)
-            sell = np.where(sell > probability_edge, -1, 0)
-            dfx['stance'] = buy + sell
-            dfx['stance'] = dfx['stance'].replace(0, np.NaN)
-            dfx['stance'] = dfx['stance'].ffill()
-            if backtest:
-                main_df['stance'] += dfx['stance'] * int(mbuy[1].split('_')[-2])
-            position_ = dfx['stance'].iloc[-1] * int(mbuy[1].split('_')[-2])
-            try:
-                _ = int(position_)
-            except Exception:
-                continue
-            stance_values.append(int(position_))
-            i+=1
-            if i >= self.model_counter:
-                break
-        end = time.time()
-        duration = end-start
-        time_info(duration, "Decision time")
-        del dataframes
-        print('Stances: ', stance_values)
-        sum_of_position = np.sum(stance_values)
-
-        def longs(stance_values):
-            return round(np.sum([1 for i in stance_values if i > 0]) / len(stance_values), 2)
-
-        def longs_democratic(stance_values):
-            all_ = [abs(i) for i in stance_values]
-            return round(np.sum(stance_values) / np.sum(all_), 2)
-
-        if not backtest:
-            force_of_democratic = ic(longs_democratic(stance_values))
-            printer("Force of long democratic votes:", force_of_democratic)
-            try:
-                fx = ic(longs(stance_values))
-                printer("Percent of long votes:", fx)
-            except Exception:
-                pass
-            if sum_of_position != 0:
-                position = 0 if sum_of_position > 0 else 1
-            else:
-                position = self.pos_creator()
-
-        if backtest:
-            main_df['stance'] = np.where(main_df['stance'] >= 0, 1, -1)
-            print(main_df)
-            return main_df
-        return main_df, position
-
-    @class_errors
     def calc_pos_condition(self, df1, window_=50):
         df = df1.copy()[-window_*10:]
         df['mkt_move'] = np.log(df.close/df.close.shift())
@@ -729,10 +529,10 @@ class Bot:
             if self.fake_position:
                 return self.fake_position_robot()
 
-            market = 'e' if dt.now().hour < change_hour else 'u'
-            if market != self.market:
-                self.market = market
-                self.load_models_democracy(catalog)
+            # market = 'e' if dt.now().hour < change_hour else 'u'
+            # if market != self.market:
+            #     self.market = market
+            #     self.load_models_democracy(catalog)
 
             try:
                 strategy = self.strategies[self.strategy_number]
@@ -746,15 +546,15 @@ class Bot:
             slow = strategy[4]
             print("Interwał", self.interval)
 
-            if 'model' in strategy[0]:
-                dfx, position = self.model_position(number_of_bars, backtest=False)
-                printer(f'Position from {strategy[0]}:', position)
-            else:
-                dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + 1440)) # how_many_bars
+            # if 'model' in strategy[0]:
+            #     dfx, position = self.model_position(number_of_bars, backtest=False)
+            #     printer(f'Position from {strategy[0]}:', position)
+            # else:
+            dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + 1440)) # how_many_bars
+            dfx, position = strategy[1](dfx, slow, fast)
+            if position not in [-1, 1]:
+                dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + number_of_bars*20)) # how_many_bars
                 dfx, position = strategy[1](dfx, slow, fast)
-                if position not in [-1, 1]:
-                    dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + number_of_bars*20)) # how_many_bars
-                    dfx, position = strategy[1](dfx, slow, fast)
 
                 printer(f'Position from {strategy[0]}:', f'fast={fast} slow={slow}', base_just=60)
                 printer(f'Position from {strategy[0]}:', position)
