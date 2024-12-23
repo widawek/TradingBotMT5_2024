@@ -74,6 +74,7 @@ def z_stoch2_trend_M2(df_raw, slow, fast):
     position = df['stance'].iloc[-1]
     return df, position
 
+
 def techn1ique3_trend_M1(df_raw, slow, fast):
     df = df_raw.copy()
     df.set_index(df['time'], inplace=True)
@@ -186,7 +187,7 @@ def a_moving_averages_trend_M1(df_raw, slow, fast):
     return df, position
 
 
-def a_moving_averages_trend_M2(df_raw, slow, fast):
+def zx_moving_averages_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
     ma1 = df.ta.vwma(length=fast)
@@ -218,7 +219,7 @@ def t3_moving_average_close_trend_M1(df_raw, slow, fast):
     return df, position
 
 
-def t3_moving_average_close_trend_M2(df_raw, slow, fast):
+def t52_moving_average_close_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
     ma1 = ta.t3(df['adj'], length=round(fast*slow/5), a=0.95)
