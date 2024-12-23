@@ -795,7 +795,7 @@ class Bot:
 
         #if not strategy.__name__.startswith('model'):
         results = []
-        for slow in trange(3, 50):
+        for slow in trange(5, 50):
             for fast in range(2, 21):
                 if fast == slow:
                     continue
@@ -822,22 +822,26 @@ class Bot:
         #     return 0, 0, round(((sharpe+sharpe2)/2)*(calmar+calmar2)/2, 3)
 
     @class_errors
+    def sort_strategies(self):
+        sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
+        first_group = sorted(self.strategies, key=lambda x: x[7], reverse=True)[0][0]
+        printer("Daily starter", first_group.split('_')[-2])
+        first_ = first_group.split('_')[-2]
+        second_ = 'trend' if first_ == 'counter' else 'counter'
+        group_t = [item for item in sorted_data if item[7] == first_]
+        group_n = [item for item in sorted_data if item[7] == second_]
+        alternating_data = []
+        max_len = max(len(group_t), len(group_n))
+
+        for i in range(max_len):
+            if i < len(group_t):
+                alternating_data.append(group_t[i])
+            if i < len(group_n):
+                alternating_data.append(group_n[i])
+        return alternating_data
+
+    @class_errors
     def test_strategies(self, add_number=0):
-
-        def sort_strategies(data):
-            sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
-            group_t = [item for item in sorted_data if item[7] == 'counter']
-            group_n = [item for item in sorted_data if item[7] == 'trend']
-            alternating_data = []
-            max_len = max(len(group_t), len(group_n))
-
-            for i in range(max_len):
-                if i < len(group_t):
-                    alternating_data.append(group_t[i])
-                if i < len(group_n):
-                    alternating_data.append(group_n[i])
-            return alternating_data
-
         super_start_time = time.time()
         strategies = import_strategies([])
         self.strategies = []
@@ -861,13 +865,13 @@ class Bot:
             self.write_to_backtest(name_, interval, result, kind, fast, slow)
 
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
-        self.strategies = sort_strategies(self.strategies)
+        self.strategies = self.sort_strategies()
 
         time_info(time.time()-super_start_time, 'Total duration')
 
         # use only six best strategies
-        if len(self.strategies) > 6+add_number:
-            self.strategies = self.strategies[:6+add_number]
+        if len(self.strategies) > 4+add_number:
+            self.strategies = self.strategies[:4+add_number]
 
         if len(self.strategies) == 0:
             self.close_request()
