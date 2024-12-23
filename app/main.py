@@ -36,7 +36,7 @@ class GlobalProfitTracker:
         self.condition = False
         self.positions = []
         self.primal_tickets_list = []
-        
+
     def checkout(self):
         account = mt.account_info()
         global_profit_to_margin = round(account.profit/account.balance, 4)
@@ -377,7 +377,7 @@ class Bot:
             # track global profit
             if self.use_tracker:
                 self.positionTracker.checkout()
-    
+
             time.sleep(time_sleep)
 
     @class_errors
@@ -464,7 +464,7 @@ class Bot:
 
     @class_errors
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
-        
+
         def atr():
             length = 14
             df = get_data(self.symbol, 'M5', 1, 100)
@@ -710,7 +710,7 @@ class Bot:
 
     @class_errors
     def calc_pos_condition(self, df1, window_=50):
-        df = df1.copy()[-window_*10:] 
+        df = df1.copy()[-window_*10:]
         df['mkt_move'] = np.log(df.close/df.close.shift())
         df['return'] = df['mkt_move'] * df.stance.shift()
         df['strategy'] = (1+df['return']).cumprod() - 1
@@ -722,7 +722,7 @@ class Bot:
         cond2 = df['win_ratio_fast'].iloc[-1] > df['win_ratio_slow'].iloc[-1]
         cond = df['cond'].rolling(window_).sum()
         return cond.iloc[-1], df['cond'].iloc[-1], cond2
-    
+
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
         try:
@@ -830,7 +830,7 @@ class Bot:
         else:
             letter = "f"
 
-        name_ = self.strategies[self.strategy_number][0][:6]
+        name_ = self.strategies[self.strategy_number][0][:12]
         fast = self.strategies[self.strategy_number][3]
         slow = self.strategies[self.strategy_number][4]
         self.comment = f'{name_}_{fast}_{slow}_{self.tiktok}'
@@ -961,6 +961,23 @@ class Bot:
             pass
 
     @class_errors
+    def write_to_backtest(self, strategy_full_name, interval, result, kind, fast, slow):
+        try:
+            processor.process_backtest(
+                symbol=self.symbol,
+                strategy_short_name=strategy_full_name[:12],
+                strategy_full_name=strategy_full_name,
+                interval=interval,
+                result=result,
+                kind=kind,
+                fast=fast,
+                slow=slow
+            )
+        except Exception as e:
+            print("write_to_backtest", e)
+            pass
+
+    @class_errors
     def trend_backtest(self, strategy):
         print(strategy.__name__)
 
@@ -988,7 +1005,7 @@ class Bot:
                     #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
                     _, actual_condition, _ = self.calc_pos_condition(df1)
                     results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(calmar+calmar2), actual_condition))
-                    
+
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
             print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
             return f_result[0], f_result[1], f_result[2]*f_result[3], f_result[4]
@@ -1003,14 +1020,14 @@ class Bot:
 
     @class_errors
     def test_strategies(self, add_number=0):
-        
+
         def sort_strategies(data):
             sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
             group_t = [item for item in sorted_data if item[7] == 'counter']
             group_n = [item for item in sorted_data if item[7] == 'trend']
             alternating_data = []
             max_len = max(len(group_t), len(group_n))
-            
+
             for i in range(max_len):
                 if i < len(group_t):
                     alternating_data.append(group_t[i])
@@ -1031,16 +1048,20 @@ class Bot:
                 interval = self.model_interval
             else:
                 interval = name_.split('_')[-1]
-            marker = name_.split('_')[-2]
+            kind = name_.split('_')[-2]
             #marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
             fast, slow, result, actual_condition = self.trend_backtest(strategy)
             print(name_, interval, fast, slow, round(result, 4), actual_condition)
-            self.strategies.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, marker))
+            self.strategies.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind))
+
+        for name_, _, interval, fast, slow, result, _, kind in self.strategies:
+            self.write_to_backtest(name_, interval, result, kind, fast, slow)
+
         self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
         self.strategies = sort_strategies(self.strategies)
 
         time_info(time.time()-super_start_time, 'Total duration')
-        
+
         # use only six best strategies
         if len(self.strategies) > 6+add_number:
             self.strategies = self.strategies[:6+add_number]

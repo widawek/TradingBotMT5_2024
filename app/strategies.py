@@ -6,7 +6,7 @@ import pandas as pd
 
 # def model_M20():
 #     pass
-def a_moving_averages_trend_M2(df_raw, slow, fast):
+def z_moving_averages_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
     ma1 = df.ta.vwma(length=fast)
@@ -17,7 +17,7 @@ def a_moving_averages_trend_M2(df_raw, slow, fast):
     return df, position
 
 
-def b_moving_averages_close_trend_M2(df_raw, slow, fast):
+def x_moving_averages_close_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
     ma1 = df.ta.vwma(length=fast)
@@ -27,7 +27,7 @@ def b_moving_averages_close_trend_M2(df_raw, slow, fast):
     return df, position
 
 
-def t3_moving_average_close_trend_M2(df_raw, slow, fast):
+def t3a_moving_average_close_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
     ma1 = ta.t3(df['adj'], length=round(fast*slow/5), a=0.95)
@@ -38,7 +38,7 @@ def t3_moving_average_close_trend_M2(df_raw, slow, fast):
     return df, position
 
 
-def macd1_signal_trend_M2(df_raw, slow, fast):
+def x_macd1_signal_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
     df['macd'] = macd.iloc[:,0]
@@ -48,7 +48,7 @@ def macd1_signal_trend_M2(df_raw, slow, fast):
     return df, position
 
 
-def macd2_histogram0_trend_M2(df_raw, slow, fast):
+def z_macd2_histogram0_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
     df['histogram'] = macd.iloc[:,1]
@@ -66,7 +66,7 @@ def macd3_histogram1_trend_M1(df_raw, slow, fast):
     return df, position
 
 
-def stoch2_trend_M2(df_raw, slow, fast):
+def z_stoch2_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     df['k1'] = df.ta.stoch(k=fast).iloc[:,0]
     df['k2'] = df.ta.stoch(k=slow).iloc[:,0]

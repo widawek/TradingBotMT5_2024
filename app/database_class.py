@@ -13,6 +13,7 @@ current_working_dir = os.getcwd()
 db_path = os.path.join(current_working_dir, 'database', 'position_history.db')
 db_url = f"sqlite:///{db_path}"
 
+
 # Model dla tabeli Position
 class Position(Base):
     __tablename__ = 'positions'
@@ -38,6 +39,7 @@ class Position(Base):
     # Relacja do tabeli Profit
     profits = relationship("Profit", back_populates="position")
 
+
 # Model dla tabeli Profit
 class Profit(Base):
     __tablename__ = 'profits'
@@ -56,6 +58,22 @@ class Profit(Base):
 
     # Relacja do tabeli Position
     position = relationship("Position", back_populates="profits")
+
+
+# Model dla tabeli Backtest
+class Backtest(Base):
+    __tablename__ = 'backtests'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(DateTime, default=dt.now(), nullable=False)
+    symbol = Column(String, nullable=False)
+    strategy_short_name = Column(String, nullable=False)
+    strategy_full_name = Column(String, nullable=False)
+    interval = Column(String, nullable=False)
+    result = Column(Float, nullable=False)
+    kind = Column(String, nullable=False)
+    fast = Column(Integer, nullable=False)
+    slow = Column(Integer, nullable=False)
 
 
 # Klasa do zarządzania bazą danych
@@ -100,7 +118,6 @@ class DatabaseManager:
             session.add(new_position)
             session.commit()
             print(f"Dodano nową pozycję z ticketem {ticket}.")
-
         session.close()
 
     def add_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread,
@@ -122,6 +139,23 @@ class DatabaseManager:
             )
             session.add(new_profit)
             session.commit()
+        session.close()
+
+    def add_bt_result(self, symbol, strategy_short_name, strategy_full_name, interval, result, kind, fast, slow):
+        session = self.Session()
+        new_result = Backtest(
+            symbol=symbol,
+            strategy_short_name=strategy_short_name,
+            strategy_full_name=strategy_full_name,
+            interval=interval,
+            result=result,
+            kind=kind,
+            fast=fast,
+            slow=slow
+        )
+        session.add(new_result)
+        session.commit()
+        print(f"Add {strategy_full_name} backtest result to database.")
         session.close()
 
 
@@ -170,6 +204,18 @@ class TradingProcessor:
             fake_position_counter=fake_position_counter,
             fake_position_stoploss=fake_position_stoploss)
 
+    def process_backtest(self, symbol, strategy_short_name, strategy_full_name, interval, result, kind, fast, slow):
+        # Przetwarzanie profitu
+        # Dodajemy profit do bazy danych
+        self.db_manager.add_bt_result(
+            symbol=symbol,
+            strategy_short_name=strategy_short_name,
+            strategy_full_name=strategy_full_name,
+            interval=interval,
+            result=result,
+            kind=kind,
+            fast=fast,
+            slow=slow)
 
 class ReadDatabase:
     def __init__(self, db_url= f"sqlite:///{db_path}"):
@@ -193,6 +239,12 @@ class ReadDatabase:
             df_profits = pd.read_sql(query, connection)
         return df_profits
 
+    def read_backtests_to_df(self):
+        """Odczytuje dane z tabeli 'Profit' i konwertuje je do pandas DataFrame."""
+        query = "SELECT * FROM backtests"  # SQL zapytanie do odczytu danych z tabeli 'Profit'
+        with self.engine.connect() as connection:
+            df_profits = pd.read_sql(query, connection)
+        return df_profits
 
 if __name__=='__main__':
     print("YO WTF?")

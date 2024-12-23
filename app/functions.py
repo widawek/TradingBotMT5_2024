@@ -345,7 +345,6 @@ def printer(text, value, base_just=50):
     print(f'{text}{space}{value}')
 
 
-
 def time_info(time_data, time_info):
     hours = int(time_data // 3600)
     minutes = int((time_data % 3600) // 60)
@@ -391,6 +390,11 @@ def import_strategies(to_delate: list) -> list:
                inspect.isfunction(element[1])]
     strategiesList = [i[1] for i in funkcje if i[0] not in to_delate]
     print(f"Number of strategies to check {len(strategiesList)}")
+
+    test_list = [i.__name__[:12] for i in strategiesList]
+    assert len(test_list) == len(list(set(test_list))), \
+        "Some of strategies have the same first 12 letters in name."
+
     return strategiesList
 
 
