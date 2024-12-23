@@ -830,7 +830,7 @@ class Bot:
         else:
             letter = "f"
 
-        name_ = self.strategies[self.strategy_number][0][:12]
+        name_ = self.strategies[self.strategy_number][0][:6]
         fast = self.strategies[self.strategy_number][3]
         slow = self.strategies[self.strategy_number][4]
         self.comment = f'{name_}_{fast}_{slow}_{self.tiktok}'
@@ -965,7 +965,7 @@ class Bot:
         try:
             processor.process_backtest(
                 symbol=self.symbol,
-                strategy_short_name=strategy_full_name[:12],
+                strategy_short_name=strategy_full_name[:6],
                 strategy_full_name=strategy_full_name,
                 interval=interval,
                 result=result,
