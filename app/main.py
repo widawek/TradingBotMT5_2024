@@ -70,6 +70,7 @@ class GlobalProfitTracker:
 class Bot:
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
         self.number_of_bars_for_backtest = 20000
@@ -514,9 +515,10 @@ class Bot:
 
     @class_errors
     def calc_pos_condition(self, df1, window_=50):
-        df = df1.copy()[-window_*10:]
-        df['mkt_move'] = np.log(df.close/df.close.shift())
-        df['return'] = df['mkt_move'] * df.stance.shift()
+        df = df1.copy()[-window_*30:]
+        # df['mkt_move'] = np.log(df.close/df.close.shift())
+        # df['return'] = df['mkt_move'] * df.stance.shift()
+        df = calculate_strategy_returns(df, leverage)
         df['strategy'] = (1+df['return']).cumprod() - 1
         df['strategy_mean'] = df['strategy'].rolling(window_).mean()
         df['strategy_std'] = df['strategy'].rolling(window_).std()/2
@@ -641,7 +643,7 @@ class Bot:
         name_ = self.strategies[self.strategy_number][0][:6]
         fast = self.strategies[self.strategy_number][3]
         slow = self.strategies[self.strategy_number][4]
-        self.comment = f'{name_}_{fast}_{slow}_{self.tiktok}'
+        self.comment = f'{name_}_{fast}_{slow}_{self.actual_today_best[:1]}_{self.tiktok}'
 
         request = {
             "action": action,
@@ -832,6 +834,7 @@ class Bot:
         first_group = sorted(self.strategies, key=lambda x: x[7], reverse=True)[0][0]
         printer("Daily starter", first_group.split('_')[-2])
         first_ = first_group.split('_')[-2]
+        self.actual_today_best = first_
         second_ = 'trend' if first_ == 'counter' else 'counter'
         group_t = [item for item in sorted_data if item[7] == first_]
         group_n = [item for item in sorted_data if item[7] == second_]
