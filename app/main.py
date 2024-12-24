@@ -863,7 +863,7 @@ class Bot:
             kind = name_.split('_')[-2]
             #marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
             fast, slow, result, actual_condition, daily_return = self.trend_backtest(strategy)
-            print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return)
+            print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, "\n")
             self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return))
 
         for name_, _, interval, fast, slow, result, _, kind, _ in self.strategies_raw:
