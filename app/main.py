@@ -272,10 +272,14 @@ class Bot:
                     elif profit < -self.profit_needed*profit_decrease_barrier:# and profit > 0.91 * self.profit_min:
                         self.clean_orders()
 
-                    # Jeżeli strata mniejsza od straty granicznej
-                    elif profit > self.profit_needed * profit_increase_barrier and profit < profit_decrease_barrier * self.profit_max:
-                        self.clean_orders()
+                    # # Jeżeli strata mniejsza od straty granicznej
+                    # elif profit > self.profit_needed * profit_increase_barrier and profit < profit_decrease_barrier * self.profit_max:
+                    #     self.clean_orders()
 
+                    # Jeżeli strata mniejsza od straty granicznej
+                    elif self.profit_max > self.profit_needed and profit < self.profit_max * self.profit_decline_factor:
+                        self.clean_orders()
+                    
                     # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
                     elif (profit > self.profit_needed/(profit_factor*1.5)):
                         _ = self.fake_position_robot()
@@ -321,9 +325,9 @@ class Bot:
         return ((self.print_count == 0) or (self.print_count % 10 == 0))
 
     @class_errors
-    def self_decline_factor(self, multiplier: int=3):
-        min_val = 0.55
-        max_val = 0.85
+    def self_decline_factor(self, multiplier: int=2):
+        min_val = 0.65
+        max_val = 0.93
         min_value = 0
         max_value = self.profit_needed*multiplier
         # only variable is self.profit_max
