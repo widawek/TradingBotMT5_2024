@@ -261,9 +261,10 @@ class Bot:
                         printer("Change value:", f"{round(self.profit_needed, 2):.2f} $")
                         #printer("Actual trigger:", self.trigger)
                         printer("Max profit:", f"{self.profit_max:.2f} $")
-                        printer("Profit zero aka spread:", f"{self.profit0:.2f} $")
-                        printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2):.2f} $")
+                        # printer("Profit zero aka spread:", f"{self.profit0:.2f} $")
+                        # printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2):.2f} $")
                         printer("Decline factor:", f"{self.profit_decline_factor}")
+                        printer("Close position if profit is less than", f"{round(self.profit_max * self.profit_decline_factor, 2)} $")
 
                     if self.fake_position:
                         _ = self.fake_position_robot()
