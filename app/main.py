@@ -844,7 +844,7 @@ class Bot:
     def test_strategies(self, add_number=0):
         super_start_time = time.time()
         strategies = import_strategies([])
-        self.strategies = []
+        self.strategies_raw = []
         for strategy in strategies:
             self.is_this_the_end()
             self.check_trigger()
@@ -859,12 +859,12 @@ class Bot:
             #marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
             fast, slow, result, actual_condition, daily_return = self.trend_backtest(strategy)
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return)
-            self.strategies.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return))
+            self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return))
 
-        for name_, _, interval, fast, slow, result, _, kind, _ in self.strategies:
+        for name_, _, interval, fast, slow, result, _, kind, _ in self.strategies_raw:
             self.write_to_backtest(name_, interval, result, kind, fast, slow)
 
-        self.strategies = [i for i in self.strategies if ((i[5] != np.inf) and (i[5] > 0))]
+        self.strategies = [i for i in self.strategies_raw if ((i[5] != np.inf) and (i[5] > 0))]
         self.strategies = self.sort_strategies()
 
         time_info(time.time()-super_start_time, 'Total duration')
