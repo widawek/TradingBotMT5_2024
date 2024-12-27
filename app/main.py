@@ -123,7 +123,7 @@ class Bot:
 
 
     @class_errors
-    def if_tiktok(self):
+    def if_tiktok(self, backtest=False):
         pos = mt.positions_get(symbol=self.symbol)
         profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].magic == self.magic])
         self.close_profits.append((profit_, self.comment[:-1]))
@@ -162,9 +162,9 @@ class Bot:
             else:
                 self.strategy_number += 1
                 self.tiktok = 0
-
-        if self.strategy_number > len(self.strategies)-1:
-            self.test_strategies(add_number=10)
+        if not backtest:
+            if self.strategy_number > len(self.strategies)-1:
+                self.test_strategies(add_number=3)
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
     @class_errors
@@ -244,60 +244,56 @@ class Bot:
                 return pos_type
 
     @class_errors
-    def check_trigger(self, trigger_mode='on'):
-        if trigger_mode == 'on':
-            #position_time = self.position_time()
-            try:
-                if len(self.positions) != 0:
-                    profit = sum([i[-4] for i in self.positions])
+    def check_trigger(self, backtest=False):
+        try:
+            if len(self.positions) != 0:
+                profit = sum([i[-4] for i in self.positions])
 
-                    if self.profit0 is None:
-                        self.profit0 = profit
-                    self.profits.append(profit+self.profit0)
-                    self.profit_max = max(self.profits)
-                    self.profit_min = min(self.profits)
-                    mean_profits = np.mean(self.profits)
-                    self.self_decline_factor()
-                    if self.print_condition():
-                        printer("Change value:", f"{round(self.profit_needed, 2):.2f} $")
-                        #printer("Actual trigger:", self.trigger)
-                        printer("Max profit:", f"{self.profit_max:.2f} $")
-                        # printer("Profit zero aka spread:", f"{self.profit0:.2f} $")
-                        # printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2):.2f} $")
-                        printer("Decline factor:", f"{self.profit_decline_factor}")
-                        printer("Close position if profit is less than", f"{round(self.profit_max * self.profit_decline_factor, 2)} $")
+                if self.profit0 is None:
+                    self.profit0 = profit
+                self.profits.append(profit+self.profit0)
+                self.profit_max = max(self.profits)
+                self.profit_min = min(self.profits)
+                mean_profits = np.mean(self.profits)
+                self.self_decline_factor()
+                if self.print_condition():
+                    printer("Change value:", f"{round(self.profit_needed, 2):.2f} $")
+                    #printer("Actual trigger:", self.trigger)
+                    printer("Max profit:", f"{self.profit_max:.2f} $")
+                    # printer("Profit zero aka spread:", f"{self.profit0:.2f} $")
+                    # printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2):.2f} $")
+                    printer("Decline factor:", f"{self.profit_decline_factor}")
+                    printer("Close position if profit is less than", f"{round(self.profit_max * self.profit_decline_factor, 2)} $")
 
-                    if self.fake_position:
-                        _ = self.fake_position_robot()
+                if self.fake_position:
+                    _ = self.fake_position_robot()
 
-                    # Jeżeli strata mniejsza od straty granicznej
-                    elif profit < -self.profit_needed*profit_decrease_barrier:# and profit > 0.91 * self.profit_min:
-                        self.clean_orders()
+                # Jeżeli strata mniejsza od straty granicznej
+                elif profit < -self.profit_needed*profit_decrease_barrier:# and profit > 0.91 * self.profit_min:
+                    self.clean_orders(backtest)
 
-                    # # Jeżeli strata mniejsza od straty granicznej
-                    # elif profit > self.profit_needed * profit_increase_barrier and profit < profit_decrease_barrier * self.profit_max:
-                    #     self.clean_orders()
+                # # Jeżeli strata mniejsza od straty granicznej
+                # elif profit > self.profit_needed * profit_increase_barrier and profit < profit_decrease_barrier * self.profit_max:
+                #     self.clean_orders()
 
-                    # Jeżeli strata mniejsza od straty granicznej
-                    elif self.profit_max > self.profit_needed and profit < self.profit_max * self.profit_decline_factor:
-                        self.clean_orders()
-                    
-                    # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                    elif (profit > self.profit_needed/(profit_factor*1.5)):
-                        _ = self.fake_position_robot()
+                # Jeżeli strata mniejsza od straty granicznej
+                elif self.profit_max > self.profit_needed and profit < self.profit_max * self.profit_decline_factor:
+                    self.clean_orders(backtest)
+                
+                # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
+                elif (profit > self.profit_needed/(profit_factor*1.5)):
+                    _ = self.fake_position_robot()
 
-                    if self.print_condition():
-                        printer("TIKTOK:", self.tiktok)
+                if self.print_condition():
+                    printer("TIKTOK:", self.tiktok)
 
-            except Exception as e:
-                print("check_trigger", e)
-                pass
-        else:
+        except Exception as e:
+            print("check_trigger", e)
             pass
 
     @class_errors
-    def clean_orders(self):
-        self.if_tiktok()
+    def clean_orders(self, backtest=False):
+        self.if_tiktok(backtest)
         self.close_request()
         orders = mt.orders_get(symbol=self.symbol)
         print(orders)
@@ -378,7 +374,7 @@ class Bot:
             if self.print_condition():
                 printer("\nSymbol:", self.symbol)
                 printer("Czas:", time.strftime("%H:%M:%S"))
-            self.check_trigger(trigger_mode=trigger_mode)
+            self.check_trigger()
             self.data()
             # track global profit
             if self.use_tracker:
@@ -529,8 +525,12 @@ class Bot:
         cond = df['cond'].rolling(window_).sum()
         df['date_xc'] = df['time'].dt.date
         df = df[df['date_xc'] == dt.now().date()]
-        ret = (1+df['return']).cumprod() - 1
-        return cond.iloc[-1], df['cond'].iloc[-1], cond2, round(ret.iloc[-1]*100, 2)
+        #ret = (1+df['return']).cumprod() - 1
+        # ret = df['return'].mean()/df['return'].std()
+        # ret = round(ret, 4)
+        sharpe, omega = calc_result(1)
+        ret = round(sharpe * omega, 4)
+        return cond.iloc[-1], df['cond'].iloc[-1], cond2, ret
 
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
@@ -547,7 +547,7 @@ class Bot:
                 strategy = self.strategies[self.strategy_number]
             except IndexError as e:
                 print("actual_position_democracy", e)
-                self.test_strategies(add_number=10)
+                self.test_strategies(add_number=3)
                 strategy = self.strategies[self.strategy_number]
             print("Strategia", strategy[0])
             self.interval = strategy[0].split('_')[-1]
@@ -617,6 +617,7 @@ class Bot:
                     time.sleep(5)
         except KeyError as e:
             print("actual_position_democracy", e)
+            self.trend_backtest(add_number=3)
             return self.actual_position_democracy(number_of_bars=number_of_bars*2)
         self.pos_time = interval_time(self.interval)
 
@@ -830,10 +831,13 @@ class Bot:
 
     @class_errors
     def sort_strategies(self):
-        sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
-        first_group = sorted(self.strategies, key=lambda x: x[7], reverse=True)[0][0]
-        printer("Daily starter", first_group.split('_')[-2])
+        if dt.now().hour > 13:
+            sorted_data = sorted(self.strategies, key=lambda x: (x[8], x[5]), reverse=True)
+        else:
+            sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
+        first_group = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][0]
         first_ = first_group.split('_')[-2]
+        printer("Daily starter", first_)
         self.actual_today_best = first_
         second_ = 'trend' if first_ == 'counter' else 'counter'
         group_t = [item for item in sorted_data if item[7] == first_]
@@ -855,7 +859,7 @@ class Bot:
         self.strategies_raw = []
         for strategy in strategies:
             self.is_this_the_end()
-            self.check_trigger()
+            self.check_trigger(backtest=True)
             name_ = strategy.__name__
             # if name_ == 'model':
             #     if self.model_counter == 0:
@@ -877,7 +881,7 @@ class Bot:
 
         time_info(time.time()-super_start_time, 'Total duration')
 
-        # use only six best strategies
+        # use only four best strategies
         if len(self.strategies) > 4+add_number:
             self.strategies = self.strategies[:4+add_number]
 
@@ -890,7 +894,7 @@ class Bot:
             for i in self.strategies:
                 print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8])
             self.strategy_number = 0
-
+            self.reset_bot()
 
 if __name__ == '__main__':
     print('Yo, wtf?')

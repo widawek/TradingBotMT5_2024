@@ -15,7 +15,6 @@ symbols:                                list = [
                                             'US30',
                                             'XAUUSD',
                                             'BTCUSD',
-                                            'XAGUSD',
                                             'AUDUSD'
                                             ]
 
@@ -44,7 +43,6 @@ change_hour: int                        = 24 # 15
 tz_diff                                 = get_timezone_difference()
 game_system: str                        = 'weighted_democracy'
 max_number_of_models: int               = 2
-trigger_mode: str                       = 'on'
 profit_factor: float                    = 1.5
 position_size: int                      = int((100/len(symbols))*0.8)  # percent of balance
 kill_multiplier: float                  = 1.5  # loss of daily volatility by one position multiplier
