@@ -246,7 +246,7 @@ class Bot:
     @class_errors
     def check_trigger(self, backtest=False):
         try:
-            if len(self.positions) != 0:
+            if self.positions is None or len(self.positions) != 0:
                 profit = sum([i[-4] for i in self.positions])
 
                 if self.profit0 is None:
@@ -528,7 +528,7 @@ class Bot:
         #ret = (1+df['return']).cumprod() - 1
         # ret = df['return'].mean()/df['return'].std()
         # ret = round(ret, 4)
-        sharpe, omega = calc_result(1)
+        sharpe, omega = calc_result(df, 1)
         ret = round(sharpe * omega, 4)
         return cond.iloc[-1], df['cond'].iloc[-1], cond2, ret
 
@@ -831,7 +831,7 @@ class Bot:
 
     @class_errors
     def sort_strategies(self):
-        if dt.now().hour > 13:
+        if dt.now().hour > 13 or all([i[6] == -2 for i in self.strategies]):
             sorted_data = sorted(self.strategies, key=lambda x: (x[8], x[5]), reverse=True)
         else:
             sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
@@ -854,6 +854,7 @@ class Bot:
 
     @class_errors
     def test_strategies(self, add_number=0):
+        strategies_number = 4 + add_number
         super_start_time = time.time()
         strategies = import_strategies([])
         self.strategies_raw = []
@@ -882,8 +883,8 @@ class Bot:
         time_info(time.time()-super_start_time, 'Total duration')
 
         # use only four best strategies
-        if len(self.strategies) > 4+add_number:
-            self.strategies = self.strategies[:4+add_number]
+        if len(self.strategies) > strategies_number:
+            self.strategies = self.strategies[:strategies_number]
 
         if len(self.strategies) == 0:
             self.close_request()
