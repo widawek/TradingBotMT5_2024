@@ -70,6 +70,7 @@ class GlobalProfitTracker:
 class Bot:
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.after_change_hour = False
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
@@ -279,7 +280,7 @@ class Bot:
                 # Jeżeli strata mniejsza od straty granicznej
                 elif self.profit_max > self.profit_needed and profit < self.profit_max * self.profit_decline_factor:
                     self.clean_orders(backtest)
-                
+
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
                 elif (profit > self.profit_needed/(profit_factor*1.5)):
                     _ = self.fake_position_robot()
@@ -349,6 +350,9 @@ class Bot:
     @class_errors
     def request_get(self):
         if not self.positions:
+            if not self.after_change_hour and dt.now().hour >= change_hour:
+                self.after_change_hour = True
+                self.test_strategies()
             pos_type = self.actual_position_democracy()
             self.request(actions['deal'], pos_type)
         self.positions_()
@@ -466,7 +470,6 @@ class Bot:
 
     @class_errors
     def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
-
         def atr():
             length = 14
             df = get_data(self.symbol, 'M5', 1, 100)
@@ -693,7 +696,7 @@ class Bot:
 
     @class_errors
     def active_session(self):
-        df = get_data(self.symbol, 'D1', 0, 1)
+        df = get_data(self.symbol, 'H1', 0, 1)
         today_date_tuple = time.localtime()
         formatted_date = time.strftime("%Y-%m-%d", today_date_tuple)
         if str(df.time[0].date()) == formatted_date:
@@ -831,7 +834,7 @@ class Bot:
 
     @class_errors
     def sort_strategies(self):
-        if dt.now().hour > 13 or all([i[6] == -2 for i in self.strategies]):
+        if dt.now().hour > 14 or all([i[6] == -2 for i in self.strategies]):
             sorted_data = sorted(self.strategies, key=lambda x: (x[8], x[5]), reverse=True)
         else:
             sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
