@@ -835,7 +835,8 @@ class Bot:
     @class_errors
     def sort_strategies(self):
         if dt.now().hour > 14 or all([i[6] == -2 for i in self.strategies]):
-            sorted_data = sorted(self.strategies, key=lambda x: (x[8], x[5]), reverse=True)
+            self.strategies = [i for i in self.strategies if i[8] > 0]
+            sorted_data = sorted(self.strategies, key=lambda x: x[5], reverse=True)
         else:
             sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
         first_group = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][0]
