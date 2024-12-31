@@ -169,6 +169,15 @@ class Bot:
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
     @class_errors
+    def fake_position_off(self):
+        self.fake_position = False
+        self.max_close = None
+        self.fake_stoploss = 0
+        self.fake_counter = 0
+        self.base_fake_interval = base_fake_interval
+        return self.actual_position_democracy()
+
+    @class_errors
     def fake_position_robot(self):
         if self.fake_counter <= 5:
             interval = self.base_fake_interval
@@ -187,8 +196,12 @@ class Bot:
         close0 = interval_df['close'].iloc[0]
         close1 = interval_df['close'].iloc[1]
         close2 = interval_df['close'].iloc[2]
-        pos_type = self.positions[0].type
-        profit_ = self.positions[0].profit
+        try:
+            pos_type = self.positions[0].type
+            profit_ = self.positions[0].profit
+        except IndexError:
+            return self.fake_position_off()
+
         try:
             if self.base_fake_interval != interval:
                 test = get_data(self.symbol, interval, 1, 200)
@@ -208,14 +221,6 @@ class Bot:
             self.max_close = close2
             self.fake_stoploss = close1
 
-        def fake_position_off():
-            self.fake_position = False
-            self.max_close = None
-            self.fake_stoploss = 0
-            self.fake_counter = 0
-            self.base_fake_interval = base_fake_interval
-            return self.actual_position_democracy()
-
         if not self.fake_position:
             if (((pos_type == 0) and (close2 > close1 > close0)) or\
                 ((pos_type == 1) and (close2 < close1 < close0))) and\
@@ -229,7 +234,7 @@ class Bot:
                 self.fake_counter+=1
                 self.fake_stoploss = close1
             if (close2 < self.fake_stoploss) or (profit_ < 0):
-                return fake_position_off()
+                return self.fake_position_off()
             else:
                 return pos_type
 
@@ -240,7 +245,7 @@ class Bot:
                 self.fake_counter+=1
                 self.fake_stoploss = close1
             if (close2 > self.fake_stoploss) or (profit_ < 0):
-                return fake_position_off()
+                return self.fake_position_off()
             else:
                 return pos_type
 
@@ -699,7 +704,7 @@ class Bot:
         df = get_data(self.symbol, 'H1', 0, 1)
         today_date_tuple = time.localtime()
         formatted_date = time.strftime("%Y-%m-%d", today_date_tuple)
-        if str(df.time[0].date()) == formatted_date:
+        if str(df.time.dt.date.iloc[-1]) == formatted_date:
             pass
         else:
             print(f"Session on {self.symbol} is not active")
