@@ -273,10 +273,7 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
 
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
-    # cross = (df['cross'].sum()/len(df))*100
-    # if cross < 0.1:
-    #     cross = 0.1
-    cross = 0.01
+    cross = int(df['cross'].sum()) ** 0.7 + 1
     sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 2)
     omega = omega_ratio(df['return'])
     return sharpe, omega
