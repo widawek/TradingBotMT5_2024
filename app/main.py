@@ -70,7 +70,7 @@ class GlobalProfitTracker:
 class Bot:
     weekday = dt.now().weekday()
     def __init__(self, symbol):
-        self.after_change_hour = False
+        self.after_change_hour = False if dt.now().hour < change_hour else True
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
@@ -355,9 +355,6 @@ class Bot:
     @class_errors
     def request_get(self):
         if not self.positions:
-            if not self.after_change_hour and dt.now().hour >= change_hour:
-                self.after_change_hour = True
-                self.test_strategies()
             pos_type = self.actual_position_democracy()
             self.request(actions['deal'], pos_type)
         self.positions_()
@@ -727,6 +724,10 @@ class Bot:
                 "type_filling": mt.ORDER_FILLING_IOC
                 }
             order_result = mt.order_send(request)
+
+        if not self.after_change_hour and dt.now().hour >= change_hour:
+            self.after_change_hour = True
+            self.test_strategies()
 
     @class_errors
     def pos_creator(self):
