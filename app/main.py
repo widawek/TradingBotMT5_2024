@@ -77,7 +77,7 @@ class Bot:
         self.number_of_bars_for_backtest = 20000
         printer(dt.now(), symbol)
         self.symbol = symbol
-        self.active_session()
+        #self.active_session()
         self.magic = magic_(symbol, 'bot_2024')
         self.model_counter = None
         self.profit0 = None
