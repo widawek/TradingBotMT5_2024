@@ -533,9 +533,12 @@ class Bot:
         #ret = (1+df['return']).cumprod() - 1
         # ret = df['return'].mean()/df['return'].std()
         # ret = round(ret, 4)
-        sharpe, omega = calc_result(df, 1)
-        ret = round(sharpe * omega, 4)
-        return cond.iloc[-1], df['cond'].iloc[-1], cond2, ret
+        try:
+            sharpe, omega = calc_result(df, 1)
+            ret = round(sharpe * omega, 4)
+            return cond.iloc[-1], df['cond'].iloc[-1], cond2, ret
+        except IndexError:
+            return 0, 0, 0, 0
 
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
