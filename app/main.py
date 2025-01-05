@@ -817,7 +817,11 @@ class Bot:
                 if fast == slow:
                     continue
                 df1, position = strategy(df_raw, slow, fast)
+                if len(df1) < self.number_of_bars_for_backtest/2:
+                    continue
                 df1 = calculate_strategy_returns(df1, leverage)
+                if len(df1) < self.number_of_bars_for_backtest/2:
+                    continue
                 df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
                 #df2 = df1.copy()[-small_bt_bars:]
                 sharpe, calmar = calc_result(df1, sharpe_multiplier)
@@ -828,7 +832,7 @@ class Bot:
 
         f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
-        return f_result[0], f_result[1], f_result[2]*f_result[3], f_result[4], f_result[5]
+        return f_result[0], f_result[1], round(f_result[2]*f_result[3]*100, 4), f_result[4], f_result[5]
         # else:
         #     df1 = self.model_position(500, backtest=True)
         #     sharpe, calmar = calc_result(df1, sharpe_multiplier)
@@ -866,7 +870,7 @@ class Bot:
     def test_strategies(self, add_number=0):
         strategies_number = 4 + add_number
         super_start_time = time.time()
-        strategies = import_strategies([])
+        strategies = import_strategies(['find_support_resistance_numpy'])
         self.strategies_raw = []
         for strategy in strategies:
             self.is_this_the_end()

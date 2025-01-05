@@ -328,3 +328,25 @@ def win_ratio(df, column, window=50, threshold=0):
     df['win_ratio_slow'] = df['win_ratio'].rolling(window).mean()
     return df
 
+
+def find_support_resistance_numpy(df, slow, fast):
+    df['tolerance'] = (df.high-df.low).rolling(slow).mean() * fast/20
+    low = df['low'].to_numpy()
+    high = df['high'].to_numpy()
+    tolerance = df['tolerance'].to_numpy()
+
+    # Znajdź lokalne minima i maksima za pomocą NumPy
+    is_support = np.where((low[1:-1] < low[:-2] - tolerance[1:-1]) & (low[1:-1] < low[2:] - tolerance[1:-1]))[0] + 1
+    is_resistance = np.where((high[1:-1] > high[:-2] + tolerance[1:-1]) & (high[1:-1] > high[2:] + tolerance[1:-1]))[0] + 1
+
+    # Utwórz kolumny support i resistance
+    df['support'] = np.nan
+    df['resistance'] = np.nan
+    df.loc[df.index[is_support], 'support'] = df['low'].iloc[is_support]
+    df.loc[df.index[is_resistance], 'resistance'] = df['high'].iloc[is_resistance]
+
+    # Wypełnij brakujące wartości NaN poprzednimi wartościami (forward fill)
+    df['support'] = df['support'].ffill()
+    df['resistance'] = df['resistance'].ffill()
+    return df
+
