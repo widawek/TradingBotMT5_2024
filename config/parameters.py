@@ -14,7 +14,6 @@ symbols:                                list = [
                                             'USDJPY',
                                             'US30',
                                             'XAUUSD',
-                                            'BTCUSD',
                                             'AUDUSD'
                                             ]
 
@@ -44,7 +43,7 @@ tz_diff                                 = get_timezone_difference()
 game_system: str                        = 'weighted_democracy'
 max_number_of_models: int               = 2
 profit_factor: float                    = 1.5
-position_size: int                      = int((100/len(symbols))*0.4)  # percent of balance 0.4 for tickmill europe broker leverage 1:30
+position_size: int                      = int((100/len(symbols))*0.24)  # percent of balance 0.24 for tickmill europe broker leverage 1:30
 kill_multiplier: float                  = 1.5  # loss of daily volatility by one position multiplier
 tp_miner: int                           = 3
 master_interval: str                    = intervals[0]
