@@ -70,6 +70,7 @@ class GlobalProfitTracker:
 class Bot:
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.currency = mt.account_info().currency
         self.after_change_hour = False if dt.now().hour < change_hour else True
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
@@ -142,7 +143,7 @@ class Bot:
                 last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment[:-1]]
                 if len(last_to_by_comment) >= 2:
                     last_two = sum(last_to_by_comment[-2:])
-                    printer("Last two positions profit", f"{last_two:.2f} $")
+                    printer("Last two positions profit", f"{last_two:.2f} {self.currency}")
                 else:
                     last_two = 0
             except Exception:
@@ -263,13 +264,13 @@ class Bot:
                 mean_profits = np.mean(self.profits)
                 self.self_decline_factor()
                 if self.print_condition():
-                    printer("Change value:", f"{round(self.profit_needed, 2):.2f} $")
+                    printer("Change value:", f"{round(self.profit_needed, 2):.2f} {self.currency}")
                     #printer("Actual trigger:", self.trigger)
-                    printer("Max profit:", f"{self.profit_max:.2f} $")
-                    # printer("Profit zero aka spread:", f"{self.profit0:.2f} $")
-                    # printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2):.2f} $")
+                    printer("Max profit:", f"{self.profit_max:.2f} {self.currency}")
+                    # printer("Profit zero aka spread:", f"{self.profit0:.2f} {self.currency}")
+                    # printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2):.2f} {self.currency}")
                     printer("Decline factor:", f"{self.profit_decline_factor}")
-                    printer("Close position if profit is less than", f"{round(self.profit_max * self.profit_decline_factor, 2)} $")
+                    printer("Close position if profit is less than", f"{round(self.profit_max * self.profit_decline_factor, 2)} {self.currency}")
 
                 if self.fake_position:
                     _ = self.fake_position_robot()
@@ -433,9 +434,9 @@ class Bot:
 
     @class_errors
     def info(self, profit, account, profit_to_margin, profit_to_balance):
-        printer("Profit:", f"{round(profit, 2):.2f} $")
-        printer("Account balance:", f"{account.balance:.2f} $")
-        printer("Account free margin:", f"{account.margin_free:.2f} $")
+        printer("Profit:", f"{round(profit, 2):.2f} {self.currency}")
+        printer("Account balance:", f"{account.balance:.2f} {self.currency}")
+        printer("Account free margin:", f"{account.margin_free:.2f} {self.currency}")
         printer("Profit to margin:", f"{profit_to_margin:.2f} %")
         printer("Profit to balance:", f"{profit_to_balance:.2f} %")
         printer("Actual position from model:", self.pos_type)
@@ -511,8 +512,8 @@ class Bot:
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
         printer('Min volume:', min_volume)
         printer('Calculated volume:', volume)
-        printer("Target:", f"{self.tp_miner:.2f} $")
-        printer("Killer:", f"{-self.kill_position_profit:.2f} $")
+        printer("Target:", f"{self.tp_miner:.2f} {self.currency}")
+        printer("Killer:", f"{-self.kill_position_profit:.2f} {self.currency}")
 
     @class_errors
     def calc_pos_condition(self, df1, window_=50):
