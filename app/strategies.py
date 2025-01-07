@@ -16,14 +16,14 @@ def z_moving_averages_trend_M2(df_raw, slow, fast):
     return df, position
 
 
-def x_moving_averages_close_trend_M2(df_raw, slow, fast):
-    df = df_raw.copy()
-    df['adj'] = (df['close'] + df['high'] + df['low']) / 3
-    ma1 = df.ta.vwma(length=fast)
-    ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
-    df['stance'] = np.where(((df['close']>=ma2)&(df['close']>=ma1)), 1, -1)
-    position = df['stance'].iloc[-1]
-    return df, position
+# def x_moving_averages_close_trend_M2(df_raw, slow, fast):
+#     df = df_raw.copy()
+#     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
+#     ma1 = df.ta.vwma(length=fast)
+#     ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
+#     df['stance'] = np.where(((df['close']>=ma2)&(df['close']>=ma1)), 1, -1)
+#     position = df['stance'].iloc[-1]
+#     return df, position
 
 
 def t3a_moving_average_close_trend_M2(df_raw, slow, fast):
@@ -37,32 +37,23 @@ def t3a_moving_average_close_trend_M2(df_raw, slow, fast):
     return df, position
 
 
-def x_macd1_signal_trend_M2(df_raw, slow, fast):
-    df = df_raw.copy()
-    macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
-    df['macd'] = macd.iloc[:,0]
-    df['signal'] = macd.iloc[:,2]
-    df['stance'] = np.where((df['macd']>=df['signal']), 1, -1)
-    position = df['stance'].iloc[-1]
-    return df, position
+# def x_macd1_signal_trend_M2(df_raw, slow, fast):
+#     df = df_raw.copy()
+#     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
+#     df['macd'] = macd.iloc[:,0]
+#     df['signal'] = macd.iloc[:,2]
+#     df['stance'] = np.where((df['macd']>=df['signal']), 1, -1)
+#     position = df['stance'].iloc[-1]
+#     return df, position
 
 
-def z_macd2_histogram0_trend_M2(df_raw, slow, fast):
-    df = df_raw.copy()
-    macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
-    df['histogram'] = macd.iloc[:,1]
-    df['stance'] = np.where((df['histogram']>0), 1, -1)
-    position = df['stance'].iloc[-1]
-    return df, position
-
-
-def macd3_histogram1_trend_M2(df_raw, slow, fast):
-    df = df_raw.copy()
-    macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
-    df['histogram'] = macd.iloc[:,1]
-    df['stance'] = np.where((df['histogram']>df['histogram'].shift(1)), 1, -1)
-    position = df['stance'].iloc[-1]
-    return df, position
+# def z_macd2_histogram0_trend_M2(df_raw, slow, fast):
+#     df = df_raw.copy()
+#     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
+#     df['histogram'] = macd.iloc[:,1]
+#     df['stance'] = np.where((df['histogram']>0), 1, -1)
+#     position = df['stance'].iloc[-1]
+#     return df, position
 
 
 def z_stoch2_trend_M2(df_raw, slow, fast):
@@ -175,15 +166,15 @@ def stoch1_divergence_strategy_counter_M1(df_raw, slow, fast):
 #     return df, position
 
 
-def a_moving_averages_trend_M1(df_raw, slow, fast):
-    df = df_raw.copy()
-    df['adj'] = (df['close'] + df['high'] + df['low']) / 3
-    ma1 = df.ta.vwma(length=fast)
-    ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
-    df['stance'] = np.where(ma1>=ma2, 1, 0)
-    df['stance'] = np.where(ma1<ma2, -1, df['stance'])
-    position = df['stance'].iloc[-1]
-    return df, position
+# def a_moving_averages_trend_M1(df_raw, slow, fast):
+#     df = df_raw.copy()
+#     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
+#     ma1 = df.ta.vwma(length=fast)
+#     ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
+#     df['stance'] = np.where(ma1>=ma2, 1, 0)
+#     df['stance'] = np.where(ma1<ma2, -1, df['stance'])
+#     position = df['stance'].iloc[-1]
+#     return df, position
 
 
 def zx_moving_averages_trend_M2(df_raw, slow, fast):
@@ -217,34 +208,6 @@ def t52_moving_average_close_trend_M2(df_raw, slow, fast):
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
-
-
-def macd1_signal_trend_M1(df_raw, slow, fast):
-    df = df_raw.copy()
-    macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
-    df['macd'] = macd.iloc[:,0]
-    df['signal'] = macd.iloc[:,2]
-    df['stance'] = np.where((df['macd']>=df['signal']), 1, -1)
-    position = df['stance'].iloc[-1]
-    return df, position
-
-
-def macd2_histogram0_trend_M1(df_raw, slow, fast):
-    df = df_raw.copy()
-    macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
-    df['histogram'] = macd.iloc[:,1]
-    df['stance'] = np.where((df['histogram']>0), 1, -1)
-    position = df['stance'].iloc[-1]
-    return df, position
-
-
-# def macd3_histogram1_trend_M1(df_raw, slow, fast):
-#     df = df_raw.copy()
-#     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
-#     df['histogram'] = macd.iloc[:,1]
-#     df['stance'] = np.where((df['histogram']>df['histogram'].shift(1)), 1, -1)
-#     position = df['stance'].iloc[-1]
-#     return df, position
 
 
 def stoch2_trend_M1(df_raw, slow, fast):
@@ -390,6 +353,52 @@ def eng2minmax_counter_M2(df, slow, fast):
     cond_short = (df['close'] < df['close'].shift(1))&(df['close'].shift(1) > df['close'].shift(2))&(df['close'].shift(2) > df['close'].shift(3))&(df['new_max'].rolling(fast).sum()>=1)#&(df['close'] < df['close'].shift(2))
     df['stance'] = np.where(cond_long, 1, np.NaN)
     df['stance'] = np.where(cond_short, -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def hhll1_counter_M1(df, slow, fast):
+    fast = fast-1
+    df['max_']=df['high'].rolling(slow).max()
+    df['min_']=df['low'].rolling(slow).min()
+    df['max_low'] = np.where(df['max_'] > df['max_'].shift(1), df['low'].rolling(fast).min(), np.NaN)
+    df['max_low'] = df['max_low'].ffill()
+    df['min_high'] = np.where(df['min_'] < df['min_'].shift(1), df['high'].rolling(fast).max(), np.NaN)
+    df['min_high'] = df['min_high'].ffill()
+    df['new_max'] = np.where(df['max_'] > df['max_'].shift(1), 1, np.NaN)
+    df['new_max'] = np.where(df['max_'] < df['max_'].shift(1), 0, df['new_max'])
+    df['new_max'] = df['new_max'].ffill()
+    df['new_min'] = np.where(df['min_'] < df['min_'].shift(1), 1, np.NaN)
+    df['new_min'] = np.where(df['min_'] > df['min_'].shift(1), 0, df['new_min'])
+    df['new_min'] = df['new_min'].ffill()
+    df['stance'] = np.where((df['new_max'] == 1)&(df['new_min']==0)&(df['close']>=df['min_'])&(df['close']<=df['min_high']), 1, np.NaN)
+    df['stance'] = np.where((df['new_max'] == 1)&(df['new_min']==0)&(df['close']>df['max_'].shift(1)), -1, df['stance'])
+    df['stance'] = np.where((df['new_max'] == 0)&(df['new_min']==1)&(df['close']<=df['max_'])&(df['close']>=df['max_low']), -1, df['stance'])
+    df['stance'] = np.where((df['new_max'] == 0)&(df['new_min']==1)&(df['close']<df['min_'].shift(1)), 1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def hhll2_counter_M2(df, slow, fast):
+    fast = fast-1
+    df['max_']=df['high'].rolling(slow).max()
+    df['min_']=df['low'].rolling(slow).min()
+    df['max_low'] = np.where(df['max_'] > df['max_'].shift(1), df['low'].rolling(fast).min(), np.NaN)
+    df['max_low'] = df['max_low'].ffill()
+    df['min_high'] = np.where(df['min_'] < df['min_'].shift(1), df['high'].rolling(fast).max(), np.NaN)
+    df['min_high'] = df['min_high'].ffill()
+    df['new_max'] = np.where(df['max_'] > df['max_'].shift(1), 1, np.NaN)
+    df['new_max'] = np.where(df['max_'] < df['max_'].shift(1), 0, df['new_max'])
+    df['new_max'] = df['new_max'].ffill()
+    df['new_min'] = np.where(df['min_'] < df['min_'].shift(1), 1, np.NaN)
+    df['new_min'] = np.where(df['min_'] > df['min_'].shift(1), 0, df['new_min'])
+    df['new_min'] = df['new_min'].ffill()
+    df['stance'] = np.where((df['new_max'] == 1)&(df['new_min']==0)&(df['close']>=df['min_'])&(df['close']<=df['min_high']), 1, np.NaN)
+    df['stance'] = np.where((df['new_max'] == 1)&(df['new_min']==0)&(df['close']>df['max_'].shift(1)), -1, df['stance'])
+    df['stance'] = np.where((df['new_max'] == 0)&(df['new_min']==1)&(df['close']<=df['max_'])&(df['close']>=df['max_low']), -1, df['stance'])
+    df['stance'] = np.where((df['new_max'] == 0)&(df['new_min']==1)&(df['close']<df['min_'].shift(1)), 1, df['stance'])
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
