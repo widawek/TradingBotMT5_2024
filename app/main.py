@@ -445,6 +445,7 @@ class Bot:
         #printer("Trend:", self.trend)
         try:
             printer("Strategy name:", self.strategies[self.strategy_number][0])
+            printer("Last backtest:", self.backtest_time)
         except IndexError as e:
             print("info", e)
             pass
@@ -872,6 +873,7 @@ class Bot:
 
     @class_errors
     def test_strategies(self, add_number=0):
+        self.backtest_time = dt.now().strftime("%H:%M")
         strategies_number = 4 + add_number
         super_start_time = time.time()
         strategies = import_strategies(['find_support_resistance_numpy'])

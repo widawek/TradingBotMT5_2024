@@ -1,7 +1,6 @@
 import pandas_ta as ta
 import numpy as np
 import pandas as pd
-from app.bot_functions import find_support_resistance_numpy
 
 # The first six characters are a mark of strategy, so they should be unique.
 
@@ -188,15 +187,15 @@ def zx_moving_averages_trend_M2(df_raw, slow, fast):
     return df, position
 
 
-def t3_moving_average_close_trend_M1(df_raw, slow, fast):
-    df = df_raw.copy()
-    df['adj'] = (df['close'] + df['high'] + df['low']) / 3
-    ma1 = ta.t3(df['adj'], length=round(fast*slow/5), a=0.95)
-    df['stance'] = np.where((df['close']>ma1), 1, np.NaN)
-    df['stance'] = np.where((df['close']<ma1), -1, df['stance'])
-    df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position
+# def t3_moving_average_close_trend_M1(df_raw, slow, fast):
+#     df = df_raw.copy()
+#     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
+#     ma1 = ta.t3(df['adj'], length=round(fast*slow/5), a=0.95)
+#     df['stance'] = np.where((df['close']>ma1), 1, np.NaN)
+#     df['stance'] = np.where((df['close']<ma1), -1, df['stance'])
+#     df['stance'] = df['stance'].ffill()
+#     position = df['stance'].iloc[-1]
+#     return df, position
 
 
 def t52_moving_average_close_trend_M2(df_raw, slow, fast):
@@ -301,7 +300,9 @@ def momen1tum_divergence_strategy_counter_M1(df, slow, fast):
     return df, position
 
 
-def sup1_res_numpy_trend_M1(df, slow, fast): 
+def sup1_res_numpy_trend_M1(df, slow, fast):
+    # import in function for report script
+    from app.bot_functions import find_support_resistance_numpy
     df = find_support_resistance_numpy(df, slow, fast)
     df['stance'] = np.where(df['close'] < df['support'], -1, np.NaN)
     df['stance'] = np.where(df['close'] > df['resistance'], 1, df['stance'])
@@ -311,6 +312,8 @@ def sup1_res_numpy_trend_M1(df, slow, fast):
 
 
 def sup2_res_numpy_trend_M2(df, slow, fast):
+    # import in function for report script
+    from app.bot_functions import find_support_resistance_numpy
     df = find_support_resistance_numpy(df, slow, fast)
     df['stance'] = np.where(df['close'] < df['support'], -1, np.NaN)
     df['stance'] = np.where(df['close'] > df['resistance'], 1, df['stance'])
@@ -320,6 +323,8 @@ def sup2_res_numpy_trend_M2(df, slow, fast):
 
 
 def sup3_res_numpy_trend_M3(df, slow, fast):
+    # import in function for report script
+    from app.bot_functions import find_support_resistance_numpy
     df = find_support_resistance_numpy(df, slow, fast)
     df['stance'] = np.where(df['close'] < df['support'], -1, np.NaN)
     df['stance'] = np.where(df['close'] > df['resistance'], 1, df['stance'])
