@@ -276,7 +276,8 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
     cross = int(df['cross'].sum()) ** 0.85 + 2
     sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 6)
     omega = omega_ratio(df['return'])
-    return sharpe, omega
+    density = df['cross'].sum()/len(df)
+    return sharpe, omega, density
 
 
 def delete_last_day_and_clean_returns(df, morning_hour, evening_hour, respect_overnight=True):
