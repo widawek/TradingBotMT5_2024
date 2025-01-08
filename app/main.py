@@ -536,7 +536,7 @@ class Bot:
         # ret = df['return'].mean()/df['return'].std()
         # ret = round(ret, 4)
         try:
-            sharpe, omega = calc_result(df, 1)
+            sharpe, omega, _ = calc_result(df, 1)
             ret = round(sharpe * omega, 4)
             return cond.iloc[-1], df['cond'].iloc[-1], cond2, ret
         except IndexError:
@@ -829,8 +829,10 @@ class Bot:
                     continue
                 df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
                 #df2 = df1.copy()[-small_bt_bars:]
-                sharpe, calmar = calc_result(df1, sharpe_multiplier)
-                sharpe2, calmar2 = calc_result(df1, sharpe_multiplier, True)
+                sharpe, calmar, density = calc_result(df1, sharpe_multiplier)
+                if density < 1/400:
+                    continue
+                sharpe2, calmar2, _ = calc_result(df1, sharpe_multiplier, True)
                 #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
                 _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
                 results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(calmar+calmar2), actual_condition, daily_return))
