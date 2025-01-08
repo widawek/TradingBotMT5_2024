@@ -15,16 +15,6 @@ def z_moving_averages_trend_M2(df_raw, slow, fast):
     return df, position
 
 
-# def x_moving_averages_close_trend_M2(df_raw, slow, fast):
-#     df = df_raw.copy()
-#     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
-#     ma1 = df.ta.vwma(length=fast)
-#     ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
-#     df['stance'] = np.where(((df['close']>=ma2)&(df['close']>=ma1)), 1, -1)
-#     position = df['stance'].iloc[-1]
-#     return df, position
-
-
 def t3a_moving_average_close_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
@@ -36,53 +26,11 @@ def t3a_moving_average_close_trend_M2(df_raw, slow, fast):
     return df, position
 
 
-# def x_macd1_signal_trend_M2(df_raw, slow, fast):
-#     df = df_raw.copy()
-#     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
-#     df['macd'] = macd.iloc[:,0]
-#     df['signal'] = macd.iloc[:,2]
-#     df['stance'] = np.where((df['macd']>=df['signal']), 1, -1)
-#     position = df['stance'].iloc[-1]
-#     return df, position
-
-
-# def z_macd2_histogram0_trend_M2(df_raw, slow, fast):
-#     df = df_raw.copy()
-#     macd = df.ta.macd(fast=round(fast), slow=round(slow), signal=round(fast*3/4))
-#     df['histogram'] = macd.iloc[:,1]
-#     df['stance'] = np.where((df['histogram']>0), 1, -1)
-#     position = df['stance'].iloc[-1]
-#     return df, position
-
-
 def z_stoch2_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     df['k1'] = df.ta.stoch(k=fast).iloc[:,0]
     df['k2'] = df.ta.stoch(k=slow).iloc[:,0]
     df['stance'] = np.where(df['k1']>=df['k2'], 1, -1)
-    position = df['stance'].iloc[-1]
-    return df, position
-
-
-def techn1ique3_trend_M1(df_raw, slow, fast):
-    df = df_raw.copy()
-    df.set_index(df['time'], inplace=True)
-    df['numbers'] = [1+i for i in range(len(df))]
-    df['vwap_D'] = df.ta.vwap(anchor="D")
-    df['adj'] = (df['close'] + df['high'] + df['low'])/3
-    df['ma'] = ta.sma(df['adj'], length=slow)
-    df['super_new_indicator'] = (df['close'] - df['close'].shift(1)) * df['volume']
-    df['super_new_indicator'] = df['super_new_indicator'].rolling(slow).mean()
-    df['super_max'] = df['super_new_indicator'].rolling(slow*fast).max()
-    df['super_min'] = df['super_new_indicator'].rolling(slow*fast).min()
-    df['median'] = (df['super_max'] + df['super_min']) / 2
-    df['super_ma'] = df['ma'] + df['ma']*df['median']
-    df['k1'] = df.ta.stoch(k=fast).iloc[:,0]
-    df['k2'] = df.ta.stoch(k=slow).iloc[:,0]
-    df['stance'] = np.where((df['super_ma'] < df['ma']) & (df.close > df.vwap_D), 1, 0)
-    df['stance'] = np.where((df['super_ma'] > df['ma']) & (df.close < df.vwap_D), -1, df['stance'])
-    df['stance'] = np.where((df.k1>df.k2)&(df.stance==0), 1, df['stance'])
-    df['stance'] = np.where((df.k1<df.k2)&(df.stance==0), -1, df['stance'])
     position = df['stance'].iloc[-1]
     return df, position
 
@@ -113,69 +61,6 @@ def rsi1_divergence_strategy_counter_M1(df_raw, slow, fast):
     return df, position
 
 
-# def stoch1_divergence_strategy_counter_M1(df_raw, slow, fast):
-#     df = df_raw.copy()
-#     df['rsi'] = df.ta.stoch(k=slow).iloc[:,0]
-#     df['price_peak'] = df['high'].rolling(fast).max()
-#     df['price_trough'] = df['low'].rolling(fast).min()
-#     df['rsi_peak'] = df['rsi'].rolling(fast).max()
-#     df['rsi_trough'] = df['rsi'].rolling(fast).min()
-
-#     df['bullish_div'] = np.where(
-#         ((df['price_trough'] < df['price_trough'].shift(1)) &  # Price makes a lower low
-#         (df['rsi_trough'] > df['rsi_trough'].shift(1))),  # RSI makes a higher low
-#         1, 0)
-
-#     df['bearish_div'] = np.where(
-#         ((df['price_peak'] > df['price_peak'].shift(1)) &  # Price makes a higher high
-#         (df['rsi_peak'] < df['rsi_peak'].shift(1))),  # RSI makes a lower high
-#         1, 0)
-
-#     df['stance'] = np.NaN
-#     df.loc[df['bullish_div'] == 1, 'stance'] = 1  # Buy signal on bullish divergence
-#     df.loc[df['bearish_div'] == 1, 'stance'] = -1  # Sell signal on bearish divergence
-#     df['stance'] = df['stance'].ffill()
-#     position = df['stance'].iloc[-1]
-#     return df, position
-
-
-# def cci1_divergence_strategy_counter_M1(df_raw, slow, fast):
-#     df = df_raw.copy()
-#     df['rsi'] = df.ta.cci(length=slow)
-#     df['price_peak'] = df['high'].rolling(fast).max()
-#     df['price_trough'] = df['low'].rolling(fast).min()
-#     df['rsi_peak'] = df['rsi'].rolling(fast).max()
-#     df['rsi_trough'] = df['rsi'].rolling(fast).min()
-
-#     df['bullish_div'] = np.where(
-#         ((df['price_trough'] < df['price_trough'].shift(1)) &  # Price makes a lower low
-#         (df['rsi_trough'] > df['rsi_trough'].shift(1))),  # RSI makes a higher low
-#         1, 0)
-
-#     df['bearish_div'] = np.where(
-#         ((df['price_peak'] > df['price_peak'].shift(1)) &  # Price makes a higher high
-#         (df['rsi_peak'] < df['rsi_peak'].shift(1))),  # RSI makes a lower high
-#         1, 0)
-
-#     df['stance'] = np.NaN
-#     df.loc[df['bullish_div'] == 1, 'stance'] = 1  # Buy signal on bullish divergence
-#     df.loc[df['bearish_div'] == 1, 'stance'] = -1  # Sell signal on bearish divergence
-#     df['stance'] = df['stance'].ffill()
-#     position = df['stance'].iloc[-1]
-#     return df, position
-
-
-# def a_moving_averages_trend_M1(df_raw, slow, fast):
-#     df = df_raw.copy()
-#     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
-#     ma1 = df.ta.vwma(length=fast)
-#     ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
-#     df['stance'] = np.where(ma1>=ma2, 1, 0)
-#     df['stance'] = np.where(ma1<ma2, -1, df['stance'])
-#     position = df['stance'].iloc[-1]
-#     return df, position
-
-
 def zx_moving_averages_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
@@ -187,17 +72,6 @@ def zx_moving_averages_trend_M2(df_raw, slow, fast):
     return df, position
 
 
-# def t3_moving_average_close_trend_M1(df_raw, slow, fast):
-#     df = df_raw.copy()
-#     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
-#     ma1 = ta.t3(df['adj'], length=round(fast*slow/5), a=0.95)
-#     df['stance'] = np.where((df['close']>ma1), 1, np.NaN)
-#     df['stance'] = np.where((df['close']<ma1), -1, df['stance'])
-#     df['stance'] = df['stance'].ffill()
-#     position = df['stance'].iloc[-1]
-#     return df, position
-
-
 def t52_moving_average_close_trend_M2(df_raw, slow, fast):
     df = df_raw.copy()
     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
@@ -205,15 +79,6 @@ def t52_moving_average_close_trend_M2(df_raw, slow, fast):
     df['stance'] = np.where((df['close']>ma1), 1, np.NaN)
     df['stance'] = np.where((df['close']<ma1), -1, df['stance'])
     df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position
-
-
-def stoch2_trend_M1(df_raw, slow, fast):
-    df = df_raw.copy()
-    df['k1'] = df.ta.stoch(k=fast).iloc[:,0]
-    df['k2'] = df.ta.stoch(k=slow).iloc[:,0]
-    df['stance'] = np.where(df['k1']>=df['k2'], 1, -1)
     position = df['stance'].iloc[-1]
     return df, position
 
@@ -433,6 +298,50 @@ def ema1boll_trend_M1(df, slow, fast):
 
 
 def t1boll_trend_M1(df, slow, fast):
+    fast = fast-1
+    df['ema'] = df.ta.ema(length=slow)
+    df['std'] = df.ta.stdev(length=slow)
+    df['upper'] = df['ema'] + (fast/10)*df['std']
+    df['lower'] = df['ema'] - (fast/10)*df['std']
+    df['max_']=df['high'].rolling(slow).max()
+    df['min_']=df['low'].rolling(slow).min()
+    df['new_max'] = np.where(df['max_'] > df['max_'].shift(1), 1, np.NaN)
+    df['new_max'] = np.where(df['max_'] < df['max_'].shift(1), 0, df['new_max'])
+    df['new_max'] = df['new_max'].ffill()
+    df['new_min'] = np.where(df['min_'] < df['min_'].shift(1), 1, np.NaN)
+    df['new_min'] = np.where(df['min_'] > df['min_'].shift(1), 0, df['new_min'])
+    df['new_min'] = df['new_min'].ffill()
+    df['stance'] = np.where((df['new_max'] == 1)&(df['new_min']==0)&(df['close']<df['lower']), 1, np.NaN)
+    df['stance'] = np.where((df['new_max'] == 0)&(df['new_min']==1)&(df['close']>df['upper']), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def ema2boll_trend_M2(df, slow, fast):
+    fast = fast-1
+    df['ema'] = df.ta.ema(length=slow)
+    df['ema_high'] = ta.sma(df.high, length=slow*5)
+    df['ema_low'] = ta.sma(df.low, length=slow*5)
+    df['std'] = df.ta.stdev(length=slow)
+    df['upper'] = df['ema'] + (fast/10)*df['std']
+    df['lower'] = df['ema'] - (fast/10)*df['std']
+    df['max_']=df['high'].rolling(slow).max()
+    df['min_']=df['low'].rolling(slow).min()
+    df['new_max'] = np.where((df['max_'] > df['max_'].shift(1))&(df['close']>df['ema_high']), 1, np.NaN)
+    df['new_max'] = np.where(df['max_'] < df['max_'].shift(1), 0, df['new_max'])
+    df['new_max'] = df['new_max'].ffill()
+    df['new_min'] = np.where((df['min_'] < df['min_'].shift(1))&(df['close']<df['ema_low']), 1, np.NaN)
+    df['new_min'] = np.where(df['min_'] > df['min_'].shift(1), 0, df['new_min'])
+    df['new_min'] = df['new_min'].ffill()
+    df['stance'] = np.where((df['new_max'] == 1)&(df['new_min']==0), -1, np.NaN)
+    df['stance'] = np.where((df['new_max'] == 0)&(df['new_min']==1), 1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def t2boll_trend_M2(df, slow, fast):
     fast = fast-1
     df['ema'] = df.ta.ema(length=slow)
     df['std'] = df.ta.stdev(length=slow)

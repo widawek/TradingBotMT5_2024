@@ -819,23 +819,27 @@ class Bot:
         results = []
         for slow in trange(5, 50):
             for fast in range(2, 21):
-                if fast == slow:
+                try:
+                    if fast == slow:
+                        continue
+                    df1, position = strategy(df_raw, slow, fast)
+                    if len(df1) < self.number_of_bars_for_backtest/2:
+                        continue
+                    df1 = calculate_strategy_returns(df1, leverage)
+                    if len(df1) < self.number_of_bars_for_backtest/2:
+                        continue
+                    df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
+                    #df2 = df1.copy()[-small_bt_bars:]
+                    sharpe, calmar, density = calc_result(df1, sharpe_multiplier)
+                    if density < 1/400:
+                        continue
+                    sharpe2, calmar2, _ = calc_result(df1, sharpe_multiplier, True)
+                    #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
+                    _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
+                    results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(calmar+calmar2), actual_condition, daily_return))
+                except Exception as e:
+                    print("trend_backtest", e)
                     continue
-                df1, position = strategy(df_raw, slow, fast)
-                if len(df1) < self.number_of_bars_for_backtest/2:
-                    continue
-                df1 = calculate_strategy_returns(df1, leverage)
-                if len(df1) < self.number_of_bars_for_backtest/2:
-                    continue
-                df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
-                #df2 = df1.copy()[-small_bt_bars:]
-                sharpe, calmar, density = calc_result(df1, sharpe_multiplier)
-                if density < 1/400:
-                    continue
-                sharpe2, calmar2, _ = calc_result(df1, sharpe_multiplier, True)
-                #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
-                _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
-                results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(calmar+calmar2), actual_condition, daily_return))
 
         f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
