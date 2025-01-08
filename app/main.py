@@ -519,9 +519,7 @@ class Bot:
     @class_errors
     def calc_pos_condition(self, df1, window_=50):
         df = df1.copy()[-window_*30:]
-        # df['mkt_move'] = np.log(df.close/df.close.shift())
-        # df['return'] = df['mkt_move'] * df.stance.shift()
-        df = calculate_strategy_returns(df, leverage)
+        df, _ = calculate_strategy_returns(df, leverage)
         df['strategy'] = (1+df['return']).cumprod() - 1
         df['strategy_mean'] = df['strategy'].rolling(window_).mean()
         df['strategy_std'] = df['strategy'].rolling(window_).std()/2
@@ -532,11 +530,14 @@ class Bot:
         cond = df['cond'].rolling(window_).sum()
         df['date_xc'] = df['time'].dt.date
         df = df[df['date_xc'] == dt.now().date()]
+        if not respect_overnight:
+            df['return'] = np.where((df['time'].dt.hour < morning_hour-1) | (df['time'].dt.hour > evening_hour+1), np.NaN, df['return'])
+            df = df.dropna()
         #ret = (1+df['return']).cumprod() - 1
         # ret = df['return'].mean()/df['return'].std()
         # ret = round(ret, 4)
         try:
-            sharpe, omega, _ = calc_result(df, 1)
+            sharpe, omega = calc_result(df, 1)
             ret = round(sharpe * omega, 4)
             return cond.iloc[-1], df['cond'].iloc[-1], cond2, ret
         except IndexError:
@@ -822,21 +823,19 @@ class Bot:
                 try:
                     if fast == slow:
                         continue
-                    df1, position = strategy(df_raw, slow, fast)
+                    df1, _ = strategy(df_raw, slow, fast)
                     if len(df1) < self.number_of_bars_for_backtest/2:
                         continue
-                    df1 = calculate_strategy_returns(df1, leverage)
-                    if len(df1) < self.number_of_bars_for_backtest/2:
+                    df1, density = calculate_strategy_returns(df1, leverage)
+                    if (len(df1) < self.number_of_bars_for_backtest/2) or (density < 1/500):
                         continue
                     df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
                     #df2 = df1.copy()[-small_bt_bars:]
-                    sharpe, calmar, density = calc_result(df1, sharpe_multiplier)
-                    if density < 1/500:
-                        continue
-                    sharpe2, calmar2, _ = calc_result(df1, sharpe_multiplier, True)
+                    sharpe, omega = calc_result(df1, sharpe_multiplier)
+                    sharpe2, omega2 = calc_result(df1, sharpe_multiplier, True)
                     #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
                     _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
-                    results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(calmar+calmar2), actual_condition, daily_return))
+                    results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(omega+omega2), actual_condition, daily_return))
                 except Exception as e:
                     print("trend_backtest", e)
                     continue

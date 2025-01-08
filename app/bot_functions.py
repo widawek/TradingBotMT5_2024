@@ -251,8 +251,9 @@ def calculate_strategy_returns(df, leverage):
                             ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
     df['mkt_move'] = np.log(df.close/df.close.shift(1))
     df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open))*leverage
+    density = df['cross'].sum()/len(df)
     #df['strategy'] = (1+df['return']).cumprod() - 1
-    return df
+    return df, density
 
 
 def calmar_ratio(returns, periods_per_year=252):
@@ -276,8 +277,7 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
     cross = int(df['cross'].sum()) ** 0.85 + 2
     sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 6)
     omega = omega_ratio(df['return'])
-    density = df['cross'].sum()/len(df)
-    return sharpe, omega, density
+    return sharpe, omega
 
 
 def delete_last_day_and_clean_returns(df, morning_hour, evening_hour, respect_overnight=True):
