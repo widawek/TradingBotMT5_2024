@@ -730,7 +730,7 @@ class Bot:
                 }
             order_result = mt.order_send(request)
 
-        if not self.after_change_hour and dt.now().hour >= change_hour:
+        if (not self.after_change_hour) and (dt.now().hour >= change_hour):
             self.after_change_hour = True
             self.test_strategies()
 
@@ -831,7 +831,7 @@ class Bot:
                     df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
                     #df2 = df1.copy()[-small_bt_bars:]
                     sharpe, calmar, density = calc_result(df1, sharpe_multiplier)
-                    if density < 1/400:
+                    if density < 1/500:
                         continue
                     sharpe2, calmar2, _ = calc_result(df1, sharpe_multiplier, True)
                     #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)

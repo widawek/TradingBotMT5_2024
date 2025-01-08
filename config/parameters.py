@@ -36,7 +36,7 @@ ts_list: list                           = [0.3]
 factors: list                           = [_ for _ in range(min_factor, max_factor, range_)]
 n_splits: int                           = 2
 bars: int                               = 30000
-change_hour: int                        = 24 # 15
+change_hour: int                        = 14
 
 #                                       bot params
 tz_diff                                 = get_timezone_difference()
