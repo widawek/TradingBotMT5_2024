@@ -351,3 +351,41 @@ def find_support_resistance_numpy(df, slow, fast):
     df['resistance'] = df['resistance'].ffill()
     return df
 
+
+def wlr_rr(df):
+    stances = df['stance'].to_list()
+    positions = []
+    for index, position in enumerate(stances):
+        last_position = stances[index-1] if index > 0 else None
+        if position != last_position:
+           positions.append((index, position))
+
+    positions = [(a[0], b[0], int(a[1])) for a, b in zip(positions[1:], positions[2:])]
+    print(positions)
+    stats = []
+    for start, end, position in positions:
+        df_stats = df.iloc[start:end]
+        position = "Long" if position == 1 else "Short"
+        max_price = df_stats.high.max()
+        min_price = df_stats.low.min()
+        if position == "Long":
+            result = df_stats.iloc[-1].close-df_stats.iloc[0].close
+            max_result = max_price-df_stats.iloc[0].close
+            min_result = df_stats.iloc[0].close-min_price
+        else:
+            result = df_stats.iloc[0].close-df_stats.iloc[-1].close
+            min_result = max_price-df_stats.iloc[0].close
+            max_result = df_stats.iloc[-1].close-min_price
+        stats.append((result, min_result, max_result))
+
+    df = pd.DataFrame(stats, columns=['result', 'min_result', 'max_result'])
+    risk_reward_ratio = round(df['max_result'].mean()/df['min_result'].mean(), 3)
+    try:
+        win_loss_ratio = round(len(df[df['result'] > 0])/len(df[df['result'] < 0]), 3)
+    except ZeroDivisionError:
+        win_loss_ratio = 1
+    end_result = round(risk_reward_ratio*win_loss_ratio, 2)
+    print(f"Win/Loss Ratio: {win_loss_ratio}")
+    print(f"Risk/Reward Ratio: {risk_reward_ratio}")
+    print(f"End Result: {end_result}")
+    return end_result
