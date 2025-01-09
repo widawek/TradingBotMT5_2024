@@ -266,7 +266,46 @@ def calmar_ratio(returns, periods_per_year=252):
     return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
 
 
-def calc_result(df, sharpe_multiplier, check_week_ago=False):
+def wlr_rr(df):
+    # Tworzenie listy zmian pozycji
+    stances = df['stance'].to_numpy()
+    change_indices = np.where(stances[:-1] != stances[1:])[0] + 1
+    change_positions = [(0, change_indices[0], stances[0])] + [
+        (start, end, stances[start]) for start, end in zip(change_indices[:-1], change_indices[1:])
+    ]
+    # Wektoryzowane obliczanie statystyk
+    stats = []
+    for start, end, position in change_positions:
+        df_stats = df.iloc[start:end]
+        prices = df_stats[['close', 'high', 'low']].to_numpy()
+        open_price, close_price = prices[0, 0], prices[-1, 0]
+        max_price, min_price = prices[:, 1].max(), prices[:, 2].min()
+
+        if position == 1:
+            result = (close_price - open_price) / open_price
+            max_result = (max_price - open_price) / open_price
+            min_result = (open_price - min_price) / open_price
+        else:
+            result = (open_price - close_price) / open_price
+            min_result = (max_price - open_price) / open_price
+            max_result = (close_price - min_price) / open_price
+
+        stats.append((result, min_result, max_result))
+    # Tworzenie DataFrame dla statystyk
+    stats_df = pd.DataFrame(stats, columns=['result', 'min_result', 'max_result'])
+    risk_reward_ratio = stats_df['max_result'].mean() / (stats_df['min_result'].mean() + stats_df['min_result'].std())
+    risk_reward_ratio = round(risk_reward_ratio, 3)
+    try:
+        win_loss_ratio = round((stats_df['result'] > 0).sum() / (stats_df['result'] < 0).sum(), 3)
+    except ZeroDivisionError:
+        win_loss_ratio = 1
+    end_result = round(risk_reward_ratio * win_loss_ratio, 2)
+    if end_result == np.inf:
+        end_result = 4
+    return end_result
+
+
+def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=False):
     if check_week_ago:
         today = dt.now().date()
         week_ago_date = today - timedelta(days=7)
@@ -277,7 +316,11 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False):
     cross = int(df['cross'].sum()) ** 0.85 + 2
     sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 6)
     omega = omega_ratio(df['return'])
-    return sharpe, omega
+    if check_end_result:
+        end_result = wlr_rr(df)
+        return sharpe, omega, end_result
+    else:
+        return sharpe, omega
 
 
 def delete_last_day_and_clean_returns(df, morning_hour, evening_hour, respect_overnight=True):
@@ -351,46 +394,3 @@ def find_support_resistance_numpy(df, slow, fast):
     df['resistance'] = df['resistance'].ffill()
     return df
 
-
-def wlr_rr(df):
-    stances = df['stance'].to_list()
-    changes = df['cross'].to_list()
-    positions = []
-    for index, position in enumerate(stances):
-        last_position = stances[index-1] if index > 0 else None
-        if position != last_position:
-           positions.append((index, position))
-
-    positions = [(a[0], b[0], int(a[1])) for a, b in zip(positions[1:], positions[2:])]
-    #print(positions)
-    stats = []
-    for start, end, position in positions:
-        df_stats = df.iloc[start:end]
-        position = "Long" if position == 1 else "Short"
-        max_price = df_stats.high.max()
-        min_price = df_stats.low.min()
-        if position == "Long":
-            result = (df_stats.iloc[-1].close-df_stats.iloc[0].close)/df_stats.iloc[0].close
-            max_result = (max_price-df_stats.iloc[0].close)/df_stats.iloc[0].close
-            min_result = (df_stats.iloc[0].close-min_price)/df_stats.iloc[0].close
-        else:
-            result = (df_stats.iloc[0].close-df_stats.iloc[-1].close)/df_stats.iloc[0].close
-            min_result = (max_price-df_stats.iloc[0].close)/df_stats.iloc[0].close
-            max_result = (df_stats.iloc[-1].close-min_price)/df_stats.iloc[0].close
-        open = df_stats.iloc[0].open
-        stats.append((open, result, min_result, max_result))
-
-    df = pd.DataFrame(stats, columns=['open', 'result', 'min_result', 'max_result'])
-    risk_reward_ratio = round(df['max_result'].mean()/(df['min_result'].mean()+df['min_result'].std()), 3)
-    try:
-        win_loss_ratio = round(len(df[df['result'] > 0])/len(df[df['result'] < 0]), 3)
-    except ZeroDivisionError:
-        win_loss_ratio = 1
-    end_result = round(risk_reward_ratio*win_loss_ratio, 2)
-    std_loss = round(df['min_result'].std()*100, 3)
-    print(f"Win/Loss Ratio: {win_loss_ratio}")
-    print(f"Risk/Reward Ratio: {risk_reward_ratio}")
-    print(f"End Result: {end_result}")
-    print(f"Standard deviation of loss: {std_loss}")
-    #_= plt.plot((1+df['result']).cumprod()-1)
-    return end_result

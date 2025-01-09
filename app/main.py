@@ -31,7 +31,7 @@ processor = TradingProcessor()
 class GlobalProfitTracker:
     mt.initialize()
     def __init__(self, symbols: list, multiplier: float):
-        self.barrier = round((len(symbols)*multiplier)/100, 4)
+        self.barrier = round((len(symbols)*multiplier)/(100*5), 4)
         self.global_profit_to_margin = None
         self.condition = False
         self.positions = []
@@ -537,7 +537,7 @@ class Bot:
         # ret = df['return'].mean()/df['return'].std()
         # ret = round(ret, 4)
         try:
-            sharpe, omega = calc_result(df, 1)
+            sharpe, omega = calc_result(df, 1, False, False)
             ret = round(sharpe * omega, 4)
             return cond.iloc[-1], df['cond'].iloc[-1], cond2, ret
         except IndexError:
@@ -570,7 +570,7 @@ class Bot:
             #     dfx, position = self.model_position(number_of_bars, backtest=False)
             #     printer(f'Position from {strategy[0]}:', position)
             # else:
-            dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + 1440)) # how_many_bars
+            dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + 3440)) # how_many_bars
             dfx, position = strategy[1](dfx, slow, fast)
             if position not in [-1, 1]:
                 dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + number_of_bars*20)) # how_many_bars
@@ -831,18 +831,19 @@ class Bot:
                         continue
                     df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
                     #df2 = df1.copy()[-small_bt_bars:]
-                    sharpe, omega = calc_result(df1, sharpe_multiplier)
-                    sharpe2, omega2 = calc_result(df1, sharpe_multiplier, True)
+                    sharpe, omega = calc_result(df1, sharpe_multiplier, False, False)
+                    sharpe2, omega2, end_result = calc_result(df1, sharpe_multiplier, True, True)
                     #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
                     _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
-                    results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(omega+omega2), actual_condition, daily_return))
+                    results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(omega+omega2),
+                                    actual_condition, daily_return, end_result))
                 except Exception as e:
                     print("trend_backtest", e)
                     continue
 
         f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
-        return f_result[0], f_result[1], round(f_result[2]*f_result[3]*100, 4), f_result[4], f_result[5]
+        return f_result[0], f_result[1], round(f_result[2]*f_result[3]*f_result[6]*100, 4), f_result[4], f_result[5], f_result[6]
         # else:
         #     df1 = self.model_position(500, backtest=True)
         #     sharpe, calmar = calc_result(df1, sharpe_multiplier)
@@ -895,11 +896,11 @@ class Bot:
             interval = name_.split('_')[-1]
             kind = name_.split('_')[-2]
             #marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
-            fast, slow, result, actual_condition, daily_return = self.trend_backtest(strategy)
-            print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, "\n")
-            self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return))
+            fast, slow, result, actual_condition, daily_return, end_result = self.trend_backtest(strategy)
+            print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, "\n")
+            self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result))
 
-        for name_, _, interval, fast, slow, result, _, kind, _ in self.strategies_raw:
+        for name_, _, interval, fast, slow, result, _, kind, _, end_result in self.strategies_raw:
             self.write_to_backtest(name_, interval, result, kind, fast, slow)
 
         self.strategies = [i for i in self.strategies_raw if ((i[5] != np.inf) and (i[5] > 0))]
@@ -918,7 +919,7 @@ class Bot:
             self.test_strategies()
         else:
             for i in self.strategies:
-                print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8])
+                print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9])
             self.strategy_number = 0
             self.reset_bot()
 
