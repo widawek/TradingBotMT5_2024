@@ -268,7 +268,7 @@ def calmar_ratio(returns, periods_per_year=252):
 
 def wlr_rr(df):
     # Tworzenie listy zmian pozycji
-    stances = df['stance'].to_numpy()
+    stances = df['stance'].shift(1).dropna().to_numpy()
     change_indices = np.where(stances[:-1] != stances[1:])[0] + 1
     change_positions = [(0, change_indices[0], stances[0])] + [
         (start, end, stances[start]) for start, end in zip(change_indices[:-1], change_indices[1:])
@@ -276,7 +276,7 @@ def wlr_rr(df):
     # Wektoryzowane obliczanie statystyk
     stats = []
     for start, end, position in change_positions:
-        df_stats = df.iloc[start:end]
+        df_stats = df.iloc[start+1:end+1]
         prices = df_stats[['close', 'high', 'low']].to_numpy()
         open_price, close_price = prices[0, 0], prices[-1, 0]
         max_price, min_price = prices[:, 1].max(), prices[:, 2].min()
@@ -296,7 +296,7 @@ def wlr_rr(df):
     risk_reward_ratio = stats_df['max_result'].mean() / (stats_df['min_result'].mean() + stats_df['min_result'].std())
     risk_reward_ratio = round(risk_reward_ratio, 3)
     try:
-        win_loss_ratio = round((stats_df['result'] > 0).sum() / (stats_df['result'] < 0).sum(), 3)
+        win_loss_ratio = round(len(stats_df[stats_df['result'] > 0])/len(stats_df[stats_df['result'] < 0]), 3)
     except ZeroDivisionError:
         win_loss_ratio = 1
     end_result = round(risk_reward_ratio * win_loss_ratio, 2)
