@@ -497,12 +497,13 @@ class Bot:
         account = mt.account_info()._asdict()
         max_pos_margin = round(account["balance"] * (max_pos_margin/100) /
                             (self.avg_vol * 100))
+        divider_condition = 1 if self.too_much_risk() == 1 else 2
         if "JP" not in self.symbol:
-            volume = round((max_pos_margin / margin_min)) *\
+            volume = round((max_pos_margin / (margin_min*divider_condition))) *\
                             symbol_info["volume_min"]
             printer('Volume from value:', round((max_pos_margin / margin_min), 2))
         else:
-            volume = round((max_pos_margin * 100 / margin_min)) *\
+            volume = round((max_pos_margin * 100 / (margin_min*divider_condition))) *\
                             symbol_info["volume_min"]
             printer('Volume from value:', round((max_pos_margin * 100 / margin_min), 2))
         if volume > symbol_info["volume_max"]:
