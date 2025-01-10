@@ -300,8 +300,8 @@ def wlr_rr(df):
     except ZeroDivisionError:
         win_loss_ratio = 1
     end_result = round(risk_reward_ratio * win_loss_ratio, 2)
-    if end_result == np.inf:
-        end_result = 4
+    if (end_result == np.inf) or (end_result > 2):
+        end_result = 2.0
     return end_result
 
 

@@ -154,7 +154,7 @@ class Bot:
         if self.tiktok < 1:
             if (profit_ > 0) and (last_two >= 0):
                 self.tiktok -= 1
-            elif (profit_ < 0) or (last_two < 0):
+            elif (profit_ < 0):# or (last_two < 0):
                 self.tiktok += 1
             else:
                 pass
@@ -228,6 +228,9 @@ class Bot:
                     (profit_ > 0):
                 fake_position_on()
 
+        elif self.too_much_risk() > 1:
+            return self.fake_position_off()
+
         elif self.fake_position and pos_type == 0:
             old_max = self.max_close
             self.max_close = close2 if (close2 > self.max_close) else self.max_close
@@ -276,7 +279,7 @@ class Bot:
                     _ = self.fake_position_robot()
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif profit < -self.profit_needed*profit_decrease_barrier:# and profit > 0.91 * self.profit_min:
+                elif profit < -self.profit_needed*profit_decrease_barrier/self.too_much_risk():# and profit > 0.91 * self.profit_min:
                     self.clean_orders(backtest)
 
                 # # Jeżeli strata mniejsza od straty granicznej
@@ -922,6 +925,12 @@ class Bot:
                 print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9])
             self.strategy_number = 0
             self.reset_bot()
+
+    def too_much_risk(self):
+        test = [i - timedelta(minutes=5) < dt.now() < i + timedelta(minutes=60) for i in hardcore_hours]
+        if any(test):
+            return 5
+        return 1
 
 if __name__ == '__main__':
     print('Yo, wtf?')

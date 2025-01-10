@@ -1,8 +1,9 @@
 import sys
 sys.path.append("..")
 from app.functions import get_timezone_difference
-from extensions.investing_scrapper import get_me_economics
+from extensions.investing_scrapper import Scraper
 
+scraper = Scraper()
 # global params
 
 symbols:                                list = [
@@ -25,7 +26,7 @@ min_factor: int                         = 6
 max_factor: int                         = 23
 range_: int                             = 1
 morning_hour: int                       = 7
-evening_hour: int                       = 21 if not get_me_economics() else 20
+evening_hour: int                       = 21 if not scraper.give_me_economics() else 20
 probability_edge: float                 = 0.25
 sharpe_limit: float                     = 3.0
 kk_limit: float                         = 1.0
@@ -55,3 +56,4 @@ global_tracker_multiplier: float        = 1.1
 profit_decrease_barrier: float          = 0.93
 profit_increase_barrier: float          = 1.6
 respect_overnight: bool                 = True
+hardcore_hours: list                    = scraper.give_me_hardcore_hours()
