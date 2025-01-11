@@ -266,18 +266,32 @@ def calmar_ratio(returns, periods_per_year=252):
     return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
 
 
-def wlr_rr(df):
-    # Tworzenie listy zmian pozycji
-    stances = df['stance'].shift(1).dropna().to_numpy()
-    change_indices = np.where(stances[:-1] != stances[1:])[0] + 1
-    change_positions = [(0, change_indices[0], stances[0])] + [
-        (start, end, stances[start]) for start, end in zip(change_indices[:-1], change_indices[1:])
-    ]
-    # Wektoryzowane obliczanie statystyk
+def wlr_rr(df_raw):
+
+    def garch_metric(excess_returns):
+        sharpe_ratio = np.mean(excess_returns) / np.std(excess_returns)
+        cumulative_returns = excess_returns.cumsum()
+        growth_continuity = np.sum(cumulative_returns.diff() < 0) / len(cumulative_returns) if len(cumulative_returns) > 1 else 0
+        final_result = 1 if cumulative_returns.iloc[-1] > 0 else 0
+        garch_metric_value = sharpe_ratio * (1 - growth_continuity) * final_result
+        return garch_metric_value
+
+    df = df_raw.copy()
+    df['stance'] = df['stance'].shift(1)
+    df = df.dropna()
+    df.reset_index(drop=True, inplace=True)
+    stances = df['stance'].to_numpy()
+    positions = []
+    for index, position in enumerate(stances):
+        last_position = stances[index-1] if index > 0 else None
+        if position != last_position:
+           positions.append((index, position))
+    positions = [(a[0], b[0], int(a[1])) for a, b in zip(positions[1:], positions[2:])]
     stats = []
-    for start, end, position in change_positions:
-        df_stats = df.iloc[start+1:end+1]
+    for start, end, position in positions:
+        df_stats = df.iloc[start:end]
         prices = df_stats[['close', 'high', 'low']].to_numpy()
+        #print(prices)
         open_price, close_price = prices[0, 0], prices[-1, 0]
         max_price, min_price = prices[:, 1].max(), prices[:, 2].min()
 
@@ -288,11 +302,16 @@ def wlr_rr(df):
         else:
             result = (open_price - close_price) / open_price
             min_result = (max_price - open_price) / open_price
-            max_result = (close_price - min_price) / open_price
+            max_result = (open_price - min_price) / open_price
 
         stats.append((result, min_result, max_result))
     # Tworzenie DataFrame dla statystyk
     stats_df = pd.DataFrame(stats, columns=['result', 'min_result', 'max_result'])
+
+    max_res = stats_df.sort_values(by=['max_result'], ascending=False)['max_result'][2:]
+    aberration = max_res.mean() + stats_df['result'].std()
+    stats_df['result'] = np.where(stats_df['result'] > aberration, aberration, stats_df['result'])
+
     risk_reward_ratio = stats_df['max_result'].mean() / (stats_df['min_result'].mean() + stats_df['min_result'].std())
     risk_reward_ratio = round(risk_reward_ratio, 3)
     try:
@@ -302,7 +321,9 @@ def wlr_rr(df):
     end_result = round(risk_reward_ratio * win_loss_ratio, 2)
     if (end_result == np.inf) or (end_result > 2):
         end_result = 2.0
-    return end_result
+
+    garch = garch_metric(stats_df['result'])
+    return round(end_result*garch, 5)
 
 
 def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=False):
