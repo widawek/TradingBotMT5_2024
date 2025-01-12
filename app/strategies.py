@@ -361,14 +361,3 @@ def t2boll_trend_M2(df, slow, fast):
     position = df['stance'].iloc[-1]
     return df, position
 
-
-def rev1ers_momentum_counter_M1(df, slow, fast):
-    df['sma_short'] = df['close'].rolling(fast).mean()
-    df['sma_long'] = df['close'].rolling(slow).mean()
-    df['momentum'] = df['close'] - df['close'].shift(fast)
-    df['signal'] = np.NaN
-    df.loc[(df['sma_short'] > df['sma_long']) & (df['momentum'] > 0), 'signal'] = -1  # Kupno
-    df.loc[(df['sma_short'] < df['sma_long']) & (df['momentum'] < 0), 'signal'] = 1  # Sprzedaż
-    df['stance'] = df['signal'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position

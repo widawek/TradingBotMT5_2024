@@ -308,7 +308,9 @@ def wlr_rr(df_raw):
     # Tworzenie DataFrame dla statystyk
     stats_df = pd.DataFrame(stats, columns=['result', 'min_result', 'max_result'])
 
-    max_res = stats_df.sort_values(by=['max_result'], ascending=False)['max_result'][2:]
+    percent_best = 3
+    number = round((percent_best/100)*len(stats_df))
+    max_res = stats_df.sort_values(by=['max_result'], ascending=False)['max_result'][number:]
     aberration = max_res.mean() + stats_df['result'].std()
     stats_df['result'] = np.where(stats_df['result'] > aberration, aberration, stats_df['result'])
 

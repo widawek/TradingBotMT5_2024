@@ -888,6 +888,7 @@ class Bot:
         super_start_time = time.time()
         strategies = import_strategies(['find_support_resistance_numpy'])
         self.strategies_raw = []
+        i = 1
         for strategy in strategies:
             self.is_this_the_end()
             self.check_trigger(backtest=True)
@@ -900,6 +901,8 @@ class Bot:
             interval = name_.split('_')[-1]
             kind = name_.split('_')[-2]
             #marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
+            print(f'Strategy {i} from {len(strategies)}')
+            i += 1
             fast, slow, result, actual_condition, daily_return, end_result = self.trend_backtest(strategy)
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, "\n")
             self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result))
