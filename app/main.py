@@ -131,13 +131,13 @@ class Bot:
         if len(self.close_profits) >= 2:
             x = self.close_profits[-2:]
             if all([i[0] < 0 for i in x]):
-                self.position_size -= 1
-                if self.position_size < 1:
-                    self.position_size = 1
+                self.position_size -= 0.2*self.position_size
+                if self.position_size < 0.5*position_size:
+                    self.position_size = 0.5*position_size
             elif all([i[0] > 0 for i in x]):
-                self.position_size += 1
-                if self.position_size > position_size + 4:
-                    self.position_size = position_size + 4
+                self.position_size += 0.2*self.position_size
+                if self.position_size > 2*position_size:
+                    self.position_size = 2*position_size
             try:
                 last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment[:-1]]
                 if len(last_to_by_comment) >= 2:
