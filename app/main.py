@@ -108,7 +108,7 @@ class Bot:
         self.avg_daily_vol()
         self.round_number = round_number_(symbol)
         #self.mdv = self.mdv_() / 100
-        self.volume_calc(position_size, True)
+        self.volume_calc(position_size, 0, True)
         self.positions_()
         #self.load_models_democracy(catalog)
         self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_("M1"), 0, 1)[0][0]
@@ -122,7 +122,6 @@ class Bot:
         except Exception:
             return 0
         return int((dt.now() - dt_from_timestamp - timedelta(hours=tz_diff)).seconds/60)
-
 
     @class_errors
     def if_tiktok(self, backtest=False):
@@ -267,11 +266,8 @@ class Bot:
                 mean_profits = np.mean(self.profits)
                 self.self_decline_factor()
                 if self.print_condition():
-                    printer("Change value:", f"{round(self.profit_needed, 2):.2f} {self.currency}")
-                    #printer("Actual trigger:", self.trigger)
+                    printer("Change value:", f"{round(self.profit_needed, 2):.2f} ({self.profit_needed_min:.2f}) {self.currency}")
                     printer("Max profit:", f"{self.profit_max:.2f} {self.currency}")
-                    # printer("Profit zero aka spread:", f"{self.profit0:.2f} {self.currency}")
-                    # printer("Mean position profit minus spread:", f"{round(mean_profits-self.profit0, 2):.2f} {self.currency}")
                     printer("Decline factor:", f"{self.profit_decline_factor}")
                     printer("Close position if profit is less than", f"{round(self.profit_max * self.profit_decline_factor, 2)} {self.currency}")
 
@@ -281,10 +277,6 @@ class Bot:
                 # Jeżeli strata mniejsza od straty granicznej
                 elif profit < -self.profit_needed*profit_decrease_barrier/self.too_much_risk():# and profit > 0.91 * self.profit_min:
                     self.clean_orders(backtest)
-
-                # # Jeżeli strata mniejsza od straty granicznej
-                # elif profit > self.profit_needed * profit_increase_barrier and profit < profit_decrease_barrier * self.profit_max:
-                #     self.clean_orders()
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif self.profit_max > self.profit_needed and profit < self.profit_max * self.profit_decline_factor:
@@ -476,7 +468,7 @@ class Bot:
         self.avg_vol = df['avg_daily'].mean()
 
     @class_errors
-    def volume_calc(self, max_pos_margin: int, min_volume: int) -> None:
+    def volume_calc(self, max_pos_margin: float, posType: int, min_volume: bool) -> None:
         def atr():
             length = 14
             df = get_data(self.symbol, 'M5', 1, 100)
@@ -487,7 +479,12 @@ class Bot:
             another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
         except AttributeError:
             another_new_volume_multiplier_from_win_rate_condition = 0.6
-        max_pos_margin = int(round(max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition))
+
+        bouns = play_with_trend(self.symbol)
+        trend_bonus = bouns if posType == 0 else -bouns
+        max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
+        max_pos_margin = max_pos_margin + max_pos_margin*trend_bonus
+        print('max_pos_margin', round(max_pos_margin, 3))
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
         price = mt.symbol_info_tick(self.symbol)._asdict()
@@ -515,6 +512,7 @@ class Bot:
         self.kill_position_profit = round(self.kill_position_profit, 2)# * (1+self.multi_voltage('M5', 33)), 2)
         self.tp_miner = round(self.kill_position_profit * tp_miner / kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
+        self.profit_needed_min = round(self.profit_needed / (self.volume/symbol_info["volume_min"]), 2)
         printer('Min volume:', min_volume)
         printer('Calculated volume:', volume)
         printer("Target:", f"{self.tp_miner:.2f} {self.currency}")
@@ -650,7 +648,8 @@ class Bot:
             else:
                 posType = pendings["short_stop"]
 
-        self.volume_calc(position_size, True)
+
+        self.volume_calc(self.position_size, posType, True)
         if self.trend_or_not:
             letter = "t"
         else:
@@ -931,9 +930,10 @@ class Bot:
             self.reset_bot()
 
     def too_much_risk(self):
-        test = [i - timedelta(minutes=5) < dt.now() < i + timedelta(minutes=60) for i in hardcore_hours]
+        test = [i - timedelta(minutes=5) < dt.now() < i + timedelta(minutes=45) for i in hardcore_hours]
         if any(test):
-            return 5
+            print("High volatility risk.")
+            return 4
         return 1
 
 if __name__ == '__main__':

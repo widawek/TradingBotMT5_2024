@@ -386,7 +386,7 @@ def win_ratio(df, column, window=50, threshold=0):
         win_count = np.sum(returns > threshold)
         loss_count = np.sum(returns <= threshold)
         return (win_count / loss_count) * (gains / losses) if (losses != 0)&(loss_count!=0) else np.nan  # Unikamy dzielenia przez zero
-        
+
     # Obliczanie rolling Omega ratio
     df['win_ratio'] = df[column].rolling(window).apply(
         lambda x: win_ratio_(x, threshold), raw=True
@@ -416,4 +416,38 @@ def find_support_resistance_numpy(df, slow, fast):
     df['support'] = df['support'].ffill()
     df['resistance'] = df['resistance'].ffill()
     return df
+
+
+def play_with_trend(symbol):
+    df = get_data(symbol, 'M5', 1, 10000)
+    df['ma_week'] = df.ta.sma(length=1440)
+    df['ma_432'] = df.ta.sma(length=432)
+    df['std_432'] = df['close'].rolling(432).std()
+    df['boll_up_432'] = df['ma_432'] + 2*df['std_432']
+    df['boll_down_432'] = df['ma_432'] - 2*df['std_432']
+    d = df.iloc[-1]
+    if d.ma_432 > d.ma_week:
+        if d.close < d.boll_down_432:
+            print("Best to open long!")
+            return 0.4
+        elif d.close < d.ma_432:
+            print("Good to open long!")
+            return 0.25
+        elif d.close > d.ma_432 and d.close < d.boll_up_432:
+            print("Just long trend!")
+            return 0.1
+        else:
+            return 0
+    else:
+        if d.close > d.boll_up_432:
+            print("Best to open short!")
+            return -0.4
+        elif d.close > d.ma_432:
+            print("Good to open short!")
+            return -0.25
+        elif d.close < d.ma_432 and d.close > d.boll_down_432:
+            print("Just short trend!")
+            return -0.1
+        else:
+            return 0
 
