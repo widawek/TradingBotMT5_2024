@@ -266,16 +266,16 @@ def calmar_ratio(returns, periods_per_year=252):
     return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
 
 
+def garch_metric(excess_returns):
+    sharpe_ratio = np.mean(excess_returns) / np.std(excess_returns)
+    cumulative_returns = excess_returns.cumsum()
+    growth_continuity = np.sum(cumulative_returns.diff() < 0) / len(cumulative_returns) if len(cumulative_returns) > 1 else 0
+    final_result = 1 if cumulative_returns.iloc[-1] > 0 else 0
+    garch_metric_value = sharpe_ratio * (1 - growth_continuity) * final_result
+    return garch_metric_value
+
+
 def wlr_rr(df_raw):
-
-    def garch_metric(excess_returns):
-        sharpe_ratio = np.mean(excess_returns) / np.std(excess_returns)
-        cumulative_returns = excess_returns.cumsum()
-        growth_continuity = np.sum(cumulative_returns.diff() < 0) / len(cumulative_returns) if len(cumulative_returns) > 1 else 0
-        final_result = 1 if cumulative_returns.iloc[-1] > 0 else 0
-        garch_metric_value = sharpe_ratio * (1 - growth_continuity) * final_result
-        return garch_metric_value
-
     df = df_raw.copy()
     df['stance'] = df['stance'].shift(1)
     df = df.dropna()
@@ -418,21 +418,21 @@ def find_support_resistance_numpy(df, slow, fast):
     return df
 
 
-def play_with_trend(symbol):
+def play_with_trend(symbol, short, long, dev):
     df = get_data(symbol, 'M5', 1, 10000)
-    df['ma_week'] = df.ta.sma(length=1440)
-    df['ma_432'] = df.ta.sma(length=432)
-    df['std_432'] = df['close'].rolling(432).std()
-    df['boll_up_432'] = df['ma_432'] + 2*df['std_432']
-    df['boll_down_432'] = df['ma_432'] - 2*df['std_432']
+    df['ma_week'] = df.ta.sma(length=long)
+    df['ma_432'] = df.ta.sma(length=short)
+    df['std_432'] = df['close'].rolling(short).std()
+    df['boll_up_432'] = df['ma_432'] + (dev/10)*df['std_432']
+    df['boll_down_432'] = df['ma_432'] - (dev/10)*df['std_432']
     d = df.iloc[-1]
     if d.ma_432 > d.ma_week:
         if d.close < d.boll_down_432:
             print("Best to open long!")
-            return 0.4
+            return 0.33
         elif d.close < d.ma_432:
             print("Good to open long!")
-            return 0.25
+            return 0.2
         elif d.close > d.ma_432 and d.close < d.boll_up_432:
             print("Just long trend!")
             return 0.1
@@ -441,13 +441,73 @@ def play_with_trend(symbol):
     else:
         if d.close > d.boll_up_432:
             print("Best to open short!")
-            return -0.4
+            return -0.33
         elif d.close > d.ma_432:
             print("Good to open short!")
-            return -0.25
+            return -0.2
         elif d.close < d.ma_432 and d.close > d.boll_down_432:
             print("Just short trend!")
             return -0.1
         else:
             return 0
+
+
+def play_with_trend_bt(symbol):
+    from tqdm import tqdm
+    longs = range(1100, 2001, 25)
+    shorts = range(380, 721, 10)
+    devs = range(10, 23, 2)
+    df_raw = get_data(symbol, 'M5', 1, 50000)
+
+    def trend_strategy(short, long, dev):
+        df = df_raw.copy()
+        df['ma_short'] = df.ta.ema(length=short)
+        df['ma_long'] = df.ta.ema(length=long)
+        df['stddev'] = df.close.rolling(short).std()
+        df['boll_up'] = df['ma_short'] + (dev/10)*df['stddev']
+        df['boll_down'] = df['ma_short']-(dev/10)*df['stddev']
+        up = df.ma_short > df.ma_long
+        down = df.ma_short < df.ma_long
+        df['stance'] = 0
+        close_long = np.where((up)&(df.close.shift()>df.boll_up.shift())&(df.close<df.boll_up), 3, 0)
+        stance_up_1 = np.where((up)&(df.close.shift()>df.ma_short.shift())&(df.close<df.ma_short), 1, 0)
+        stance_up_2 = np.where((up)&(df.close.shift()>df.boll_down.shift())&(df.close<df.boll_down), 2, 0)
+
+        close_short = np.where((down)&(df.close.shift()<df.boll_down.shift())&(df.close>df.boll_down), -3, 0)
+        stance_down_1 = np.where((down)&(df.close.shift()<df.ma_short.shift())&(df.close>df.ma_short), -1, 0)
+        stance_down_2 = np.where((down)&(df.close.shift()<df.boll_up.shift())&(df.close>df.boll_up), -2, 0)
+        df['stance'] = close_long + stance_up_1 + stance_up_2 + close_short + stance_down_1 + stance_down_2
+        df['stance'] = df['stance'].replace(0, np.NaN)
+        df['stance'] = df['stance'].replace([-3, 3], 0)
+        df['stance'] = df['stance'].ffill()
+        return df
+
+    results = []
+    for long in tqdm(longs):
+        for short in shorts:
+            if short == long or short>long:
+                continue
+            for dev in devs:
+                try:
+                    df = trend_strategy(short, long, dev)
+                    df, _ = calculate_strategy_returns(df, 1)
+                    df = df.dropna()
+                    df.reset_index(drop=True, inplace=True)
+                    sharpe = round(((df['return'].mean()/df['return'].std())), 6)
+                    omega = omega_ratio(df['return'])
+                    df2 = df.copy()[int(len(df)/2):]
+                    sharpe2 = round(((df2['return'].mean()/df2['return'].std())), 6)
+                    omega2 = omega_ratio(df2['return'])
+                    result = np.mean([sharpe, sharpe2])*np.mean([omega, omega2])
+                    results.append((dev, short, long, result))
+                except Exception as e:
+                    print(e)
+                    continue
+
+    final = sorted(results, key=lambda x: x[3], reverse=True)[0]
+    dev = final[0]
+    short = final[1]
+    long = final[2]
+    print(f'play_with_trend_bt results: dev={dev}, short={short}, long={long}, result={round(final[3],5)}')
+    return short, long, dev
 

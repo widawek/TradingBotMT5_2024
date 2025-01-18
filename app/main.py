@@ -71,6 +71,7 @@ class Bot:
     weekday = dt.now().weekday()
     def __init__(self, symbol):
         self.currency = mt.account_info().currency
+        self.pwt_short, self.pwt_long, self.pwt_dev = play_with_trend_bt(symbol)
         self.after_change_hour = False if dt.now().hour < change_hour else True
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
@@ -480,7 +481,7 @@ class Bot:
         except AttributeError:
             another_new_volume_multiplier_from_win_rate_condition = 0.6
 
-        bouns = play_with_trend(self.symbol)
+        bouns = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev)
         trend_bonus = bouns if posType == 0 else -bouns
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
         max_pos_margin = max_pos_margin + max_pos_margin*trend_bonus
@@ -535,7 +536,7 @@ class Bot:
         if not respect_overnight:
             df['return'] = np.where((df['time'].dt.hour < morning_hour-1) | (df['time'].dt.hour > evening_hour+1), np.NaN, df['return'])
             df = df.dropna()
-        #ret = (1+df['return']).cumprod() - 1
+        # ret = (1+df['return']).cumprod() - 1
         # ret = df['return'].mean()/df['return'].std()
         # ret = round(ret, 4)
         try:

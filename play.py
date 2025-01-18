@@ -7,7 +7,7 @@ printer("Symbols", symbols)
 timer(6)
 
 # from app.main import Bot;
-# bot = Bot('GBPUSD')
+# bot = Bot('BTCUSD')
 # bot.report()
 
 for symbol in symbols:
