@@ -1,7 +1,16 @@
 import sys
 sys.path.append("..")
-from app.functions import get_timezone_difference
+from app.functions import get_timezone_difference, get_data
 from extensions.investing_scrapper import Scraper
+
+def divider():
+    import MetaTrader5 as mt
+    mt.initialize()
+    curr = mt.account_info().currency
+    df_ = get_data("USDPLN", "D1", 0, 1)
+    last_o = float(df_['open'].iloc[-1])
+    divider = 1 if curr == 'USD' else last_o
+    return divider
 
 scraper = Scraper()
 # global params
@@ -44,7 +53,7 @@ tz_diff                                 = get_timezone_difference()
 game_system: str                        = 'weighted_democracy'
 max_number_of_models: int               = 2
 profit_factor: float                    = 1.5
-position_size: float                    = round((100/len(symbols))*0.18, 3)  # percent of balance 0.24 for tickmill europe broker leverage 1:30
+position_size: float                    = round((100/len(symbols))*(0.8/divider()), 3)  # percent of balance 0.24 for tickmill europe broker leverage 1:30
 kill_multiplier: float                  = 1.5  # loss of daily volatility by one position multiplier
 tp_miner: int                           = 3
 master_interval: str                    = intervals[0]
