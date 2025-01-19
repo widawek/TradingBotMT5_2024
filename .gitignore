@@ -14,4 +14,5 @@ position_history.db
 position_history.db-journal
 database_analize.py
 old_strategies.py
+play.py
 
