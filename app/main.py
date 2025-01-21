@@ -28,10 +28,24 @@ catalog = f'{parent_catalog}\\models'
 processor = TradingProcessor()
 
 
+class Target:
+    def __init__(self, target=0.03):
+        self.start_balance = mt.account_info().balance
+        self.target=target
+        self.result = False
+
+    def checkTarget(self):
+        if not self.result:
+            actual_result = mt.account_info().balance + sum([i for i  in mt.positions_get()])
+            if actual_result > self.start_balance * (1+self.target):
+                self.result = True
+        return self.result
+
+
 class GlobalProfitTracker:
     mt.initialize()
     def __init__(self, symbols: list, multiplier: float):
-        self.barrier = round((len(symbols)*multiplier)/(100*5), 4)
+        self.barrier = round((len(symbols)*multiplier)/(100), 5)
         self.global_profit_to_margin = None
         self.condition = False
         self.positions = []
@@ -68,6 +82,7 @@ class GlobalProfitTracker:
 
 
 class Bot:
+    target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
         self.currency = mt.account_info().currency
@@ -485,6 +500,8 @@ class Bot:
         trend_bonus = bouns if posType == 0 else -bouns
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
         max_pos_margin = max_pos_margin + max_pos_margin*trend_bonus
+        if Bot.target_class.checkTarget():
+            max_pos_margin = max_pos_margin / 4
         print('max_pos_margin', round(max_pos_margin, 3))
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
@@ -511,6 +528,8 @@ class Bot:
             self.volume = symbol_info["volume_min"]
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, kill_multiplier)
         self.kill_position_profit = round(self.kill_position_profit, 2)# * (1+self.multi_voltage('M5', 33)), 2)
+        if Bot.target_class.checkTarget():
+            self.kill_position_profit = round(self.kill_position_profit/2, 2)
         self.tp_miner = round(self.kill_position_profit * tp_miner / kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
         self.profit_needed_min = round(self.profit_needed / (self.volume/symbol_info["volume_min"]), 2)
@@ -621,7 +640,7 @@ class Bot:
                         break
 
                     if self.check_new_bar():
-                        return self.actual_position_democracy(number_of_bars=number_of_bars)
+                        return self.actual_position_democracy(number_of_bars=number_of_bars*20)
                     pos = 'LONG' if position==0 else "SHORT"
                     printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
 
@@ -935,7 +954,7 @@ class Bot:
         if any(test):
             print("High volatility risk.")
             return 4
-        return 1
+        return 1 if not Bot.target_class.checkTarget() else 2
 
 if __name__ == '__main__':
     print('Yo, wtf?')
