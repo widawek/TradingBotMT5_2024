@@ -955,8 +955,8 @@ class Bot:
         test = [i - timedelta(minutes=5) < dt.now() < i + timedelta(minutes=45) for i in hardcore_hours]
         if any(test):
             print("High volatility risk.")
-            return 4
-        return 1 if not Bot.target_class.checkTarget() else 2
+            return 5
+        return 1 if not Bot.target_class.checkTarget() else 3
 
 if __name__ == '__main__':
     print('Yo, wtf?')
