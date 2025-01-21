@@ -29,7 +29,7 @@ processor = TradingProcessor()
 
 
 class Target:
-    def __init__(self, target=0.03):
+    def __init__(self, target=0.02):
         self.start_balance = mt.account_info().balance
         self.target=target
         self.result = False
@@ -273,7 +273,9 @@ class Bot:
         try:
             if self.positions is None or len(self.positions) != 0:
                 profit = sum([i[-4] for i in self.positions])
-
+                multi = 1
+                if Bot.target_class.checkTarget():
+                    multi = 3
                 if self.profit0 is None:
                     self.profit0 = profit
                 self.profits.append(profit+self.profit0)
@@ -295,7 +297,7 @@ class Bot:
                     self.clean_orders(backtest)
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif self.profit_max > self.profit_needed and profit < self.profit_max * self.profit_decline_factor:
+                elif self.profit_max > self.profit_needed/multi and profit < self.profit_max * self.profit_decline_factor:
                     self.clean_orders(backtest)
 
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
