@@ -29,14 +29,14 @@ processor = TradingProcessor()
 
 
 class Target:
-    def __init__(self, target=0.02):
+    def __init__(self, target=0.025):
         self.start_balance = mt.account_info().balance
         self.target=target
         self.result = False
 
     def checkTarget(self):
         if not self.result:
-            actual_result = mt.account_info().balance + sum([i for i  in mt.positions_get()])
+            actual_result = mt.account_info().balance + sum([i.profit for i  in mt.positions_get()])
             if actual_result > self.start_balance * (1+self.target):
                 self.result = True
         return self.result
@@ -91,7 +91,7 @@ class Bot:
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
-        self.number_of_bars_for_backtest = 20000
+        self.number_of_bars_for_backtest = 16000
         printer(dt.now(), symbol)
         self.symbol = symbol
         #self.active_session()

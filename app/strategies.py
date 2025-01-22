@@ -297,3 +297,28 @@ def ema2boll_trend_M2(df, slow, fast):
     position = df['stance'].iloc[-1]
     return df, position
 
+
+def cci1_divergence_strategy_counter_M1(df_raw, slow, fast):
+    df = df_raw.copy()
+    df['rsi'] = df.ta.cci(length=slow)
+    df['price_peak'] = df['high'].rolling(fast).max()
+    df['price_trough'] = df['low'].rolling(fast).min()
+    df['rsi_peak'] = df['rsi'].rolling(fast).max()
+    df['rsi_trough'] = df['rsi'].rolling(fast).min()
+
+    df['bullish_div'] = np.where(
+        ((df['price_trough'] < df['price_trough'].shift(1)) &  # Price makes a lower low
+        (df['rsi_trough'] > df['rsi_trough'].shift(1))),  # RSI makes a higher low
+        1, 0)
+
+    df['bearish_div'] = np.where(
+        ((df['price_peak'] > df['price_peak'].shift(1)) &  # Price makes a higher high
+        (df['rsi_peak'] < df['rsi_peak'].shift(1))),  # RSI makes a lower high
+        1, 0)
+
+    df['stance'] = np.NaN
+    df.loc[df['bullish_div'] == 1, 'stance'] = 1  # Buy signal on bullish divergence
+    df.loc[df['bearish_div'] == 1, 'stance'] = -1  # Sell signal on bearish divergence
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position

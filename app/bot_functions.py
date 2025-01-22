@@ -419,7 +419,7 @@ def find_support_resistance_numpy(df, slow, fast):
 
 
 def play_with_trend(symbol, short, long, dev):
-    df = get_data(symbol, 'M5', 1, 10000)
+    df = get_data(symbol, 'M5', 1, 5000)
     df['ma_week'] = df.ta.sma(length=long)
     df['ma_432'] = df.ta.sma(length=short)
     df['std_432'] = df['close'].rolling(short).std()
@@ -429,27 +429,24 @@ def play_with_trend(symbol, short, long, dev):
     if d.ma_432 > d.ma_week:
         if d.close < d.boll_down_432:
             print("Best to open long!")
-            return 0.33
+            return 0.55
         elif d.close < d.ma_432:
             print("Good to open long!")
-            return 0.2
+            return 0.35
         elif d.close > d.ma_432 and d.close < d.boll_up_432:
             print("Just long trend!")
-            return 0.1
-        else:
-            return 0
+            return 0.2
     else:
         if d.close > d.boll_up_432:
             print("Best to open short!")
-            return -0.33
+            return -0.55
         elif d.close > d.ma_432:
             print("Good to open short!")
-            return -0.2
+            return -0.35
         elif d.close < d.ma_432 and d.close > d.boll_down_432:
             print("Just short trend!")
-            return -0.1
-        else:
-            return 0
+            return -0.2
+    return 0
 
 
 def play_with_trend_bt(symbol):
