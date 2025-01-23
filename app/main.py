@@ -30,7 +30,7 @@ processor = TradingProcessor()
 
 class Target:
     def __init__(self, target=0.025):
-        self.start_balance = mt.account_info().balance
+        self.start_balance = mt.account_info().balance - closed_pos()
         self.target=target
         self.result = False
 
@@ -275,7 +275,7 @@ class Bot:
                 profit = sum([i[-4] for i in self.positions])
                 multi = 1
                 if Bot.target_class.checkTarget():
-                    multi = 3
+                    multi = 4
                 if self.profit0 is None:
                     self.profit0 = profit
                 self.profits.append(profit+self.profit0)
@@ -415,9 +415,9 @@ class Bot:
             print("data", e)
             self.clean_orders()
 
-        # force of strategy condition
+        self.force_profit_print = 'ok'
         if self.actual_force < 1 and profit < 0:
-            print("Actual strategy is weak")
+            self.force_profit_print = 'weak'
 
         self.number_of_positions = len(self.positions)
         account = mt.account_info()
@@ -459,6 +459,7 @@ class Bot:
         try:
             printer("Strategy name:", self.strategies[self.strategy_number][0])
             printer("Last backtest:", self.backtest_time)
+            printer("Actual strategy is",  f"{self.force_profit_print}")
         except IndexError as e:
             print("info", e)
             pass
@@ -956,7 +957,7 @@ class Bot:
         if any(test):
             print("High volatility risk.")
             return 5
-        return 1 if not Bot.target_class.checkTarget() else 3
+        return 1 if not Bot.target_class.checkTarget() else 2
 
 if __name__ == '__main__':
     print('Yo, wtf?')

@@ -414,6 +414,20 @@ def interval_time_sharpe(interval):
         case 'M': return np.sqrt(252 * 24 * 60 / int(interval[1:]))
 
 
+def closed_pos():
+    dzisiaj = dt.now().date()
+    poczatek_dnia = dt.combine(dzisiaj, dt.min.time())
+    koniec_dnia = dt.combine(dzisiaj, dt.max.time())
+    zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia)
+
+    if zamkniete_transakcje is None or len(zamkniete_transakcje) == 0:
+        return 0
+    else:
+        suma_zyskow = sum(deal.profit for deal in zamkniete_transakcje)
+        print(f"Suma zysków z zamkniętych pozycji dzisiaj: {suma_zyskow:.2f} USD")
+        return suma_zyskow
+
+
 if __name__ == '__main__':
     print(interval_time_sharpe('M1'))
     
