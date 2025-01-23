@@ -652,9 +652,13 @@ class Bot:
 
                     time.sleep(5)
         except KeyError as e:
-            print("actual_position_democracy", e)
-            self.trend_backtest(add_number=3)
-            return self.actual_position_democracy(number_of_bars=number_of_bars*2)
+            try:
+                print("actual_position_democracy", e)
+                self.trend_backtest(add_number=3)
+                return self.actual_position_democracy(number_of_bars=number_of_bars*2)
+            except Exception as e:
+                print(e)
+                return self.pos_type
         self.pos_time = interval_time(self.interval)
 
         print("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
