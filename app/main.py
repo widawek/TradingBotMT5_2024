@@ -510,7 +510,8 @@ class Bot:
         trend_bonus = bouns if posType == 0 else -bouns
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
         max_pos_margin = max_pos_margin + max_pos_margin*trend_bonus
-        if Bot.target_class.checkTarget():
+        x, _ = Bot.target_class.checkTarget()
+        if x:
             max_pos_margin = max_pos_margin / 5
         print('max_pos_margin', round(max_pos_margin, 3))
         leverage = mt.account_info().leverage
