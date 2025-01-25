@@ -7,6 +7,7 @@ import sys
 import os
 from datetime import timedelta
 from datetime import datetime as dt
+from time import sleep
 from icecream import ic
 import xgboost as xgb
 from extensions.symbols_rank import symbol_stats
@@ -31,15 +32,17 @@ processor = TradingProcessor()
 class Target:
     def __init__(self, target=0.025):
         self.start_balance = mt.account_info().balance - closed_pos()
-        self.target=target
+        self.target = target
         self.result = False
+        self.last_self_result = False
 
     def checkTarget(self):
+        self.last_self_result = self.result
         if not self.result:
             actual_result = mt.account_info().balance + sum([i.profit for i  in mt.positions_get()])
             if actual_result > self.start_balance * (1+self.target):
                 self.result = True
-        return self.result
+        return self.result, self.last_self_result == self.result
 
 
 class GlobalProfitTracker:
@@ -85,6 +88,7 @@ class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.fresh_daily_target = False
         self.currency = mt.account_info().currency
         self.pwt_short, self.pwt_long, self.pwt_dev = play_with_trend_bt(symbol)
         self.after_change_hour = False if dt.now().hour < change_hour else True
@@ -274,8 +278,11 @@ class Bot:
             if self.positions is None or len(self.positions) != 0:
                 profit = sum([i[-4] for i in self.positions])
                 multi = 1
-                if Bot.target_class.checkTarget():
-                    multi = 4
+                x, y = Bot.target_class.checkTarget()
+                if x:
+                    multi = 2
+                if y:
+                    self.fresh_daily_target = True
                 if self.profit0 is None:
                     self.profit0 = profit
                 self.profits.append(profit+self.profit0)
@@ -297,7 +304,7 @@ class Bot:
                     self.clean_orders(backtest)
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif self.profit_max > self.profit_needed/multi and profit < self.profit_max * self.profit_decline_factor:
+                elif (self.profit_max > self.profit_needed/multi and profit < self.profit_max * self.profit_decline_factor) or (self.fresh_daily_target and profit < self.profit_max * self.profit_decline_factor):
                     self.clean_orders(backtest)
 
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
@@ -504,7 +511,7 @@ class Bot:
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
         max_pos_margin = max_pos_margin + max_pos_margin*trend_bonus
         if Bot.target_class.checkTarget():
-            max_pos_margin = max_pos_margin / 4
+            max_pos_margin = max_pos_margin / 5
         print('max_pos_margin', round(max_pos_margin, 3))
         leverage = mt.account_info().leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
@@ -531,11 +538,10 @@ class Bot:
             self.volume = symbol_info["volume_min"]
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, kill_multiplier)
         self.kill_position_profit = round(self.kill_position_profit, 2)# * (1+self.multi_voltage('M5', 33)), 2)
-        if Bot.target_class.checkTarget():
-            self.kill_position_profit = round(self.kill_position_profit/2, 2)
         self.tp_miner = round(self.kill_position_profit * tp_miner / kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
         self.profit_needed_min = round(self.profit_needed / (self.volume/symbol_info["volume_min"]), 2)
+        self.fresh_daily_target = False
         printer('Min volume:', min_volume)
         printer('Calculated volume:', volume)
         printer("Target:", f"{self.tp_miner:.2f} {self.currency}")
@@ -764,6 +770,13 @@ class Bot:
         if (not self.after_change_hour) and (dt.now().hour >= change_hour):
             self.after_change_hour = True
             self.test_strategies()
+        if self.fresh_daily_target:
+            time_sleep = 120
+            print(dt.now())
+            print(f"Target was reached. {time_sleep} minutes brake.")
+            sleep(time_sleep*60)
+            self.test_strategies()
+            self.fresh_daily_target = False
 
     @class_errors
     def pos_creator(self):
@@ -961,7 +974,7 @@ class Bot:
         if any(test):
             print("High volatility risk.")
             return 5
-        return 1 if not Bot.target_class.checkTarget() else 2
+        return 1# if not Bot.target_class.checkTarget() else 2
 
 if __name__ == '__main__':
     print('Yo, wtf?')
