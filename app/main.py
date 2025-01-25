@@ -42,7 +42,7 @@ class Target:
             actual_result = mt.account_info().balance + sum([i.profit for i  in mt.positions_get()])
             if actual_result > self.start_balance * (1+self.target):
                 self.result = True
-        return self.result, self.last_self_result == self.result
+        return self.result, self.last_self_result != self.result
 
 
 class GlobalProfitTracker:
