@@ -35,6 +35,7 @@ class Target:
         self.target = target
         self.result = False
         self.last_self_result = False
+        self.test = 0
 
     def checkTarget(self):
         self.last_self_result = self.result
@@ -42,6 +43,10 @@ class Target:
             actual_result = mt.account_info().balance + sum([i.profit for i  in mt.positions_get()])
             if actual_result > self.start_balance * (1+self.target):
                 self.result = True
+        if self.last_self_result != self.result:
+            self.test += 1
+        if self.test > 1:
+            return self.result, False
         return self.result, self.last_self_result != self.result
 
 
@@ -99,7 +104,7 @@ class Bot:
         printer(dt.now(), symbol)
         self.symbol = symbol
         #self.active_session()
-        self.magic = magic_(symbol, 'bot_2024')
+        self.magic = magic_(symbol, 'bot_2025')
         self.model_counter = None
         self.profit0 = None
         self.max_close = None
@@ -185,7 +190,7 @@ class Bot:
                 self.tiktok = 0
         if not backtest:
             if self.strategy_number > len(self.strategies)-1:
-                self.test_strategies(add_number=3)
+                self.test_strategies()
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
     @class_errors
@@ -485,6 +490,7 @@ class Bot:
         self.fake_stoploss = 0
         self.fake_counter = 0
         self.base_fake_interval = base_fake_interval
+        self.fresh_daily_target = False
         print(f"The bot was reset.")
 
     @class_errors
@@ -590,7 +596,7 @@ class Bot:
                 strategy = self.strategies[self.strategy_number]
             except IndexError as e:
                 print("actual_position_democracy", e)
-                self.test_strategies(add_number=3)
+                self.test_strategies()
                 strategy = self.strategies[self.strategy_number]
             print("Strategia", strategy[0])
             self.interval = strategy[0].split('_')[-1]
@@ -661,7 +667,7 @@ class Bot:
         except KeyError as e:
             try:
                 print("actual_position_democracy", e)
-                self.trend_backtest(add_number=3)
+                self.test_strategies()
                 return self.actual_position_democracy(number_of_bars=number_of_bars*2)
             except Exception as e:
                 print(e)
@@ -772,12 +778,13 @@ class Bot:
             self.after_change_hour = True
             self.test_strategies()
         if self.fresh_daily_target:
+            self.fresh_daily_target = False
             time_sleep = 120
             print(dt.now())
             print(f"Target was reached. {time_sleep} minutes brake.")
             sleep(time_sleep*60)
             self.test_strategies()
-            self.fresh_daily_target = False
+
 
     @class_errors
     def pos_creator(self):
