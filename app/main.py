@@ -309,7 +309,8 @@ class Bot:
                     self.clean_orders(backtest)
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif (self.profit_max > self.profit_needed/multi and profit < self.profit_max * self.profit_decline_factor) or (self.fresh_daily_target and profit < self.profit_max * self.profit_decline_factor):
+                elif ((self.profit_max > self.profit_needed/multi and profit < self.profit_max * self.profit_decline_factor) or
+                    (self.fresh_daily_target and profit < self.profit_max * (self.profit_decline_factor-0.06))):
                     self.clean_orders(backtest)
 
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
