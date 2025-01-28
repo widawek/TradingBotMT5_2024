@@ -521,13 +521,18 @@ class Bot:
         if x:
             max_pos_margin = max_pos_margin / 5
         print('max_pos_margin', round(max_pos_margin, 3))
-        leverage = mt.account_info().leverage
+
+        info_ = mt.account_info()
+        if (info_.margin_free < info_.balance/10) and (not x):
+            max_pos_margin = max_pos_margin / 5
+
+        leverage = info_.leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
         price = mt.symbol_info_tick(self.symbol)._asdict()
         margin_min = round(((symbol_info["volume_min"] *
                         symbol_info["trade_contract_size"])/leverage) *
                         price["bid"], 2)
-        account = mt.account_info()._asdict()
+        account = info_._asdict()
         max_pos_margin = round(account["balance"] * (max_pos_margin/100) /
                             (self.avg_vol * 100))
         divider_condition = 1 if self.too_much_risk() == 1 else 2
@@ -717,6 +722,11 @@ class Bot:
             }
         order_result = mt.order_send(request)
         print(order_result)
+        if order_result.comment == 'No money':
+            seconds = 300
+            print(f"No enough money to open position. Waiting {round(seconds/60, 2)} minutes")
+            sleep(300)
+            self.request_get()
 
     @class_errors
     def delete_model(self):
