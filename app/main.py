@@ -95,7 +95,7 @@ class Bot:
     def __init__(self, symbol):
         self.fresh_daily_target = False
         self.currency = mt.account_info().currency
-        self.pwt_short, self.pwt_long, self.pwt_dev = play_with_trend_bt(symbol)
+        self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider = play_with_trend_bt(symbol)
         self.after_change_hour = False if dt.now().hour < change_hour else True
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
@@ -160,7 +160,7 @@ class Bot:
                 if self.position_size < 0.5*position_size:
                     self.position_size = 0.5*position_size
             elif all([i[0] > 0 for i in x]):
-                self.position_size += 0.2*self.position_size
+                self.position_size += 0.3*self.position_size
                 if self.position_size > 2*position_size:
                     self.position_size = 2*position_size
             try:
@@ -513,7 +513,7 @@ class Bot:
         except AttributeError:
             another_new_volume_multiplier_from_win_rate_condition = 0.6
 
-        bouns = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev)
+        bouns = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
         trend_bonus = bouns if posType == 0 else -bouns
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
         max_pos_margin = max_pos_margin + max_pos_margin*trend_bonus

@@ -418,7 +418,7 @@ def find_support_resistance_numpy(df, slow, fast):
     return df
 
 
-def play_with_trend(symbol, short, long, dev):
+def play_with_trend(symbol, short, long, dev, divider):
     df = get_data(symbol, 'M5', 1, 5000)
     df['ma_week'] = df.ta.sma(length=long)
     df['ma_432'] = df.ta.sma(length=short)
@@ -429,23 +429,23 @@ def play_with_trend(symbol, short, long, dev):
     if d.ma_432 > d.ma_week:
         if d.close < d.boll_down_432:
             print("Best to open long!")
-            return 0.55
+            return 0.55 / divider
         elif d.close < d.ma_432:
             print("Good to open long!")
-            return 0.35
+            return 0.35 / divider
         elif d.close > d.ma_432 and d.close < d.boll_up_432:
             print("Just long trend!")
-            return 0.2
+            return 0.2 / divider
     else:
         if d.close > d.boll_up_432:
             print("Best to open short!")
-            return -0.55
+            return -0.55 / divider
         elif d.close > d.ma_432:
             print("Good to open short!")
-            return -0.35
+            return -0.35 / divider
         elif d.close < d.ma_432 and d.close > d.boll_down_432:
             print("Just short trend!")
-            return -0.2
+            return -0.2 / divider
     return 0
 
 
@@ -455,6 +455,9 @@ def play_with_trend_bt(symbol):
     shorts = range(380, 721, 10)
     devs = range(10, 23, 2)
     df_raw = get_data(symbol, 'M5', 1, 50000)
+    df_raw['weekday'] = df.time.dt.weekday
+
+    today = dt.now().weekday()
 
     def trend_strategy(short, long, dev):
         df = df_raw.copy()
@@ -496,15 +499,39 @@ def play_with_trend_bt(symbol):
                     sharpe2 = round(((df2['return'].mean()/df2['return'].std())), 6)
                     omega2 = omega_ratio(df2['return'])
                     result = np.mean([sharpe, sharpe2])*np.mean([omega, omega2])
-                    results.append((dev, short, long, result))
+
+
+                    get_this_fuck_out = []
+                    for i in np.unique(df['weekday']):
+                        dfx = df[df['weekday'] == i]
+                        sharpex1 = round(((dfx['return'].mean()/dfx['return'].std())), 6)
+                        omegax1 = omega_ratio(dfx['return'])
+                        df3 = df.copy()[int(len(dfx)/2):]
+                        sharpex2 = round(((df3['return'].mean()/df3['return'].std())), 6)
+                        omegax2 = omega_ratio(df3['return'])
+                        result = np.mean([sharpex1, sharpex2])*np.mean([omegax1, omegax2])
+                        get_this_fuck_out.append((i, result))
+
+                    get_this_fuck_out = sorted(get_this_fuck_out, key=lambda x: x[1], reverse=True)
+                    get_this_fuck_out = [i[0] for i in get_this_fuck_out]
+                    ind_ = get_this_fuck_out.index(today)
+                    match ind_:
+                        case 0: divider = 1
+                        case 1: divider = 1.15
+                        case 2: divider = 1.30
+                        case 3: divider = 1.45
+                        case 4: divider = 1.6
+
+                    results.append((dev, short, long, divider, result))
                 except Exception as e:
                     print(e)
                     continue
 
-    final = sorted(results, key=lambda x: x[3], reverse=True)[0]
+    final = sorted(results, key=lambda x: x[4], reverse=True)[0]
     dev = final[0]
     short = final[1]
     long = final[2]
-    print(f'play_with_trend_bt results: dev={dev}, short={short}, long={long}, result={round(final[3],5)}')
-    return short, long, dev
+    divider = final[3]
+    print(f'play_with_trend_bt results: dev={dev}, short={short}, long={long}, divider={divider}, result={round(final[3],5)}')
+    return short, long, dev, divider
 
