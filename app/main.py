@@ -160,7 +160,7 @@ class Bot:
                 if self.position_size < 0.5*position_size:
                     self.position_size = 0.5*position_size
             elif all([i[0] > 0 for i in x]):
-                self.position_size += 0.3*self.position_size
+                self.position_size += 0.25*self.position_size
                 if self.position_size > 2*position_size:
                     self.position_size = 2*position_size
             try:

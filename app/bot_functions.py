@@ -518,11 +518,11 @@ def play_with_trend_bt(symbol):
                     
                     match ind_:
                         case 0: divider = 1
-                        case 1: divider = 1.15
-                        case 2: divider = 1.30
-                        case 3: divider = 1.45
-                        case 4: divider = 1.6
-                        
+                        case 1: divider = 1.1
+                        case 2: divider = 1.2
+                        case 3: divider = 1.3
+                        case 4: divider = 1.4
+
                     results.append((dev, short, long, divider, result))
                 except Exception as e:
                     print(e)
