@@ -455,7 +455,7 @@ def play_with_trend_bt(symbol):
     shorts = range(380, 721, 10)
     devs = range(10, 23, 2)
     df_raw = get_data(symbol, 'M5', 1, 50000)
-    df_raw['weekday'] = df.time.dt.weekday
+    df_raw['weekday'] = df_raw.time.dt.weekday
 
     today = dt.now().weekday()
 
@@ -502,7 +502,7 @@ def play_with_trend_bt(symbol):
 
 
                     get_this_fuck_out = []
-                    for i in np.unique(df['weekday']):
+                    for i in range(5):
                         dfx = df[df['weekday'] == i]
                         sharpex1 = round(((dfx['return'].mean()/dfx['return'].std())), 6)
                         omegax1 = omega_ratio(dfx['return'])
@@ -515,13 +515,14 @@ def play_with_trend_bt(symbol):
                     get_this_fuck_out = sorted(get_this_fuck_out, key=lambda x: x[1], reverse=True)
                     get_this_fuck_out = [i[0] for i in get_this_fuck_out]
                     ind_ = get_this_fuck_out.index(today)
+                    
                     match ind_:
                         case 0: divider = 1
                         case 1: divider = 1.15
                         case 2: divider = 1.30
                         case 3: divider = 1.45
                         case 4: divider = 1.6
-
+                        
                     results.append((dev, short, long, divider, result))
                 except Exception as e:
                     print(e)
