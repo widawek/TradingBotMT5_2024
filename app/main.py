@@ -93,7 +93,7 @@ class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
-        self.if_position_with_trend = 9
+        self.if_position_with_trend = 'n'
         self.fresh_daily_target = False
         self.currency = mt.account_info().currency
         self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider = play_with_trend_bt(symbol)
@@ -520,9 +520,9 @@ class Bot:
 
         bonus = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
         antitrend = 0.5
-        self.if_position_with_trend = 9
+        self.if_position_with_trend = 'n'
         if (bonus >= 0 and posType == 0) or (bonus <= 0 and posType == 1):
-            self.if_position_with_trend = 8
+            self.if_position_with_trend = 'y'
             antitrend = 1
         trend_bonus = bonus if posType == 0 else -bonus
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
