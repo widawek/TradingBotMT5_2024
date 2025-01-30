@@ -436,6 +436,9 @@ def play_with_trend(symbol, short, long, dev, divider):
         elif d.close > d.ma_432 and d.close < d.boll_up_432:
             print("Just long trend!")
             return 0.2 / divider
+        elif d.close > d.boll_up_432:
+            print("Overbougth long trend!")
+            return 0.05 / divider
     else:
         if d.close > d.boll_up_432:
             print("Best to open short!")
@@ -446,6 +449,9 @@ def play_with_trend(symbol, short, long, dev, divider):
         elif d.close < d.ma_432 and d.close > d.boll_down_432:
             print("Just short trend!")
             return -0.2 / divider
+        elif d.close < d.boll_down_432:
+            print("Oversold short trend!")
+            return -0.05 / divider
     return 0
 
 

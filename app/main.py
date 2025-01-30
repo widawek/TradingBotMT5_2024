@@ -306,7 +306,7 @@ class Bot:
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif profit < -self.profit_needed*profit_decrease_barrier/self.too_much_risk():# and profit > 0.91 * self.profit_min:
-                    self.clean_orders(backtest)
+                    self.clean_orders(True)
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif ((self.profit_max > self.profit_needed/multi and profit < self.profit_max * self.profit_decline_factor) or
@@ -348,8 +348,12 @@ class Bot:
                     counter += 1
             print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
             time.sleep(1)
-        self.reset_bot()
-        self.report()
+        if backtest:
+            self.test_strategies()
+            self.report()
+        else:
+            self.reset_bot()
+            self.report()
 
     @class_errors
     def print_condition(self):
@@ -513,10 +517,13 @@ class Bot:
         except AttributeError:
             another_new_volume_multiplier_from_win_rate_condition = 0.6
 
-        bouns = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
-        trend_bonus = bouns if posType == 0 else -bouns
+        bonus = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
+        antitrend = 0.5
+        if (bonus >= 0 and posType == 0) or (bonus <= 0 and posType == 1):
+            antitrend = 1
+        trend_bonus = bonus if posType == 0 else -bonus
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
-        max_pos_margin = max_pos_margin + max_pos_margin*trend_bonus
+        max_pos_margin = (max_pos_margin + max_pos_margin*trend_bonus)*antitrend
         x, _ = Bot.target_class.checkTarget()
         if x:
             max_pos_margin = max_pos_margin / 5
@@ -986,6 +993,7 @@ class Bot:
             for i in self.strategies:
                 print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9])
             self.strategy_number = 0
+            self.tiktok = 0
             self.reset_bot()
 
     def too_much_risk(self):

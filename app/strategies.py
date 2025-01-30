@@ -249,3 +249,35 @@ def ema2boll_trend_M2(df, slow, fast):
     position = df['stance'].iloc[-1]
     return df, position
 
+
+def sup1_res_numpy_trend_M1(df, slow, fast):
+    # import in function for report script
+    from app.bot_functions import find_support_resistance_numpy
+    df = find_support_resistance_numpy(df, slow, fast)
+    df['stance'] = np.where(df['close'] < df['support'], -1, np.NaN)
+    df['stance'] = np.where(df['close'] > df['resistance'], 1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def sup2_res_numpy_trend_M2(df, slow, fast):
+    # import in function for report script
+    from app.bot_functions import find_support_resistance_numpy
+    df = find_support_resistance_numpy(df, slow, fast)
+    df['stance'] = np.where(df['close'] < df['support'], -1, np.NaN)
+    df['stance'] = np.where(df['close'] > df['resistance'], 1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def sup3_res_numpy_trend_M3(df, slow, fast):
+    # import in function for report script
+    from app.bot_functions import find_support_resistance_numpy
+    df = find_support_resistance_numpy(df, slow, fast)
+    df['stance'] = np.where(df['close'] < df['support'], -1, np.NaN)
+    df['stance'] = np.where(df['close'] > df['resistance'], 1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
