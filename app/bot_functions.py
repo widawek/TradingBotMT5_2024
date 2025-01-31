@@ -464,7 +464,7 @@ def play_with_trend_bt(symbol):
                         dfx = df[df['weekday'] == i]
                         sharpex1 = round(((dfx['return'].mean()/dfx['return'].std())), 6)
                         omegax1 = omega_ratio(dfx['return'])
-                        df3 = df.copy()[int(len(dfx)/2):]
+                        df3 = dfx.copy()[int(len(dfx)/2):]
                         sharpex2 = round(((df3['return'].mean()/df3['return'].std())), 6)
                         omegax2 = omega_ratio(df3['return'])
                         result = np.mean([sharpex1, sharpex2])*np.mean([omegax1, omegax2])
