@@ -24,7 +24,8 @@ symbols:                                list = [
                                             'USDJPY',
                                             'US30',
                                             'XAUUSD',
-                                            'AUDUSD'
+                                            'AUDUSD',
+                                            'CADJPY'
                                             ]
 
 #                                       model_generator_params

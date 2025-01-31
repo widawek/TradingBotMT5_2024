@@ -307,7 +307,7 @@ class Bot:
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif profit < -self.profit_needed*profit_decrease_barrier/self.too_much_risk():# and profit > 0.91 * self.profit_min:
-                    self.clean_orders(True)
+                    self.clean_orders(backtest)
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif ((self.profit_max > self.profit_needed/multi and profit < self.profit_max * self.profit_decline_factor) or
@@ -349,12 +349,8 @@ class Bot:
                     counter += 1
             print(f"Usunięto łącznie {counter} zleceń na symbolu {self.symbol}")
             time.sleep(1)
-        if backtest:
-            self.test_strategies()
-            self.report()
-        else:
-            self.reset_bot()
-            self.report()
+        self.reset_bot()
+        self.report()
 
     @class_errors
     def print_condition(self):
@@ -1003,7 +999,7 @@ class Bot:
         test = [i - timedelta(minutes=5) < dt.now() < i + timedelta(minutes=45) for i in hardcore_hours]
         if any(test):
             print("High volatility risk.")
-            return 5
+            return 4
         return 1# if not Bot.target_class.checkTarget() else 2
 
 if __name__ == '__main__':
