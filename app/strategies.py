@@ -111,38 +111,6 @@ def avs1_aka_atr_vol_stoch_trend_M1(df_raw, slow, fast):
     return df, position
 
 
-def momen1tum_divergence_strategy_counter_M1(df, slow, fast):
-    df['momentum'] = df['close'] / df.close.rolling(slow).mean()
-    df['std'] = df['close'].rolling(slow).std()
-    df['lambda'] = df['std'] / df['std'].rolling(slow).mean()
-    df['velocity'] = df['momentum'] * df['lambda']
-    df['velocity_mean'] = ta.t3(df['velocity'], length=fast)
-    df['rsi'] = ta.rsi(df['close'], length=slow)
-    df['price_peak'] = df['high'].rolling(fast).max()
-    df['price_trough'] = df['low'].rolling(fast).min()
-    df['rsi_peak'] = df['velocity_mean'].rolling(fast).max()
-    df['rsi_trough'] = df['velocity_mean'].rolling(fast).min()
-
-    df['bullish_div'] = np.where(
-        (df['price_trough'] < df['price_trough'].shift(1)) &  # Price makes a lower low
-        (df['rsi_trough'] > df['rsi_trough'].shift(1)),  # RSI makes a higher low
-        1, 0)
-
-    # Identify bearish divergence
-    df['bearish_div'] = np.where(
-        (df['price_peak'] > df['price_peak'].shift(1)) &  # Price makes a higher high
-        (df['rsi_peak'] < df['rsi_peak'].shift(1)),  # RSI makes a lower high
-        1, 0)
-
-    # Generate trading signals
-    df['stance'] = np.NaN
-    df.loc[df['bullish_div'] == 1, 'stance'] = 1.0  # Buy signal on bullish divergence
-    df.loc[df['bearish_div'] == 1, 'stance'] = -1.0  # Sell signal on bearish divergence
-    df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position
-
-
 def eng2minmax_counter_M2(df, slow, fast):
     fast = fast-1
     df['local_max'] = df.high.rolling(slow).max()
@@ -271,13 +239,3 @@ def sup2_res_numpy_trend_M2(df, slow, fast):
     position = df['stance'].iloc[-1]
     return df, position
 
-
-def sup3_res_numpy_trend_M3(df, slow, fast):
-    # import in function for report script
-    from app.bot_functions import find_support_resistance_numpy
-    df = find_support_resistance_numpy(df, slow, fast)
-    df['stance'] = np.where(df['close'] < df['support'], -1, np.NaN)
-    df['stance'] = np.where(df['close'] > df['resistance'], 1, df['stance'])
-    df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position

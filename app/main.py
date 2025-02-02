@@ -30,7 +30,7 @@ processor = TradingProcessor()
 
 
 class Target:
-    def __init__(self, target=0.025):
+    def __init__(self, target=0.03):
         self.start_balance = mt.account_info().balance - closed_pos()
         self.target = target
         self.result = False

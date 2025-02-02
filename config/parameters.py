@@ -23,7 +23,7 @@ symbols:                                list = [
                                             'USDCHF',
                                             'USDJPY',
                                             'US30',
-                                            'XAUUSD',
+                                            # 'XAUUSD', temp remove XAUUSD
                                             'AUDUSD',
                                             'CADJPY'
                                             ]
