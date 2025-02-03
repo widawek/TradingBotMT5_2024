@@ -544,7 +544,7 @@ class Bot:
             another_new_volume_multiplier_from_win_rate_condition = 0.6
 
         bonus = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
-        antitrend = 0.5
+        antitrend = 0.75
         self.if_position_with_trend = 'n'
         if (bonus >= 0 and posType == 0) or (bonus <= 0 and posType == 1):
             self.if_position_with_trend = 'y'
