@@ -515,14 +515,17 @@ class Bot:
         self.profits = []
         self.profit0 = None
         self.profit_max = 0
-        # add reset fake_robot parameters
-        self.fake_position = False
-        self.max_close = None
-        self.fake_stoploss = 0
-        self.fake_counter = 0
-        self.base_fake_interval = base_fake_interval
         self.fresh_daily_target = False
-        print(f"The bot was reset.")
+        # add reset fake_robot parameters
+        if not self.real_fake_pos:
+            self.fake_position = False
+            self.max_close = None
+            self.fake_stoploss = 0
+            self.fake_counter = 0
+            self.base_fake_interval = base_fake_interval
+            print(f"The bot was reset fake_position features.")
+        else:
+            print(f"The bot was reset without fake_position features.")
 
     @class_errors
     def avg_daily_vol(self):
