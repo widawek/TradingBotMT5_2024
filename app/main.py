@@ -93,6 +93,8 @@ class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.real_fake_pos = False
+        self.fake_pos_gate = False
         self.if_position_with_trend = 'n'
         self.fresh_daily_target = False
         self.currency = mt.account_info().currency
@@ -201,22 +203,33 @@ class Bot:
         self.fake_stoploss = 0
         self.fake_counter = 0
         self.base_fake_interval = base_fake_interval
+        self.real_fake_pos = False
+        self.fake_pos_gate = False
         return self.actual_position_democracy()
 
     @class_errors
     def fake_position_robot(self):
+        intervals_ = ['M1', 'M2', 'M3', 'M5', 'M10', 'M15', 'M30']
+        base_interval_index = intervals.index(self.interval)
+        self.base_fake_interval = internal_interval(0)
+
+        def internal_interval(number):
+            if base_interval_index + number > len(intervals_) - 1:
+                return intervals_[len(intervals_) - 1]
+            return intervals_[base_interval_index + number]
+
         if self.fake_counter <= 5:
             interval = self.base_fake_interval
         elif self.fake_counter <= 8:
-            interval = 'M5'
+            interval = internal_interval(1)
         elif self.fake_counter <= 11:
-            interval = 'M10'
+            interval = internal_interval(2)
         elif self.fake_counter <= 14:
-            interval = 'M15'
+            interval = internal_interval(3)
         elif self.fake_counter <= 16:
-            interval = 'M20'
+            interval = internal_interval(4)
         else:
-            interval = 'M30'
+            interval = internal_interval(5)
 
         interval_df = get_data(self.symbol, interval, 1, 3)
         close0 = interval_df['close'].iloc[0]
@@ -242,19 +255,30 @@ class Bot:
             print("fake_position_robot", e)
             pass
 
-        def fake_position_on():
+        def fake_position_on(real_fake_position=False):
             self.fake_position = True
             self.max_close = close2
             self.fake_stoploss = close1
+            if real_fake_position:
+                self.real_fake_pos = True
+                self.fake_pos_gate = 0
 
         if not self.fake_position:
             if (((pos_type == 0) and (close2 > close1 > close0)) or\
                 ((pos_type == 1) and (close2 < close1 < close0))) and\
                     (profit_ > 0):
                 fake_position_on()
+            elif (((pos_type == 1) and (close2 > close1 > close0)) or\
+                ((pos_type == 0) and (close2 < close1 < close0))) and\
+                    (profit_ < 0):
+                fake_position_on(True)
 
         elif self.too_much_risk() > 1:
             return self.fake_position_off()
+
+        if (not self.fake_pos_gate) and (self.real_fake_pos):
+            self.fake_pos_gate = True
+            return pos_type
 
         elif self.fake_position and pos_type == 0:
             old_max = self.max_close
@@ -307,6 +331,7 @@ class Bot:
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif profit < -self.profit_needed*profit_decrease_barrier/self.too_much_risk():# and profit > 0.91 * self.profit_min:
+                    self.fake_position_flip()
                     self.clean_orders(backtest)
 
                 # Jeżeli strata mniejsza od straty granicznej
@@ -324,6 +349,10 @@ class Bot:
         except Exception as e:
             print("check_trigger", e)
             pass
+
+    @class_errors
+    def fake_position_flip(self):
+        pass
 
     @class_errors
     def clean_orders(self, backtest=False):
@@ -685,8 +714,11 @@ class Bot:
                 print(e)
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
-
-        print("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
+        if self.real_fake_pos:
+            position = 0 if position == 1 else 1
+            print("Pozycja Fake", "Long" if position == 0 else "Short" if position != 0 else "None")
+        else:
+            print("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
         return position
 
     @class_errors
@@ -711,6 +743,9 @@ class Bot:
         fast = self.strategies[self.strategy_number][3]
         slow = self.strategies[self.strategy_number][4]
         self.comment = f'{name_}_{fast}_{slow}_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
+
+        if self.real_fake_pos:
+            self.comment = f'{name_}_0_0_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
 
         request = {
             "action": action,

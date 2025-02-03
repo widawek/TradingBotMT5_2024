@@ -412,7 +412,7 @@ def play_with_trend_bt(symbol):
     longs = range(1100, 2001, 25)
     shorts = range(380, 721, 10)
     devs = range(10, 23, 2)
-    df_raw = get_data(symbol, 'M5', 1, 50000)
+    df_raw = get_data(symbol, 'M5', 1, 75000)
     df_raw['weekday'] = df_raw.time.dt.weekday
 
     today = dt.now().weekday()
@@ -491,6 +491,6 @@ def play_with_trend_bt(symbol):
     short = final[1]
     long = final[2]
     divider = final[3]
-    print(f'play_with_trend_bt results: dev={dev}, short={short}, long={long}, divider={divider}, result={round(final[3],5)}')
+    print(f'play_with_trend_bt results: dev={dev}, short={short}, long={long}, divider={divider}, result={round(final[4],5)}')
     return short, long, dev, divider
 
