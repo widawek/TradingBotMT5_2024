@@ -209,12 +209,12 @@ class Bot:
     def fake_position_robot(self):
         intervals_ = ['M1', 'M2', 'M3', 'M5', 'M10', 'M15', 'M30']
         base_interval_index = intervals.index(self.interval)
-        
+
         def internal_interval(number):
             if base_interval_index + number > len(intervals_) - 1:
                 return intervals_[len(intervals_) - 1]
             return intervals_[base_interval_index + number]
-        
+
         if self.fake_counter <= 5:
             interval = self.base_fake_interval
         elif self.fake_counter <= 8:
@@ -282,10 +282,17 @@ class Bot:
             if self.max_close > old_max:
                 self.fake_counter+=1
                 self.fake_stoploss = close1
-            if (close2 < self.fake_stoploss) or (profit_ < 0):
-                return self.fake_position_off()
+
+            if self.real_fake_pos:
+                if (close2 < self.fake_stoploss):
+                    return self.fake_position_off()
+                else:
+                    return pos_type
             else:
-                return pos_type
+                if (close2 < self.fake_stoploss) or (profit_ < 0):
+                    return self.fake_position_off()
+                else:
+                    return pos_type
 
         elif self.fake_position and pos_type == 1:
             old_max = self.max_close
@@ -293,10 +300,16 @@ class Bot:
             if self.max_close < old_max:
                 self.fake_counter+=1
                 self.fake_stoploss = close1
-            if (close2 > self.fake_stoploss) or (profit_ < 0):
-                return self.fake_position_off()
+            if self.real_fake_pos:
+                if (close2 > self.fake_stoploss):
+                    return self.fake_position_off()
+                else:
+                    return pos_type
             else:
-                return pos_type
+                if (close2 > self.fake_stoploss) or (profit_ < 0):
+                    return self.fake_position_off()
+                else:
+                    return pos_type
 
     @class_errors
     def check_trigger(self, backtest=False):
