@@ -211,13 +211,14 @@ class Bot:
     def fake_position_robot(self):
         intervals_ = ['M1', 'M2', 'M3', 'M5', 'M10', 'M15', 'M30']
         base_interval_index = intervals.index(self.interval)
-        self.base_fake_interval = internal_interval(0)
-
+        
         def internal_interval(number):
             if base_interval_index + number > len(intervals_) - 1:
                 return intervals_[len(intervals_) - 1]
             return intervals_[base_interval_index + number]
 
+        self.base_fake_interval = internal_interval(0)
+        
         if self.fake_counter <= 5:
             interval = self.base_fake_interval
         elif self.fake_counter <= 8:
@@ -261,7 +262,6 @@ class Bot:
             self.fake_stoploss = close1
             if real_fake_position:
                 self.real_fake_pos = True
-                self.fake_pos_gate = 0
 
         if not self.fake_position:
             if (((pos_type == 0) and (close2 > close1 > close0)) or\
@@ -331,7 +331,6 @@ class Bot:
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif profit < -self.profit_needed*profit_decrease_barrier/self.too_much_risk():# and profit > 0.91 * self.profit_min:
-                    self.fake_position_flip()
                     self.clean_orders(backtest)
 
                 # Jeżeli strata mniejsza od straty granicznej
@@ -349,10 +348,6 @@ class Bot:
         except Exception as e:
             print("check_trigger", e)
             pass
-
-    @class_errors
-    def fake_position_flip(self):
-        pass
 
     @class_errors
     def clean_orders(self, backtest=False):
