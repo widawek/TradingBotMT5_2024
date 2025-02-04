@@ -114,7 +114,6 @@ class Bot:
         self.fresh_signal = None
         self.strategy_pos_open_price = None
         self.good_price_to_open_pos = None
-        self.base_fake_interval = base_fake_interval
         self.print_count = 0
         self.change = 0
         self.tiktok = 0
@@ -202,7 +201,6 @@ class Bot:
         self.max_close = None
         self.fake_stoploss = 0
         self.fake_counter = 0
-        self.base_fake_interval = base_fake_interval
         self.real_fake_pos = False
         self.fake_pos_gate = False
         return self.actual_position_democracy()
@@ -216,8 +214,6 @@ class Bot:
             if base_interval_index + number > len(intervals_) - 1:
                 return intervals_[len(intervals_) - 1]
             return intervals_[base_interval_index + number]
-
-        self.base_fake_interval = internal_interval(0)
         
         if self.fake_counter <= 5:
             interval = self.base_fake_interval
@@ -517,7 +513,6 @@ class Bot:
             self.max_close = None
             self.fake_stoploss = 0
             self.fake_counter = 0
-            self.base_fake_interval = base_fake_interval
             print(f"The bot was reset fake_position features.")
         else:
             print(f"The bot was reset without fake_position features.")
@@ -740,6 +735,7 @@ class Bot:
         name_ = self.strategies[self.strategy_number][0][:6]
         fast = self.strategies[self.strategy_number][3]
         slow = self.strategies[self.strategy_number][4]
+        self.base_fake_interval = self.interval
         self.comment = f'{name_}_{fast}_{slow}_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
 
         if self.real_fake_pos:
