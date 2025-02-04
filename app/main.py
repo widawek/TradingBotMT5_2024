@@ -5,7 +5,7 @@ import MetaTrader5 as mt
 import time
 import sys
 import os
-from datetime import timedelta
+from datetime import timedelta, timezone
 from datetime import datetime as dt
 from time import sleep
 from icecream import ic
@@ -208,7 +208,7 @@ class Bot:
     @class_errors
     def fake_position_robot(self):
         intervals_ = ['M1', 'M2', 'M3', 'M5', 'M10', 'M15', 'M30']
-        base_interval_index = intervals.index(self.interval)
+        base_interval_index = intervals_.index(self.interval)
 
         def internal_interval(number):
             if base_interval_index + number > len(intervals_) - 1:
@@ -349,6 +349,9 @@ class Bot:
 
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
                 elif (profit > self.profit_needed/(profit_factor*1.5)):
+                    _ = self.fake_position_robot()
+
+                elif (profit<0 and self.get_open_positions_durations() > 3*self.pos_time):
                     _ = self.fake_position_robot()
 
                 if self.print_condition():
@@ -550,11 +553,13 @@ class Bot:
             another_new_volume_multiplier_from_win_rate_condition = 0.6
 
         bonus = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
-        antitrend = 0.75
+        antitrend = 1
         self.if_position_with_trend = 'n'
         if (bonus >= 0 and posType == 0) or (bonus <= 0 and posType == 1):
             self.if_position_with_trend = 'y'
-            antitrend = 1
+            antitrend = 0.7
+        if self.real_fake_pos:
+            antitrend = 1 if antitrend == 0.7 else 0.7
         trend_bonus = bonus if posType == 0 else -bonus
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
         max_pos_margin = (max_pos_margin + max_pos_margin*trend_bonus)*antitrend
@@ -1037,12 +1042,25 @@ class Bot:
             self.tiktok = 0
             self.reset_bot()
 
+    @class_errors
     def too_much_risk(self):
         test = [i - timedelta(minutes=5) < dt.now() < i + timedelta(minutes=45) for i in hardcore_hours]
         if any(test):
             print("High volatility risk.")
             return 4
         return 1# if not Bot.target_class.checkTarget() else 2
+
+    @class_errors
+    def get_open_positions_durations(self):
+        positions = mt.positions_get(symbol=self.symbol)
+        tick = mt.symbol_info_tick(self.symbol)
+        server_time = dt.fromtimestamp(tick.time, timezone.utc)
+        durations = []
+        for pos in positions:
+            time_open = dt.fromtimestamp(pos.time, timezone.utc)
+            duration = (server_time - time_open).total_seconds() / 60
+            durations.append((pos.ticket, duration))
+        return durations[0][1]
 
 if __name__ == '__main__':
     print('Yo, wtf?')
