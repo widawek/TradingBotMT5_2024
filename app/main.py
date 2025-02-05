@@ -93,6 +93,7 @@ class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.fake_position_first = False
         self.real_fake_pos = False
         self.fake_pos_gate = False
         self.if_position_with_trend = 'n'
@@ -203,6 +204,7 @@ class Bot:
         self.fake_counter = 0
         self.real_fake_pos = False
         self.fake_pos_gate = False
+        self.fake_position_first = False
         return self.actual_position_democracy()
 
     @class_errors
@@ -635,9 +637,10 @@ class Bot:
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
         try:
-            if self.fake_position:
+            if self.fake_position and self.fake_position_first and self.real_fake_pos:
                 return self.fake_position_robot()
-
+            elif self.fake_position and not self.real_fake_pos:
+                return self.fake_position_robot()
             # market = 'e' if dt.now().hour < change_hour else 'u'
             # if market != self.market:
             #     self.market = market
@@ -727,6 +730,7 @@ class Bot:
         self.pos_time = interval_time(self.interval)
         if self.real_fake_pos:
             position = 0 if position == 1 else 1
+            self.fake_position_first = True
             print("Pozycja Fake", "Long" if position == 0 else "Short" if position != 0 else "None")
         else:
             print("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
