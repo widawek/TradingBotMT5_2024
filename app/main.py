@@ -217,15 +217,18 @@ class Bot:
                 return intervals_[len(intervals_) - 1]
             return intervals_[base_interval_index + number]
 
-        if self.fake_counter <= 5:
+        first_val, jump, counter = 7, 2, 5
+        levels = [first_val + jump*i for i in range(counter)]
+        
+        if self.fake_counter <= levels[0]:
             interval = self.base_fake_interval
-        elif self.fake_counter <= 8:
+        elif self.fake_counter <= levels[1]:
             interval = internal_interval(1)
-        elif self.fake_counter <= 11:
+        elif self.fake_counter <= levels[2]:
             interval = internal_interval(2)
-        elif self.fake_counter <= 14:
+        elif self.fake_counter <= levels[3]:
             interval = internal_interval(3)
-        elif self.fake_counter <= 16:
+        elif self.fake_counter <= levels[4]:
             interval = internal_interval(4)
         else:
             interval = internal_interval(5)
