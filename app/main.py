@@ -690,31 +690,32 @@ class Bot:
                 return self.actual_position_democracy()
 
             positions_ = mt.positions_get(symbol=self.symbol)
-            if len(positions_) == 0:
-                while True:
-                    if self.fresh_signal:
-                        break
-                    self.is_this_the_end()
-                    # check if price is nice to open
-                    tick = mt.symbol_info_tick(self.symbol)
-                    price = round((tick.ask + tick.bid) / 2, self.round_number)
-                    diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
-                    match position:
-                        case 0: self.good_price_to_open_pos = True if price <= self.strategy_pos_open_price else False
-                        case 1: self.good_price_to_open_pos = True if price >= self.strategy_pos_open_price else False
-                        #case 2: self.good_price_to_open_pos = True if abs(diff) < self.mdv else False
-                    if self.good_price_to_open_pos:
-                        break
-
-                    if self.check_new_bar():
-                        return self.actual_position_democracy(number_of_bars=number_of_bars*20)
-                    pos = 'LONG' if position==0 else "SHORT"
-                    printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
-
-                    if self.use_tracker:
-                        self.positionTracker.checkout()
-
-                    time.sleep(5)
+            if not self.real_fake_pos:
+                if len(positions_) == 0:
+                    while True:
+                        if self.fresh_signal:
+                            break
+                        self.is_this_the_end()
+                        # check if price is nice to open
+                        tick = mt.symbol_info_tick(self.symbol)
+                        price = round((tick.ask + tick.bid) / 2, self.round_number)
+                        diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
+                        match position:
+                            case 0: self.good_price_to_open_pos = True if price <= self.strategy_pos_open_price else False
+                            case 1: self.good_price_to_open_pos = True if price >= self.strategy_pos_open_price else False
+                            #case 2: self.good_price_to_open_pos = True if abs(diff) < self.mdv else False
+                        if self.good_price_to_open_pos:
+                            break
+    
+                        if self.check_new_bar():
+                            return self.actual_position_democracy(number_of_bars=number_of_bars*20)
+                        pos = 'LONG' if position==0 else "SHORT"
+                        printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
+    
+                        if self.use_tracker:
+                            self.positionTracker.checkout()
+    
+                        time.sleep(5)
         except KeyError as e:
             try:
                 print("actual_position_democracy", e)
