@@ -273,7 +273,6 @@ class Bot:
             return self.fake_position_off()
 
         if (not self.fake_pos_gate) and (self.real_fake_pos):
-            self.fake_pos_gate = True
             return pos_type
 
         elif self.fake_position and pos_type == 0:
@@ -790,6 +789,10 @@ class Bot:
 
     @class_errors
     def check_new_bar(self):
+        if (not self.fake_pos_gate) and (self.real_fake_pos):
+            self.fake_pos_gate = True
+            return True
+
         if self.change == 0:
             bar = mt.copy_rates_from_pos(
                 self.symbol, timeframe_(self.interval), 0, 1) # change self.interval to 'M1'
@@ -801,6 +804,7 @@ class Bot:
         else:
             self.change = 0
             return True
+        
 
     @class_errors
     def mdv_(self):
