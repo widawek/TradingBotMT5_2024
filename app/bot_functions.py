@@ -513,4 +513,4 @@ def get_last_closed_position_direction(symbol):
         return random.random([0, 1])
     
     last_deal = closed_positions[0]
-    return 0 if last_deal.type == mt.DEAL_TYPE_BUY else 1
+    return int(0) if last_deal.type == mt.DEAL_TYPE_BUY else int(1)

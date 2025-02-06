@@ -65,7 +65,7 @@ def class_errors(func):
             class_name = args[0].__class__.__name__
             function_name = func.__name__
             with open("class_errors.txt", "a") as log_file:
-                log_file.write("Symbol {}, Time: {} Error in class {}, function {}:\n\n"
+                log_file.write("\n\nSymbol {}, Time: {} Error in class {}, function {}:\n"
                             .format(symbol, time, class_name, function_name))
                 traceback.print_exc(file=log_file)
             if isinstance(e, RecursionError):

@@ -242,7 +242,7 @@ class Bot:
             pos_type = self.positions[0].type
             profit_ = self.positions[0].profit
         except Exception:
-            pos_type = 0 if (close2 > close1 >= close0) else 1 if (close2 < close1 <= close0) else get_last_closed_position_direction(self.symbol)
+            pos_type = 0 if (close2 > close1 > close0) else 1 if (close2 < close1 < close0) else get_last_closed_position_direction(self.symbol)
             profit_ = 0
 
         try:
@@ -267,12 +267,12 @@ class Bot:
                 self.real_fake_pos = True
 
         if not self.fake_position:
-            if (((pos_type == 0) and (close2 > close1 >= close0)) or\
-                ((pos_type == 1) and (close2 < close1 <= close0))) and\
+            if (((pos_type == 0) and (close2 > close1 > close0)) or\
+                ((pos_type == 1) and (close2 < close1 < close0))) and\
                     (profit_ > 0):
                 fake_position_on()
-            elif (((pos_type == 1) and (close2 > close1 >= close0)) or\
-                ((pos_type == 0) and (close2 < close1 <= close0))) and\
+            elif (((pos_type == 1) and (close2 > close1 > close0)) or\
+                ((pos_type == 0) and (close2 < close1 < close0))) and\
                     (profit_ < 0):
                 fake_position_on(True)
 
@@ -357,7 +357,7 @@ class Bot:
                 elif (profit > self.profit_needed/(profit_factor*1.5)):
                     _ = self.fake_position_robot()
 
-                elif (profit<0 and self.get_open_positions_durations() > 3*self.pos_time):
+                elif (profit < -self.profit_needed/15 and self.get_open_positions_durations() > 3*self.pos_time):
                     _ = self.fake_position_robot()
 
                 if self.print_condition():
@@ -1072,6 +1072,8 @@ class Bot:
     @class_errors
     def get_open_positions_durations(self):
         positions = mt.positions_get(symbol=self.symbol)
+        if len(positions) == 0:
+            return 0
         tick = mt.symbol_info_tick(self.symbol)
         server_time = dt.fromtimestamp(tick.time, timezone.utc)
         durations = []
