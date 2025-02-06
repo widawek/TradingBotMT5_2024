@@ -159,11 +159,11 @@ class Bot:
         if len(self.close_profits) >= 2:
             x = self.close_profits[-2:]
             if all([i[0] < 0 for i in x]):
-                self.position_size -= 0.2*self.position_size
+                self.position_size -= 0.1*self.position_size
                 if self.position_size < 0.5*position_size:
                     self.position_size = 0.5*position_size
             elif all([i[0] > 0 for i in x]):
-                self.position_size += 0.25*self.position_size
+                self.position_size += 0.2*self.position_size
                 if self.position_size > 2*position_size:
                     self.position_size = 2*position_size
             try:
@@ -178,23 +178,24 @@ class Bot:
         else:
             last_two = 0
 
-        if self.tiktok < 1:
-            if (profit_ > 0) and (last_two >= 0):
-                self.tiktok -= 1
-            elif (profit_ < 0):# or (last_two < 0):
-                self.tiktok += 1
+        if '_0_0_' not in self.comment:
+            if self.tiktok < 1:
+                if (profit_ > 0) and (last_two >= 0):
+                    self.tiktok -= 1
+                elif (profit_ < 0):# or (last_two < 0):
+                    self.tiktok += 1
+                else:
+                    pass
             else:
-                pass
-        else:
-            if (profit_ > 0) and (last_two >= 0):
-                self.tiktok -= 1
-            else:
-                self.strategy_number += 1
-                self.tiktok = 0
-        if not backtest:
-            if self.strategy_number > len(self.strategies)-1:
-                self.test_strategies()
-        self.tiktok = 0 if self.tiktok < 0 else self.tiktok
+                if (profit_ > 0) and (last_two >= 0):
+                    self.tiktok -= 1
+                else:
+                    self.strategy_number += 1
+                    self.tiktok = 0
+            if not backtest:
+                if self.strategy_number > len(self.strategies)-1:
+                    self.test_strategies()
+            self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
     @class_errors
     def fake_position_off(self):
@@ -217,10 +218,10 @@ class Bot:
                 return intervals_[len(intervals_) - 1]
             return intervals_[base_interval_index + number]
 
-        first_val, jump, counter = 7, 2, 5
+        first_val, jump, counter = 4, 2, 5
         levels = [first_val + jump*i for i in range(counter)]
 
-        mode = 1
+        mode = 2
         if self.fake_counter <= levels[0]:
             interval = internal_interval(mode)
         elif self.fake_counter <= levels[1]:
@@ -234,45 +235,51 @@ class Bot:
         else:
             interval = internal_interval(mode+5)
 
-        interval_df = get_data(self.symbol, interval, 1, 3)
-        close0 = interval_df['close'].iloc[0]
-        close1 = interval_df['close'].iloc[1]
-        close2 = interval_df['close'].iloc[2]
+        idf = get_data(self.symbol, interval, 1, 3)
+        idf['grow'] = idf['close'] > idf['open']
+        idf['decrease '] = idf['close'] < idf['open']
+        close0 = idf['close'].iloc[0]
+        close1 = idf['close'].iloc[1]
+        close2 = idf['close'].iloc[2]
+        long_cond = all([all(idf['grow'].to_list()), idf['close'].is_monotonic_increasing])
+        short_cond = all([all(idf['nogrow'].to_list()), idf['close'].is_monotonic_decreasing])
         try:
             pos_type = self.positions[0].type
             profit_ = self.positions[0].profit
         except Exception:
-            pos_type = 0 if (close2 > close1 > close0) else 1 if (close2 < close1 < close0) else get_last_closed_position_direction(self.symbol)
+            pos_type = 0 if long_cond else 1 if short_cond else get_last_closed_position_direction(self.symbol)
+            if pos_type is None:
+                return self.fake_position_off()
             profit_ = 0
 
-        try:
-            if self.base_fake_interval != interval:
-                test = get_data(self.symbol, interval, 1, 200)
-                test['better_close'] = np.where(((test['close']>test['close'].shift(1)) & (test['close']>test['close'].shift(2)) & (pos_type==0)) |
-                                                ((test['close']<test['close'].shift(1)) & (test['close']<test['close'].shift(2)) & (pos_type==1)), 1, 0)
-                test_better = test[test['better_close']==1]
-                test_better.reset_index()
-                self.fake_stoploss = test_better['close'].iloc[-2]
-                self.base_fake_interval = interval
-                return pos_type
-        except Exception as e:
-            print("fake_position_robot", e)
-            pass
+        # try:
+        #     if self.base_fake_interval != interval:
+        #         test = get_data(self.symbol, interval, 1, 200)
+        #         test['better_close'] = np.where(((test['close']>test['close'].shift(1)) & (test['close']>test['close'].shift(2)) & (pos_type==0)) |
+        #                                         ((test['close']<test['close'].shift(1)) & (test['close']<test['close'].shift(2)) & (pos_type==1)), 1, 0)
+        #         test_better = test[test['better_close']==1]
+        #         test_better.reset_index()
+        #         self.fake_stoploss = test_better['close'].iloc[0]
+        #         self.base_fake_interval = interval
+        #         return pos_type
+        # except Exception as e:
+        #     print("fake_position_robot", e)
+        #     pass
 
         def fake_position_on(real_fake_position=False):
             self.fake_position = True
             self.max_close = close2
-            self.fake_stoploss = close1
+            self.fake_stoploss = close0
             if real_fake_position:
                 self.real_fake_pos = True
 
         if not self.fake_position:
-            if (((pos_type == 0) and (close2 > close1 > close0)) or\
-                ((pos_type == 1) and (close2 < close1 < close0))) and\
+            if (((pos_type == 0) and (long_cond)) or\
+                ((pos_type == 1) and (short_cond))) and\
                     (profit_ > 0):
                 fake_position_on()
-            elif (((pos_type == 1) and (close2 > close1 > close0)) or\
-                ((pos_type == 0) and (close2 < close1 < close0))) and\
+            elif (((pos_type == 1) and (long_cond)) or\
+                ((pos_type == 0) and (short_cond))) and\
                     (profit_ < 0):
                 fake_position_on(True)
 
@@ -287,7 +294,8 @@ class Bot:
             self.max_close = close2 if (close2 > self.max_close) else self.max_close
             if self.max_close > old_max:
                 self.fake_counter+=1
-                self.fake_stoploss = close1
+                if close0 > self.fake_stoploss:
+                    self.fake_stoploss = close0
 
             if self.real_fake_pos:
                 if (close2 < self.fake_stoploss):
@@ -305,7 +313,9 @@ class Bot:
             self.max_close = close2 if (close2 < self.max_close) else self.max_close
             if self.max_close < old_max:
                 self.fake_counter+=1
-                self.fake_stoploss = close1
+                if close0 < self.fake_stoploss:
+                    self.fake_stoploss = close0
+
             if self.real_fake_pos:
                 if (close2 > self.fake_stoploss):
                     return self.fake_position_off()
@@ -357,7 +367,7 @@ class Bot:
                 elif (profit > self.profit_needed/(profit_factor*1.5)):
                     _ = self.fake_position_robot()
 
-                elif (profit < -self.profit_needed/15 and self.get_open_positions_durations() > 3*self.pos_time):
+                elif (profit < -self.profit_needed/10 and self.get_open_positions_durations() > 10*self.pos_time):
                     _ = self.fake_position_robot()
 
                 if self.print_condition():

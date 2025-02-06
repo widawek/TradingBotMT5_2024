@@ -496,7 +496,6 @@ def play_with_trend_bt(symbol):
 
 
 def get_last_closed_position_direction(symbol):
-    import random
     today = dt.now().date()
     from_date = dt(today.year, today.month, today.day)
     to_date = dt.now()
@@ -504,13 +503,13 @@ def get_last_closed_position_direction(symbol):
     history = mt.history_deals_get(from_date, to_date)
     if history is None:
         print("Brak historii transakcji")
-        return random.random([0, 1])
+        return None
 
     closed_positions = sorted([deal for deal in history if deal.symbol == symbol and deal.type in (mt.DEAL_TYPE_BUY, mt.DEAL_TYPE_SELL)], key=lambda x: x.time, reverse=True)
     
     if not closed_positions:
         print("Brak zamkniętych pozycji dla symbolu", symbol)
-        return random.random([0, 1])
+        return None
     
     last_deal = closed_positions[0]
     return int(0) if last_deal.type == mt.DEAL_TYPE_BUY else int(1)
