@@ -219,19 +219,20 @@ class Bot:
 
         first_val, jump, counter = 7, 2, 5
         levels = [first_val + jump*i for i in range(counter)]
-        
+
+        mode = 1
         if self.fake_counter <= levels[0]:
-            interval = self.base_fake_interval
+            interval = internal_interval(mode)
         elif self.fake_counter <= levels[1]:
-            interval = internal_interval(1)
+            interval = internal_interval(mode+1)
         elif self.fake_counter <= levels[2]:
-            interval = internal_interval(2)
+            interval = internal_interval(mode+2)
         elif self.fake_counter <= levels[3]:
-            interval = internal_interval(3)
+            interval = internal_interval(mode+3)
         elif self.fake_counter <= levels[4]:
-            interval = internal_interval(4)
+            interval = internal_interval(mode+4)
         else:
-            interval = internal_interval(5)
+            interval = internal_interval(mode+5)
 
         interval_df = get_data(self.symbol, interval, 1, 3)
         close0 = interval_df['close'].iloc[0]
@@ -240,8 +241,9 @@ class Bot:
         try:
             pos_type = self.positions[0].type
             profit_ = self.positions[0].profit
-        except IndexError:
-            return self.fake_position_off()
+        except Exception:
+            pos_type = 0 if (close2 > close1 >= close0) else 1 if (close2 < close1 <= close0) else get_last_closed_position_direction(self.symbol)
+            profit_ = 0
 
         try:
             if self.base_fake_interval != interval:
@@ -265,12 +267,12 @@ class Bot:
                 self.real_fake_pos = True
 
         if not self.fake_position:
-            if (((pos_type == 0) and (close2 > close1 > close0)) or\
-                ((pos_type == 1) and (close2 < close1 < close0))) and\
+            if (((pos_type == 0) and (close2 > close1 >= close0)) or\
+                ((pos_type == 1) and (close2 < close1 <= close0))) and\
                     (profit_ > 0):
                 fake_position_on()
-            elif (((pos_type == 1) and (close2 > close1 > close0)) or\
-                ((pos_type == 0) and (close2 < close1 < close0))) and\
+            elif (((pos_type == 1) and (close2 > close1 >= close0)) or\
+                ((pos_type == 0) and (close2 < close1 <= close0))) and\
                     (profit_ < 0):
                 fake_position_on(True)
 
@@ -561,9 +563,9 @@ class Bot:
         self.if_position_with_trend = 'n'
         if (bonus >= 0 and posType == 0) or (bonus <= 0 and posType == 1):
             self.if_position_with_trend = 'y'
-            antitrend = 0.7
-        if self.real_fake_pos:
-            antitrend = 1 if antitrend == 0.7 else 0.7
+            antitrend = 1
+        # if self.real_fake_pos:
+        #     antitrend = 1 if antitrend == 0.7 else 0.7
         trend_bonus = bonus if posType == 0 else -bonus
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
         max_pos_margin = (max_pos_margin + max_pos_margin*trend_bonus)*antitrend
@@ -641,8 +643,10 @@ class Bot:
     def actual_position_democracy(self, number_of_bars=250):
         try:
             if self.fake_position and self.fake_position_first and self.real_fake_pos:
+                print("Wariant real fake position")
                 return self.fake_position_robot()
             elif self.fake_position and not self.real_fake_pos:
+                print("Wariant fake position")
                 return self.fake_position_robot()
             # market = 'e' if dt.now().hour < change_hour else 'u'
             # if market != self.market:
@@ -682,6 +686,7 @@ class Bot:
             # if self.actual_force < 1:
             #     print("Next strategy, because the strategy is too weak.")
 
+            print("Wariant normal position")
             position = int(0) if position == 1 else int(1)
 
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
@@ -712,15 +717,15 @@ class Bot:
                             #case 2: self.good_price_to_open_pos = True if abs(diff) < self.mdv else False
                         if self.good_price_to_open_pos:
                             break
-    
+
                         if self.check_new_bar():
                             return self.actual_position_democracy(number_of_bars=number_of_bars*20)
                         pos = 'LONG' if position==0 else "SHORT"
                         printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
-    
+
                         if self.use_tracker:
                             self.positionTracker.checkout()
-    
+
                         time.sleep(5)
         except KeyError as e:
             try:
@@ -732,7 +737,8 @@ class Bot:
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
         if self.real_fake_pos:
-            position = 0 if position == 1 else 1
+            print("Wariant odwrócenia pozycji.")
+            position = int(0) if position == 1 else int(1)
             self.fake_position_first = True
             print("Pozycja Fake", "Long" if position == 0 else "Short" if position != 0 else "None")
         else:
@@ -750,12 +756,13 @@ class Bot:
             else:
                 posType = pendings["short_stop"]
 
-
+        print("POSTYPE: ", posType)
+        print("POSTYPE TYPE: ", type(posType))
         self.volume_calc(self.position_size, posType, True)
-        if self.trend_or_not:
-            letter = "t"
-        else:
-            letter = "f"
+        # if self.trend_or_not:
+        #     letter = "t"
+        # else:
+        #     letter = "f"
 
         name_ = self.strategies[self.strategy_number][0][:6]
         fast = self.strategies[self.strategy_number][3]
@@ -812,7 +819,7 @@ class Bot:
         else:
             self.change = 0
             return True
-        
+
 
     @class_errors
     def mdv_(self):
