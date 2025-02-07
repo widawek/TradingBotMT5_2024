@@ -570,10 +570,25 @@ class Bot:
 
         bonus = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
         antitrend = 1
-        self.if_position_with_trend = 'n'
-        if (bonus >= 0 and posType == 0) or (bonus <= 0 and posType == 1):
-            self.if_position_with_trend = 'y'
-            antitrend = 1
+
+        try:
+            if_trend = str(self.strategies[self.strategy_number][0]).split('_')[-2]
+            if if_trend == 'trend':
+                if (bonus >= 0 and posType == 0) or (bonus <= 0 and posType == 1):
+                    self.if_position_with_trend = 'y'
+                    antitrend = 1
+                else:
+                    self.if_position_with_trend = 'n'
+                    antitrend = 0.7
+            else:
+                if (bonus <= 0 and posType == 0) or (bonus >= 0 and posType == 1):
+                    self.if_position_with_trend = 'n'
+                    antitrend = 1
+                else:
+                    self.if_position_with_trend = 'y'
+                    antitrend = 0.7
+        except Exception as e:
+            print('volume_calc anti trend', e)
         # if self.real_fake_pos:
         #     antitrend = 1 if antitrend == 0.7 else 0.7
         trend_bonus = bonus if posType == 0 else -bonus
@@ -705,10 +720,10 @@ class Bot:
             self.strategy_pos_open_price = cross['close'].iloc[-1]
 
             printer("Last open position time by MetaTrader", f"{cross['time'].iloc[-1]}", base_just=60)
-            if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
-                self.strategy_number += 1
-                print("Next strategy because the position is from last working day.")
-                return self.actual_position_democracy()
+            # if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
+            #     self.strategy_number += 1
+            #     print("Next strategy because the position is from last working day.")
+            #     return self.actual_position_democracy()
 
             positions_ = mt.positions_get(symbol=self.symbol)
             if not self.real_fake_pos:
@@ -836,7 +851,7 @@ class Bot:
         """Returns mean daily volatility"""
         df = self.df_d1.copy()
         df['mean_vol'] = (df.high - df.low)
-        return df['mean_vol'].mean()
+        return df['mean_vol'].mean() + df["mean_vol"].std()
 
     @class_errors
     def active_session(self):

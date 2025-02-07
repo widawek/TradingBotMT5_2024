@@ -4,24 +4,24 @@ import pandas as pd
 
 # The first six characters are a mark of strategy, so they should be unique.
 
-def z_moving_averages_trend_M2(df_raw, slow, fast):
-    df = df_raw.copy()
-    df['adj'] = (df['close'] + df['high'] + df['low']) / 3
-    ma1 = df.ta.vwma(length=fast)
-    ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
-    df['stance'] = np.where(ma1>=ma2, 1, 0)
-    df['stance'] = np.where(ma1<ma2, -1, df['stance'])
-    position = df['stance'].iloc[-1]
-    return df, position
+# def z_moving_averages_trend_M2(df_raw, slow, fast):
+#     df = df_raw.copy()
+#     df['adj'] = (df['close'] + df['high'] + df['low']) / 3
+#     ma1 = df.ta.vwma(length=fast)
+#     ma2 = ta.vwma(df['adj'], df['volume'], length=slow)
+#     df['stance'] = np.where(ma1>=ma2, 1, 0)
+#     df['stance'] = np.where(ma1<ma2, -1, df['stance'])
+#     position = df['stance'].iloc[-1]
+#     return df, position
 
 
-def z_stoch2_trend_M2(df_raw, slow, fast):
-    df = df_raw.copy()
-    df['k1'] = df.ta.stoch(k=fast).iloc[:,0]
-    df['k2'] = df.ta.stoch(k=slow).iloc[:,0]
-    df['stance'] = np.where(df['k1']>=df['k2'], 1, -1)
-    position = df['stance'].iloc[-1]
-    return df, position
+# def z_stoch2_trend_M2(df_raw, slow, fast):
+#     df = df_raw.copy()
+#     df['k1'] = df.ta.stoch(k=fast).iloc[:,0]
+#     df['k2'] = df.ta.stoch(k=slow).iloc[:,0]
+#     df['stance'] = np.where(df['k1']>=df['k2'], 1, -1)
+#     position = df['stance'].iloc[-1]
+#     return df, position
 
 
 def rsi1_divergence_strategy_counter_M1(df_raw, slow, fast):
@@ -235,6 +235,114 @@ def sup2_res_numpy_trend_M2(df, slow, fast):
     df = find_support_resistance_numpy(df, slow, fast)
     df['stance'] = np.where(df['close'] < df['support'], -1, np.NaN)
     df['stance'] = np.where(df['close'] > df['resistance'], 1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def alt11rend_trend_M1(df, short, long):
+    long *= 2
+    short *= 3
+    df['res_long'] = df.close-df.open
+    df['dir_long'] = np.where(df.res_long>0, 1, -1)
+    df['trend_long'] = df['res_long'].rolling(long).sum()*df['dir_long'].rolling(short).mean()
+
+    df['res_short'] = df.open-df.close
+    df['dir_short'] = np.where(df.res_short>0, 1, -1)
+    df['trend_short'] = df['res_short'].rolling(long).sum()*df['dir_short'].rolling(short).mean()
+
+    df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
+    df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def alt12reend_trend_M1(df, short, long):
+    long *= 2
+    short *= 3
+    df['res_long'] = df.close-df.open
+    df['dir_long'] = np.where(df.res_long>0, 1, -1)
+    df['trend_long'] = df['res_long'].rolling(short).sum()*df['dir_long'].rolling(long).mean()
+
+    df['res_short'] = df.open-df.close
+    df['dir_short'] = np.where(df.res_short>0, 1, -1)
+    df['trend_short'] = df['res_short'].rolling(short).sum()*df['dir_short'].rolling(long).mean()
+
+    df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
+    df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def alt21rend_trend_M2(df, short, long):
+    long *= 2
+    short *= 3
+    df['res_long'] = df.close-df.open
+    df['dir_long'] = np.where(df.res_long>0, 1, -1)
+    df['trend_long'] = df['res_long'].rolling(long).sum()*df['dir_long'].rolling(short).mean()
+
+    df['res_short'] = df.open-df.close
+    df['dir_short'] = np.where(df.res_short>0, 1, -1)
+    df['trend_short'] = df['res_short'].rolling(long).sum()*df['dir_short'].rolling(short).mean()
+
+    df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
+    df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def alt22reend_trend_M2(df, short, long):
+    long *= 2
+    short *= 3
+    df['res_long'] = df.close-df.open
+    df['dir_long'] = np.where(df.res_long>0, 1, -1)
+    df['trend_long'] = df['res_long'].rolling(short).sum()*df['dir_long'].rolling(long).mean()
+
+    df['res_short'] = df.open-df.close
+    df['dir_short'] = np.where(df.res_short>0, 1, -1)
+    df['trend_short'] = df['res_short'].rolling(short).sum()*df['dir_short'].rolling(long).mean()
+
+    df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
+    df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def alt31rend_trend_M3(df, short, long):
+    long *= 2
+    short *= 3
+    df['res_long'] = df.close-df.open
+    df['dir_long'] = np.where(df.res_long>0, 1, -1)
+    df['trend_long'] = df['res_long'].rolling(long).sum()*df['dir_long'].rolling(short).mean()
+
+    df['res_short'] = df.open-df.close
+    df['dir_short'] = np.where(df.res_short>0, 1, -1)
+    df['trend_short'] = df['res_short'].rolling(long).sum()*df['dir_short'].rolling(short).mean()
+
+    df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
+    df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def alt32reend_trend_M3(df, short, long):
+    long *= 2
+    short *= 3
+    df['res_long'] = df.close-df.open
+    df['dir_long'] = np.where(df.res_long>0, 1, -1)
+    df['trend_long'] = df['res_long'].rolling(short).sum()*df['dir_long'].rolling(long).mean()
+
+    df['res_short'] = df.open-df.close
+    df['dir_short'] = np.where(df.res_short>0, 1, -1)
+    df['trend_short'] = df['res_short'].rolling(short).sum()*df['dir_short'].rolling(long).mean()
+
+    df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
+    df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
