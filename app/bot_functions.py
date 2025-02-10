@@ -416,7 +416,7 @@ def play_with_trend(symbol, short, long, dev, divider):
 
 
 def play_with_trend_bt(symbol):
-    longs = range(1100, 2001, 25)#range(1200, 1251, 25)
+    longs = range(1100, 2001, 25)
     shorts = range(380, 721, 10)
     devs = range(10, 23, 2)
     df_raw = get_data(symbol, 'M5', 1, 75000)

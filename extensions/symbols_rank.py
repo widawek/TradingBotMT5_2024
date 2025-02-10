@@ -83,8 +83,8 @@ def symbol_stats(symbol, volume, kill_multiplier):
 def tp_sl_in_currency(symbol, volume, tp, sl):
     volume_min = mt.symbol_info(symbol).volume_min
     margin_open = round(initial_margin_for_min_vol(symbol)*volume/volume_min, 2)
-    takeprofit = round(margin_open*tp, 2)
-    stoploss = round(margin_open*sl, 2)
+    takeprofit = round(margin_open*100*tp, 2)
+    stoploss = round(margin_open*100*sl, 2)
     return takeprofit, stoploss
 
 
