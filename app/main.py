@@ -347,25 +347,36 @@ class Bot:
                 self.self_decline_factor()
                 if self.print_condition():
                     printer("Change value:", f"{round(self.profit_needed, 2):.2f} ({self.profit_needed_min:.2f}) {self.currency}")
+                    printer("Change value profit:", f"{round(self.tp_money, 2):.2f} {self.currency}")
+                    printer("Change value loss:", f"{round(self.sl_money, 2):.2f} {self.currency}")
                     printer("Max profit:", f"{self.profit_max:.2f} {self.currency}")
                     printer("Decline factor:", f"{self.profit_decline_factor}")
                     printer("Close position if profit is less than", f"{round(self.profit_max * self.profit_decline_factor, 2)} {self.currency}")
+
+                # 10.02.2024 change value change to tp_money and sl_money
 
                 if self.fake_position:
                     _ = self.fake_position_robot()
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif profit < -self.profit_needed*profit_decrease_barrier/self.too_much_risk():# and profit > 0.91 * self.profit_min:
+                elif profit < -self.sl_money/self.too_much_risk():# and profit > 0.91 * self.profit_min:
                     self.clean_orders(backtest)
+                # elif profit < -self.profit_needed*profit_decrease_barrier/self.too_much_risk():# and profit > 0.91 * self.profit_min:
+                #     self.clean_orders(backtest)
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif ((self.profit_max > self.profit_needed/multi and profit < self.profit_max * self.profit_decline_factor) or
+                elif ((self.profit_max > self.tp_money/multi and profit < self.profit_max * self.profit_decline_factor) or
                     (self.fresh_daily_target and profit < self.profit_max * (self.profit_decline_factor-0.06))):
                     self.clean_orders(backtest)
+                # elif ((self.profit_max > self.profit_needed/multi and profit < self.profit_max * self.profit_decline_factor) or
+                #     (self.fresh_daily_target and profit < self.profit_max * (self.profit_decline_factor-0.06))):
+                #     self.clean_orders(backtest)
 
                 # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                elif (profit > self.profit_needed/(profit_factor*1.5)):
+                elif (profit > self.tp_money/(profit_factor*1.5)):
                     _ = self.fake_position_robot()
+                # elif (profit > self.profit_needed/(profit_factor*1.5)):
+                #     _ = self.fake_position_robot()
 
                 # elif (profit < -self.profit_needed/10 and self.get_open_positions_durations() > 10*self.pos_time):
                 #     _ = self.fake_position_robot()
