@@ -999,8 +999,11 @@ class Bot:
                 except Exception as e:
                     print("trend_backtest", e)
                     continue
-
-        f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
+        
+        try:
+            f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
+        except IndexError:
+            return None
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
         return f_result[0], f_result[1], round(f_result[2]*f_result[3]*f_result[6]*100, 4), f_result[4], f_result[5], f_result[6], f_result[7]
         # else:
@@ -1058,7 +1061,14 @@ class Bot:
             #marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
             print(f'Strategy {i} from {len(strategies)}')
             i += 1
-            fast, slow, result, actual_condition, daily_return, end_result, risk_data = self.trend_backtest(strategy)
+            results_pack = self.trend_backtest(strategy)
+            if results_pack is None:
+                print("This strategy have no results.")
+                continue
+            fast, slow, result, actual_condition, daily_return, end_result, risk_data = results_pack
+            tp, sl, tp_std, sl_std = risk_data
+            printer("TP/TP_STD", f'{tp, tp_std}')
+            printer("SL/SL_STD", f'{sl, sl_std}')
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, "\n")
             self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result))
 
