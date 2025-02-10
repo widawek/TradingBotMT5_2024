@@ -991,18 +991,18 @@ class Bot:
                     df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
                     #df2 = df1.copy()[-small_bt_bars:]
                     sharpe, omega = calc_result(df1, sharpe_multiplier, False, False)
-                    sharpe2, omega2, end_result = calc_result(df1, sharpe_multiplier, True, True)
+                    sharpe2, omega2, end_result, risk_data = calc_result(df1, sharpe_multiplier, True, True)
                     #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
                     _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
                     results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(omega+omega2),
-                                    actual_condition, daily_return, end_result))
+                                    actual_condition, daily_return, end_result, risk_data))
                 except Exception as e:
                     print("trend_backtest", e)
                     continue
 
         f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
-        return f_result[0], f_result[1], round(f_result[2]*f_result[3]*f_result[6]*100, 4), f_result[4], f_result[5], f_result[6]
+        return f_result[0], f_result[1], round(f_result[2]*f_result[3]*f_result[6]*100, 4), f_result[4], f_result[5], f_result[6], f_result[7]
         # else:
         #     df1 = self.model_position(500, backtest=True)
         #     sharpe, calmar = calc_result(df1, sharpe_multiplier)
@@ -1058,7 +1058,7 @@ class Bot:
             #marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
             print(f'Strategy {i} from {len(strategies)}')
             i += 1
-            fast, slow, result, actual_condition, daily_return, end_result = self.trend_backtest(strategy)
+            fast, slow, result, actual_condition, daily_return, end_result, risk_data = self.trend_backtest(strategy)
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, "\n")
             self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result))
 
