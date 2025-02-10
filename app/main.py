@@ -583,7 +583,7 @@ class Bot:
         antitrend = 1
         try:
             strategy = self.strategies[self.strategy_number]
-        except Exception:
+        except Exception as e:
             print('volume_calc anti trend no strategy', e)
 
         try:
@@ -658,7 +658,7 @@ class Bot:
             self.tp_money, self.sl_money = tp_sl_in_currency(self.symbol, self.volume, tp_percent, sl_percent)
             printer("Calculated takeprofit:", f"{self.tp_money:.2f} {self.currency}")
             printer("Calculated stoploss:", f"{self.sl_money:.2f} {self.currency}")
-        except Exception:
+        except Exception as e:
             print('volume_calc anti trend no strategy', e)
 
     @class_errors
