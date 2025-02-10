@@ -570,9 +570,13 @@ class Bot:
 
         bonus = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
         antitrend = 1
+        try:
+            strategy = self.strategies[self.strategy_number]
+        except Exception:
+            print('volume_calc anti trend no strategy', e)
 
         try:
-            if_trend = str(self.strategies[self.strategy_number][0]).split('_')[-2]
+            if_trend = str(strategy[0]).split('_')[-2]
             if if_trend == 'trend':
                 if (bonus >= 0 and posType == 0) or (bonus <= 0 and posType == 1):
                     self.if_position_with_trend = 'y'
@@ -636,6 +640,15 @@ class Bot:
         printer('Calculated volume:', volume)
         printer("Target:", f"{self.tp_miner:.2f} {self.currency}")
         printer("Killer:", f"{-self.kill_position_profit:.2f} {self.currency}")
+
+        try:
+            tp_percent = strategy[10]
+            sl_percent = strategy[11]
+            self.tp_money, self.sl_money = tp_sl_in_currency(self.symbol, self.volume, tp_percent, sl_percent)
+            printer("Calculated takeprofit:", f"{self.tp_money:.2f} {self.currency}")
+            printer("Calculated stoploss:", f"{self.sl_money:.2f} {self.currency}")
+        except Exception:
+            print('volume_calc anti trend no strategy', e)
 
     @class_errors
     def calc_pos_condition(self, df1, window_=50):
@@ -1070,9 +1083,9 @@ class Bot:
             printer("TP/TP_STD", f'{tp, tp_std}')
             printer("SL/SL_STD", f'{sl, sl_std}')
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, "\n")
-            self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result))
+            self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std))
 
-        for name_, _, interval, fast, slow, result, _, kind, _, end_result in self.strategies_raw:
+        for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std in self.strategies_raw:
             self.write_to_backtest(name_, interval, result, kind, fast, slow)
 
         self.strategies = [i for i in self.strategies_raw if ((i[5] != np.inf) and (i[5] > 0))]
@@ -1091,7 +1104,7 @@ class Bot:
             self.test_strategies()
         else:
             for i in self.strategies:
-                print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9])
+                print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9], i[10], i[11])
             self.strategy_number = 0
             self.tiktok = 0
             self.reset_bot()
@@ -1101,7 +1114,7 @@ class Bot:
         test = [i - timedelta(minutes=5) < dt.now() < i + timedelta(minutes=45) for i in hardcore_hours]
         if any(test):
             print("High volatility risk.")
-            return 4
+            return 1
         return 1# if not Bot.target_class.checkTarget() else 2
 
     @class_errors
