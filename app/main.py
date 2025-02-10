@@ -278,10 +278,10 @@ class Bot:
                 ((pos_type == 1) and (short_cond))) and\
                     (profit_ > 0):
                 fake_position_on()
-            elif (((pos_type == 1) and (long_cond)) or\
-                ((pos_type == 0) and (short_cond))) and\
-                    (profit_ < 0):
-                fake_position_on(True)
+            # elif (((pos_type == 1) and (long_cond)) or\
+            #     ((pos_type == 0) and (short_cond))) and\
+            #         (profit_ < 0):
+            #     fake_position_on(True)
 
         elif self.too_much_risk() > 1:
             return self.fake_position_off()
@@ -367,8 +367,8 @@ class Bot:
                 elif (profit > self.profit_needed/(profit_factor*1.5)):
                     _ = self.fake_position_robot()
 
-                elif (profit < -self.profit_needed/10 and self.get_open_positions_durations() > 10*self.pos_time):
-                    _ = self.fake_position_robot()
+                # elif (profit < -self.profit_needed/10 and self.get_open_positions_durations() > 10*self.pos_time):
+                #     _ = self.fake_position_robot()
 
                 if self.print_condition():
                     printer("TIKTOK:", self.tiktok)
