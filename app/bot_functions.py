@@ -263,11 +263,15 @@ def wlr_rr(df_raw):
     percent_best = 3
     number = round((percent_best/100)*len(stats_df))
     max_res = stats_df.sort_values(by=['max_result'], ascending=False)['max_result'][number:]
-    aberration = max_res.mean() + stats_df['result'].std()
-    stats_df['result'] = np.where(stats_df['result'] > aberration, aberration, stats_df['result'])
+    aberration_max = max_res.mean() + stats_df['result'].std()
+    stats_df['result'] = np.where(stats_df['result'] > aberration_max, aberration_max, stats_df['result'])
 
-    risk_reward_ratio = stats_df['max_result'].mean() / (stats_df['min_result'].mean() + stats_df['min_result'].std())
-    risk_reward_ratio = round(risk_reward_ratio, 3)
+    mean_tp = stats_df['max_result'].mean()
+    mean_sl = stats_df['min_result'].mean()
+    tp_plus_std = mean_tp + stats_df['max_result'].std()
+    sl_plus_std = mean_sl + stats_df['min_result'].std()
+    
+    risk_reward_ratio = round(mean_tp / sl_plus_std, 3)
     try:
         win_loss_ratio = round(len(stats_df[stats_df['result'] > 0])/len(stats_df[stats_df['result'] < 0]), 3)
     except ZeroDivisionError:
@@ -277,7 +281,9 @@ def wlr_rr(df_raw):
         end_result = 2.0
 
     garch = garch_metric(stats_df['result'])
-    return round(end_result*garch, 5)
+
+    package = (mean_tp, mean_sl, tp_plus_std, sl_plus_std)
+    return round(end_result*garch, 5), package
 
 
 def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=False):
@@ -292,8 +298,8 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=Fa
     sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 6)
     omega = omega_ratio(df['return'])
     if check_end_result:
-        end_result = wlr_rr(df)
-        return sharpe, omega, end_result
+        end_result, risk_data = wlr_rr(df)
+        return sharpe, omega, end_result, risk_data
     else:
         return sharpe, omega
 
