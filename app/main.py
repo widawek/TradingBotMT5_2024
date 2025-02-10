@@ -10,7 +10,7 @@ from datetime import datetime as dt
 from time import sleep
 from icecream import ic
 import xgboost as xgb
-from extensions.symbols_rank import symbol_stats
+from extensions.symbols_rank import symbol_stats, tp_sl_in_currency
 from app.functions import *
 from app.decorators import class_errors
 #from app.model_generator import data_operations, evening_hour, probability_edge
@@ -242,7 +242,7 @@ class Bot:
         close1 = idf['close'].iloc[1]
         close2 = idf['close'].iloc[2]
         long_cond = all([all(idf['grow'].to_list()), idf['close'].is_monotonic_increasing])
-        short_cond = all([all(idf['nogrow'].to_list()), idf['close'].is_monotonic_decreasing])
+        short_cond = all([all(idf['decrease'].to_list()), idf['close'].is_monotonic_decreasing])
         try:
             pos_type = self.positions[0].type
             profit_ = self.positions[0].profit
