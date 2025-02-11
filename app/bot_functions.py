@@ -323,6 +323,11 @@ def wlr_rr(df_raw):
     aberration_max = max_res.mean() + stats_df['result'].std()
     stats_df['result'] = np.where(stats_df['result'] > aberration_max, aberration_max, stats_df['result'])
 
+    if monte_carlo_with_shuffle(stats_df['result']):
+        pass
+    else:
+        return -10, [0, 0, 0, 0]
+    
     mean_tp = stats_df['max_result'].mean()
     mean_sl = stats_df['min_result'].mean()
     tp_plus_std = mean_tp + stats_df['max_result'].std()
@@ -336,7 +341,7 @@ def wlr_rr(df_raw):
     end_result = round(risk_reward_ratio * win_loss_ratio, 2)
     if (end_result == np.inf) or (end_result > 2):
         end_result = 2.0
-
+    
     garch = garch_metric(stats_df['result'])
 
     package = (mean_tp, mean_sl, tp_plus_std, sl_plus_std)
