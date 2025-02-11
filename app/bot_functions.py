@@ -263,7 +263,7 @@ def monte_carlo_with_shuffle(returns, num_trials=200, dropout_rate=0.1):
         sharpe = modified_returns.mean()/modified_returns.std()
         results.append([final_return, max_drawdown, sharpe])
     # plt.figure(figsize=(10, 6))
-    # # Rysowanie pierwszej serii (pogrubiona i na wierzchu)
+    # # --- Rysowanie pierwszej serii (pogrubiona i na wierzchu) ---
     # plt.plot(results_to_plot[0].values, linewidth=3, zorder=2)
     # # Rysowanie pozostałych serii
     # for i, series in enumerate(results_to_plot[1:]):  # Zaczynamy od 1, nie od 0
@@ -278,7 +278,7 @@ def monte_carlo_with_shuffle(returns, num_trials=200, dropout_rate=0.1):
     results_df = results_df.sort_values(by='final', ascending=False)
     #print(results_df)
     better_results = round((len(results_df[results_df['final'] > final_])/len(results_df))*100, 2)
-    print(f"Montecarlo has {better_results} % better results than base strategy.")
+    #print(f"Montecarlo has {better_results} % better results than base strategy.")
     if better_results > 50:
         return True
     return False
@@ -359,11 +359,13 @@ def wlr_rr(df_raw):
     else:
         return -10, [0, 0, 0, 0]
 
-    series = outlier_replacement(stats_df, 'max_result', percentile=0.02)
-    mean_tp = series.mean()
-    mean_sl = series.mean()
-    tp_plus_std = mean_tp + series.std()
-    sl_plus_std = mean_sl + series.std()
+    winners = stats_df[stats_df['result'] > 0]
+    series_tp = outlier_replacement(winners, 'max_result', percentile=0.02)
+    series_sl = outlier_replacement(winners, 'min_result', percentile=0.02)
+    mean_tp = series_tp.mean()
+    mean_sl = series_sl.mean()
+    tp_plus_std = mean_tp + series_tp.std()
+    sl_plus_std = mean_sl + series_sl.std()
     
     risk_reward_ratio = round(mean_tp / sl_plus_std, 3)
     try:
@@ -385,7 +387,6 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=Fa
         today = dt.now().date()
         week_ago_date = today - timedelta(days=7)
         df = df[(df['date_xy'] >= week_ago_date)]
-
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
     cross = int(df['cross'].sum()) ** 0.85 + 2
@@ -508,8 +509,8 @@ def play_with_trend(symbol, short, long, dev, divider):
 
 
 def play_with_trend_bt(symbol):
-    longs = range(1100, 2001, 25)
-    shorts = range(380, 721, 10)
+    longs = range(1300, 1501, 25)#range(1100, 2001, 25)
+    shorts = range(350, 721, 15)
     devs = range(10, 23, 2)
     df_raw = get_data(symbol, 'M5', 1, 75000)
     df_raw['weekday'] = df_raw.time.dt.weekday
