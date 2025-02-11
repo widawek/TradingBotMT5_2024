@@ -1103,7 +1103,11 @@ class Bot:
             self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std))
 
         for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std in self.strategies_raw:
-            self.write_to_backtest(name_, interval, result, kind, fast, slow)
+            try:
+                tp_sl = round(tp_std/sl_std, 3)
+            except ZeroDivisionError:
+                tp_sl = 0
+            self.write_to_backtest(name_, interval, result, kind, fast, slow, end_result, tp_sl)
 
         self.strategies = [i for i in self.strategies_raw if ((i[5] != np.inf) and (i[5] > 0))]
         self.strategies = self.sort_strategies()

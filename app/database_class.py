@@ -74,7 +74,8 @@ class Backtest(Base):
     kind = Column(String, nullable=False)
     fast = Column(Integer, nullable=False)
     slow = Column(Integer, nullable=False)
-
+    end_result = Column(Float, nullable=False)
+    tp_sl = Column(Float, nullable=False)
 
 # Klasa do zarządzania bazą danych
 class DatabaseManager:
@@ -141,7 +142,7 @@ class DatabaseManager:
             session.commit()
         session.close()
 
-    def add_bt_result(self, symbol, strategy_short_name, strategy_full_name, interval, result, kind, fast, slow):
+    def add_bt_result(self, symbol, strategy_short_name, strategy_full_name, interval, result, kind, fast, slow, end_result, tp_sl):
         session = self.Session()
         new_result = Backtest(
             symbol=symbol,
@@ -151,7 +152,9 @@ class DatabaseManager:
             result=result,
             kind=kind,
             fast=fast,
-            slow=slow
+            slow=slow,
+            end_result=end_result,
+            tp_sl=tp_sl
         )
         session.add(new_result)
         session.commit()
@@ -204,7 +207,7 @@ class TradingProcessor:
             fake_position_counter=fake_position_counter,
             fake_position_stoploss=fake_position_stoploss)
 
-    def process_backtest(self, symbol, strategy_short_name, strategy_full_name, interval, result, kind, fast, slow):
+    def process_backtest(self, symbol, strategy_short_name, strategy_full_name, interval, result, kind, fast, slow, end_result, tp_sl):
         # Przetwarzanie profitu
         # Dodajemy profit do bazy danych
         self.db_manager.add_bt_result(
@@ -215,7 +218,10 @@ class TradingProcessor:
             result=result,
             kind=kind,
             fast=fast,
-            slow=slow)
+            slow=slow,
+            end_result=end_result,
+            tp_sl=tp_sl
+            )
 
 class ReadDatabase:
     def __init__(self, db_url= f"sqlite:///{db_path}"):
