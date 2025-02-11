@@ -284,6 +284,36 @@ def monte_carlo_with_shuffle(returns, num_trials=200, dropout_rate=0.1):
     return False
 
 
+def outlier_replacement(df, column_name, percentile=0.03):
+    """
+    Odrzuca wartości odstające w kolumnie DataFrame i wypełnia je pozostałymi
+    najmniejszą i największą wartością.
+    Args:
+        df (pd.DataFrame): DataFrame wejściowy.
+        column_name (str): Nazwa kolumny, w której mają być zastąpione wartości.
+        percentile (float): Procent wartości do odrzucenia z obu końców rozkładu.
+
+    Returns:
+        pd.DataFrame: DataFrame z zastąpionymi wartościami.
+    """
+    df = df.copy()  # Tworzymy kopię, aby nie modyfikować oryginalnego DataFrame
+    # Obliczamy progi (kwantyle)
+    lower_threshold = df[column_name].quantile(percentile)
+    upper_threshold = df[column_name].quantile(1 - percentile)
+    # Znajdujemy wartości *poza* progami (czyli te do odrzucenia)
+    outliers_lower = df[column_name] < lower_threshold
+    outliers_upper = df[column_name] > upper_threshold
+    # Znajdujemy wartości *wewnątrz* progów (czyli te, które zostają)
+    values_within_range = df[column_name][~(outliers_lower | outliers_upper)]
+    # Określamy najmniejszą i największą wartość z tych, które zostają
+    min_val = values_within_range.min()
+    max_val = values_within_range.max()
+    # Zastępujemy wartości odstające
+    df.loc[outliers_lower, column_name] = min_val
+    df.loc[outliers_upper, column_name] = max_val
+    return df[column_name]
+
+
 def wlr_rr(df_raw):
     df = df_raw.copy()
     df['stance'] = df['stance'].shift(1)
@@ -314,24 +344,26 @@ def wlr_rr(df_raw):
             max_result = (open_price - min_price) / open_price
 
         stats.append((result, min_result, max_result))
-    # Tworzenie DataFrame dla statystyk
+    # --- creating dataframe with statistics ---
     stats_df = pd.DataFrame(stats, columns=['result', 'min_result', 'max_result'])
 
-    percent_best = 3
+    percent_best = 2
     number = round((percent_best/100)*len(stats_df))
-    max_res = stats_df.sort_values(by=['max_result'], ascending=False)['max_result'][number:]
-    aberration_max = max_res.mean() + stats_df['result'].std()
+    # --- normalize data to get tp and sl ---
+    max_res = stats_df.sort_values(by=['max_result'], ascending=False)['max_result'][number:number]
+    aberration_max = max_res.mean() + max_res.std()
     stats_df['result'] = np.where(stats_df['result'] > aberration_max, aberration_max, stats_df['result'])
 
     if monte_carlo_with_shuffle(stats_df['result']):
         pass
     else:
         return -10, [0, 0, 0, 0]
-    
-    mean_tp = stats_df['max_result'].mean()
-    mean_sl = stats_df['min_result'].mean()
-    tp_plus_std = mean_tp + stats_df['max_result'].std()
-    sl_plus_std = mean_sl + stats_df['min_result'].std()
+
+    series = outlier_replacement(stats_df, 'max_result', percentile=0.02)
+    mean_tp = series.mean()
+    mean_sl = series.mean()
+    tp_plus_std = mean_tp + series.std()
+    sl_plus_std = mean_sl + series.std()
     
     risk_reward_ratio = round(mean_tp / sl_plus_std, 3)
     try:
@@ -343,7 +375,6 @@ def wlr_rr(df_raw):
         end_result = 2.0
     
     garch = garch_metric(stats_df['result'])
-
     package = (mean_tp, mean_sl, tp_plus_std, sl_plus_std)
     package = [round(float(i), 4) for i in package]
     return round(end_result*garch, 5), package
