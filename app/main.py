@@ -245,8 +245,8 @@ class Bot:
         close0 = idf['close'].iloc[-3]
         close1 = idf['close'].iloc[-2]
         close2 = idf['close'].iloc[-1]
-        long_cond = all([all(idf['grow'].to_list()), idf['close'].is_monotonic_increasing], volatility_condition)
-        short_cond = all([all(idf['decrease'].to_list()), idf['close'].is_monotonic_decreasing], volatility_condition)
+        long_cond = all([all(idf['grow'].to_list()), idf['close'].is_monotonic_increasing, volatility_condition])
+        short_cond = all([all(idf['decrease'].to_list()), idf['close'].is_monotonic_decreasing, volatility_condition])
         try:
             pos_type = self.positions[0].type
             open_price = self.positions[0].price_open
