@@ -228,6 +228,62 @@ def garch_metric(excess_returns):
     return garch_metric_value
 
 
+def monte_carlo_with_shuffle(returns, num_trials=200, dropout_rate=0.1):
+    def calc_base(returns_):
+        peak = 1
+        max_drawdown = 0
+        cumulative_returns = (1 + returns_).cumprod()
+        sharpe = returns_.mean()/returns_.std()
+        for value in cumulative_returns:
+            peak = max(peak, value)
+            drawdown = (peak - value) / peak
+            max_drawdown = max(max_drawdown, drawdown)
+        final_return = cumulative_returns.iloc[-1]
+        return (final_return/max_drawdown)*sharpe
+
+    final_ = calc_base(returns)
+    #results_to_plot = []
+    #results_to_plot.append((1 + returns).cumprod())
+    results = []
+    for _ in range(num_trials):
+        shuffled_returns = returns.sample(frac=1, replace=False).values
+        num_to_drop = int(len(shuffled_returns) * dropout_rate)
+        indices_to_drop = np.random.choice(len(shuffled_returns), num_to_drop, replace=False)
+        modified_returns = np.delete(shuffled_returns, indices_to_drop)
+        cumulative_returns = (1 + modified_returns).cumprod()
+        #results_to_plot.append(pd.Series(cumulative_returns))
+        peak = 1
+        max_drawdown = 0
+        for value in cumulative_returns:
+            peak = max(peak, value)
+            drawdown = (peak - value) / peak
+            max_drawdown = max(max_drawdown, drawdown)
+
+        final_return = cumulative_returns[-1] if len(cumulative_returns) > 0 else 0
+        sharpe = modified_returns.mean()/modified_returns.std()
+        results.append([final_return, max_drawdown, sharpe])
+    # plt.figure(figsize=(10, 6))
+    # # Rysowanie pierwszej serii (pogrubiona i na wierzchu)
+    # plt.plot(results_to_plot[0].values, linewidth=3, zorder=2)
+    # # Rysowanie pozostałych serii
+    # for i, series in enumerate(results_to_plot[1:]):  # Zaczynamy od 1, nie od 0
+    #     plt.plot(series.values, label=f'Seria {i+2}', zorder=1)
+
+    # plt.title('Wykres serii o różnych długościach')
+    # plt.grid(True)
+    # plt.show()
+    results_df = pd.DataFrame(results, columns=['Final Return', 'Max Drawdown', 'Sharpe'])
+    results_df['ret_to_dd'] = results_df['Final Return'] / results_df['Max Drawdown']
+    results_df['final'] = results_df['ret_to_dd'] * results_df['Sharpe']
+    results_df = results_df.sort_values(by='final', ascending=False)
+    #print(results_df)
+    better_results = round((len(results_df[results_df['final'] > final_])/len(results_df))*100, 2)
+    print(f"Montecarlo has {better_results} % better results than base strategy.")
+    if better_results > 50:
+        return True
+    return False
+
+
 def wlr_rr(df_raw):
     df = df_raw.copy()
     df['stance'] = df['stance'].shift(1)
@@ -520,3 +576,4 @@ def get_last_closed_position_direction(symbol):
     
     last_deal = closed_positions[0]
     return int(0) if last_deal.type == mt.DEAL_TYPE_BUY else int(1)
+
