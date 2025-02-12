@@ -976,7 +976,8 @@ class Bot:
             pass
 
     @class_errors
-    def write_to_backtest(self, strategy_full_name, interval, result, kind, fast, slow):
+    def write_to_backtest(self, strategy_full_name, interval, result,
+                          kind, fast, slow, end_result, tp_sl):
         try:
             processor.process_backtest(
                 symbol=self.symbol,
@@ -986,7 +987,9 @@ class Bot:
                 result=result,
                 kind=kind,
                 fast=fast,
-                slow=slow
+                slow=slow,
+                end_result=end_result,
+                tp_sl=tp_sl
             )
         except Exception as e:
             print("write_to_backtest", e)
@@ -1107,6 +1110,8 @@ class Bot:
                 tp_sl = round(tp_std/sl_std, 3)
             except ZeroDivisionError:
                 tp_sl = 0
+            if end_result is None:
+                end_result = 0
             self.write_to_backtest(name_, interval, result, kind, fast, slow, end_result, tp_sl)
 
         self.strategies = [i for i in self.strategies_raw if ((i[5] != np.inf) and (i[5] > 0))]
