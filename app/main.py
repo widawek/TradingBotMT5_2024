@@ -237,7 +237,7 @@ class Bot:
 
         idf = get_data(self.symbol, interval, 1, 3)
         idf['grow'] = idf['close'] > idf['open']
-        idf['decrease '] = idf['close'] < idf['open']
+        idf['decrease'] = idf['close'] < idf['open']
         idf['candles_sum'] = abs(idf['close']-idf['open']).rolling(3).sum()
         idf['mean'] = idf['candles_sum'].rolling(3).mean()
         volatility_condition = idf['candles_sum'].iloc[-1] > idf['mean'].iloc[-1]
@@ -1032,7 +1032,7 @@ class Bot:
                 except Exception as e:
                     print("trend_backtest", e)
                     continue
-        
+
         try:
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
         except IndexError:
