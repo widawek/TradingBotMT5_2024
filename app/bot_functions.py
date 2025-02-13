@@ -6,6 +6,7 @@ import MetaTrader5 as mt
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+from math import ceil
 import sys
 sys.path.append("..")
 from app.functions import get_data
@@ -229,6 +230,17 @@ def garch_metric(excess_returns):
 
 
 def monte_carlo_with_shuffle(returns, num_trials=200, dropout_rate=0.1):
+
+    def remove_lowest_10_percent(lst):
+        if not lst:
+            return lst
+        lst = lst.tolist()
+        positive_values = sorted([x for x in lst if x > 0], key=abs)
+        n = ceil(len(positive_values) * 0.1)
+        filtered_positives = positive_values[n:]
+        negative_values = [x for x in lst if x <= 0]
+        return pd.Series(list(set(negative_values + filtered_positives)))
+    
     def calc_base(returns_):
         peak = 1
         max_drawdown = 0
@@ -242,6 +254,7 @@ def monte_carlo_with_shuffle(returns, num_trials=200, dropout_rate=0.1):
         return (final_return/max_drawdown)*sharpe
 
     final_ = calc_base(returns)
+    returns = remove_lowest_10_percent(returns)
     #results_to_plot = []
     #results_to_plot.append((1 + returns).cumprod())
     results = []
