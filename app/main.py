@@ -245,6 +245,7 @@ class Bot:
         close0 = idf['close'].iloc[-3]
         close1 = idf['close'].iloc[-2]
         close2 = idf['close'].iloc[-1]
+        printer("")
         long_cond = all([all(idf['grow'].to_list()), idf['close'].is_monotonic_increasing, volatility_condition])
         short_cond = all([all(idf['decrease'].to_list()), idf['close'].is_monotonic_decreasing, volatility_condition])
         try:
@@ -280,12 +281,12 @@ class Bot:
                 self.real_fake_pos = True
 
         if not self.fake_position:
-            if (((pos_type == 0) and (long_cond) and (open_price < open0)) or\
-                ((pos_type == 1) and (short_cond) and (open_price > open0))) and\
+            if (((pos_type == 0) and (long_cond) and (open_price < close0)) or\
+                ((pos_type == 1) and (short_cond) and (open_price > close0))) and\
                     (profit_ > 0):
                 fake_position_on()
-            elif (((pos_type == 1) and (long_cond) and (open_price < open0)) or\
-                ((pos_type == 0) and (short_cond) and (open_price > open0))) and\
+            elif (((pos_type == 1) and (long_cond) and (open_price < close0)) or\
+                ((pos_type == 0) and (short_cond) and (open_price > close0))) and\
                     (profit_ <= 0):
                 fake_position_on(True)
 
@@ -384,7 +385,7 @@ class Bot:
                 # elif (profit > self.profit_needed/(profit_factor*1.5)):
                 #     _ = self.fake_position_robot()
 
-                elif (profit < -self.sl_money/10 and self.get_open_positions_durations() > 10*self.pos_time):
+                elif (profit < -self.sl_money/15):# and self.get_open_positions_durations() > 7.5*self.pos_time):
                     _ = self.fake_position_robot()
 
                 if self.print_condition():
