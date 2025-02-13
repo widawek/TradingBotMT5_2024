@@ -254,7 +254,8 @@ def monte_carlo_with_shuffle(returns, num_trials=200, dropout_rate=0.1):
         return (final_return/max_drawdown)*sharpe
 
     final_ = calc_base(returns)
-    returns = remove_lowest_10_percent(returns)
+    #returns = remove_lowest_10_percent(returns)
+    
     #results_to_plot = []
     #results_to_plot.append((1 + returns).cumprod())
     results = []
@@ -292,7 +293,7 @@ def monte_carlo_with_shuffle(returns, num_trials=200, dropout_rate=0.1):
     #print(results_df)
     better_results = round((len(results_df[results_df['final'] > final_])/len(results_df))*100, 2)
     #print(f"Montecarlo has {better_results} % better results than base strategy.")
-    if better_results > 50:
+    if better_results < 50:
         return True
     return False
 
