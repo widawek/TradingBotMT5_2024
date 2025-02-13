@@ -239,8 +239,8 @@ class Bot:
         idf['grow'] = idf['close'] > idf['open']
         idf['decrease'] = idf['close'] < idf['open']
         idf['candles_sum'] = abs(idf['close']-idf['open']).rolling(3).sum()
-        idf['mean'] = idf['candles_sum'].rolling(3).mean()
-        volatility_condition = idf['candles_sum'].iloc[-1] > idf['mean'].iloc[-1]
+        idf['mean_'] = idf['candles_sum'].rolling(3).mean()
+        volatility_condition = idf['candles_sum'].iloc[-1] > idf['mean_'].iloc[-1]
         open0 = idf['open'].iloc[-3]
         close0 = idf['close'].iloc[-3]
         close1 = idf['close'].iloc[-2]
