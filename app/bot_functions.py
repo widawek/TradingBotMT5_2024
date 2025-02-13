@@ -239,7 +239,8 @@ def monte_carlo_with_shuffle(returns, num_trials=200, dropout_rate=0.1):
         n = ceil(len(positive_values) * 0.1)
         filtered_positives = positive_values[n:]
         negative_values = [x for x in lst if x <= 0]
-        return pd.Series(list(set(negative_values + filtered_positives)))
+        new_lst = negative_values + filtered_positives
+        return pd.Series(new_lst)
     
     def calc_base(returns_):
         peak = 1
