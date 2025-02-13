@@ -750,10 +750,11 @@ class Bot:
             self.strategy_pos_open_price = cross['close'].iloc[-1]
 
             printer("Last open position time by MetaTrader", f"{cross['time'].iloc[-1]}", base_just=60)
-            # if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
-            #     self.strategy_number += 1
-            #     print("Next strategy because the position is from last working day.")
-            #     return self.actual_position_democracy()
+            if dt.now().hour > 12:
+                if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
+                    self.strategy_number += 1
+                    print("Next strategy because the position is from last working day.")
+                    return self.actual_position_democracy()
 
             positions_ = mt.positions_get(symbol=self.symbol)
             if not self.real_fake_pos:
