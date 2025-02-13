@@ -369,10 +369,11 @@ def wlr_rr(df_raw):
     aberration_max = max_res.mean() + max_res.std()
     stats_df['result'] = np.where(stats_df['result'] > aberration_max, aberration_max, stats_df['result'])
 
-    if monte_carlo_with_shuffle(stats_df['result']):
-        pass
-    else:
-        return -10, [0, 0, 0, 0]
+
+    # if monte_carlo_with_shuffle(stats_df['result']):
+    #     pass
+    # else:
+    #     return -10, [0, 0, 0, 0]
 
     winners = stats_df[stats_df['result'] > 0]
     series_tp = outlier_replacement(winners, 'max_result', percentile=0.02)

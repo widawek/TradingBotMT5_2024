@@ -240,42 +240,6 @@ def sup2_res_numpy_trend_M2(df, slow, fast):
     return df, position
 
 
-def alt11rend_trend_M1(df, short, long):
-    long *= 2
-    short *= 3
-    df['res_long'] = df.close-df.open
-    df['dir_long'] = np.where(df.res_long>0, 1, -1)
-    df['trend_long'] = df['res_long'].rolling(long).sum()*df['dir_long'].rolling(short).mean()
-
-    df['res_short'] = df.open-df.close
-    df['dir_short'] = np.where(df.res_short>0, 1, -1)
-    df['trend_short'] = df['res_short'].rolling(long).sum()*df['dir_short'].rolling(short).mean()
-
-    df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
-    df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
-    df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position
-
-
-def alt12reend_trend_M1(df, short, long):
-    long *= 2
-    short *= 3
-    df['res_long'] = df.close-df.open
-    df['dir_long'] = np.where(df.res_long>0, 1, -1)
-    df['trend_long'] = df['res_long'].rolling(short).sum()*df['dir_long'].rolling(long).mean()
-
-    df['res_short'] = df.open-df.close
-    df['dir_short'] = np.where(df.res_short>0, 1, -1)
-    df['trend_short'] = df['res_short'].rolling(short).sum()*df['dir_short'].rolling(long).mean()
-
-    df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
-    df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
-    df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position
-
-
 def alt21rend_trend_M2(df, short, long):
     long *= 2
     short *= 3
@@ -294,24 +258,6 @@ def alt21rend_trend_M2(df, short, long):
     return df, position
 
 
-def alt22reend_trend_M2(df, short, long):
-    long *= 2
-    short *= 3
-    df['res_long'] = df.close-df.open
-    df['dir_long'] = np.where(df.res_long>0, 1, -1)
-    df['trend_long'] = df['res_long'].rolling(short).sum()*df['dir_long'].rolling(long).mean()
-
-    df['res_short'] = df.open-df.close
-    df['dir_short'] = np.where(df.res_short>0, 1, -1)
-    df['trend_short'] = df['res_short'].rolling(short).sum()*df['dir_short'].rolling(long).mean()
-
-    df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
-    df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
-    df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position
-
-
 def alt31rend_trend_M3(df, short, long):
     long *= 2
     short *= 3
@@ -322,24 +268,6 @@ def alt31rend_trend_M3(df, short, long):
     df['res_short'] = df.open-df.close
     df['dir_short'] = np.where(df.res_short>0, 1, -1)
     df['trend_short'] = df['res_short'].rolling(long).sum()*df['dir_short'].rolling(short).mean()
-
-    df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
-    df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
-    df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position
-
-
-def alt32reend_trend_M3(df, short, long):
-    long *= 2
-    short *= 3
-    df['res_long'] = df.close-df.open
-    df['dir_long'] = np.where(df.res_long>0, 1, -1)
-    df['trend_long'] = df['res_long'].rolling(short).sum()*df['dir_long'].rolling(long).mean()
-
-    df['res_short'] = df.open-df.close
-    df['dir_short'] = np.where(df.res_short>0, 1, -1)
-    df['trend_short'] = df['res_short'].rolling(short).sum()*df['dir_short'].rolling(long).mean()
 
     df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
     df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
