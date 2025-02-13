@@ -235,7 +235,7 @@ class Bot:
         else:
             interval = internal_interval(mode+5)
 
-        idf = get_data(self.symbol, interval, 1, 3)
+        idf = get_data(self.symbol, interval, 1, 7)
         idf['grow'] = idf['close'] > idf['open']
         idf['decrease'] = idf['close'] < idf['open']
         idf['candles_sum'] = abs(idf['close']-idf['open']).rolling(3).sum()
