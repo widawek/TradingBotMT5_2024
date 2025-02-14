@@ -199,6 +199,7 @@ class Bot:
 
     @class_errors
     def fake_position_off(self):
+        print("FAKE POSITION ON")
         self.fake_position = False
         self.max_close = None
         self.fake_stoploss = 0
@@ -245,15 +246,17 @@ class Bot:
         close0 = idf['close'].iloc[-3]
         close1 = idf['close'].iloc[-2]
         close2 = idf['close'].iloc[-1]
-        printer("")
         long_cond = all([all(idf['grow'].to_list()), idf['close'].is_monotonic_increasing, volatility_condition])
         short_cond = all([all(idf['decrease'].to_list()), idf['close'].is_monotonic_decreasing, volatility_condition])
+        printer("Fake position robot long_cond", long_cond)
+        printer("Fake position robot short_cond", short_cond)
         try:
             pos_type = self.positions[0].type
             open_price = self.positions[0].price_open
             profit_ = self.positions[0].profit
         except Exception:
             direction, open_price = get_last_closed_position_direction(self.symbol)
+            printer("position direction function", [direction, open_price])
             pos_type = 0 if long_cond else 1 if short_cond else direction
             if pos_type is None:
                 return self.fake_position_off()
@@ -274,6 +277,7 @@ class Bot:
         #     pass
 
         def fake_position_on(real_fake_position=False):
+            print("FAKE POSITION ON")
             self.fake_position = True
             self.max_close = close2
             self.fake_stoploss = close0
@@ -281,12 +285,12 @@ class Bot:
                 self.real_fake_pos = True
 
         if not self.fake_position:
-            if (((pos_type == 0) and (long_cond) and (open_price < open0)) or\
-                ((pos_type == 1) and (short_cond) and (open_price > open0))) and\
+            if (((pos_type == 0) and long_cond and (open_price < open0)) or\
+                ((pos_type == 1) and short_cond and (open_price > open0))) and\
                     (profit_ > 0):
                 fake_position_on()
-            elif (((pos_type == 1) and (long_cond) and (open_price < open0)) or\
-                ((pos_type == 0) and (short_cond) and (open_price > open0))) and\
+            elif (((pos_type == 1) and long_cond and (open_price < open0)) or\
+                ((pos_type == 0) and short_cond and (open_price > open0))) and\
                     (profit_ <= 0):
                 fake_position_on(True)
 
