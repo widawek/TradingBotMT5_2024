@@ -281,12 +281,12 @@ class Bot:
                 self.real_fake_pos = True
 
         if not self.fake_position:
-            if (((pos_type == 0) and (long_cond) and (open_price < close0)) or\
-                ((pos_type == 1) and (short_cond) and (open_price > close0))) and\
+            if (((pos_type == 0) and (long_cond) and (open_price < open0)) or\
+                ((pos_type == 1) and (short_cond) and (open_price > open0))) and\
                     (profit_ > 0):
                 fake_position_on()
-            elif (((pos_type == 1) and (long_cond) and (open_price < close0)) or\
-                ((pos_type == 0) and (short_cond) and (open_price > close0))) and\
+            elif (((pos_type == 1) and (long_cond) and (open_price < open0)) or\
+                ((pos_type == 0) and (short_cond) and (open_price > open0))) and\
                     (profit_ <= 0):
                 fake_position_on(True)
 
