@@ -235,7 +235,7 @@ class Bot:
             interval = internal_interval(mode+4)
         else:
             interval = internal_interval(mode+5)
-
+        printer("Fake robot interval", interval)
         idf = get_data(self.symbol, interval, 1, 7)
         idf['grow'] = idf['close'] > idf['open']
         idf['decrease'] = idf['close'] < idf['open']
