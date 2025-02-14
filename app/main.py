@@ -389,7 +389,7 @@ class Bot:
                 # elif (profit > self.profit_needed/(profit_factor*1.5)):
                 #     _ = self.fake_position_robot()
 
-                elif (profit < -self.sl_money/15):# and self.get_open_positions_durations() > 7.5*self.pos_time):
+                elif (profit < 0):# and self.get_open_positions_durations() > 7.5*self.pos_time):
                     _ = self.fake_position_robot()
 
                 if self.print_condition():
