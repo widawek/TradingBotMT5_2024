@@ -398,6 +398,18 @@ def wlr_rr(df_raw):
     return round(end_result*garch, 5), package
 
 
+def final_drowdown(returns_):
+    peak = 1
+    max_drawdown = 0
+    cumulative_returns = (1 + returns_).cumprod()
+    for value in cumulative_returns:
+        peak = max(peak, value)
+        drawdown = (peak - value) / peak
+        max_drawdown = max(max_drawdown, drawdown)
+    final_return = cumulative_returns.iloc[-1]
+    return (final_return/max_drawdown)
+
+
 def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=False):
     if check_week_ago:
         today = dt.now().date()
@@ -408,11 +420,12 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=Fa
     cross = int(df['cross'].sum()) ** 0.85 + 2
     sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 6)
     omega = omega_ratio(df['return'])
+    dd = final_drowdown(df['return'].tolist())
     if check_end_result:
         end_result, risk_data = wlr_rr(df)
-        return sharpe, omega, end_result, risk_data
+        return sharpe, omega*dd, end_result, risk_data
     else:
-        return sharpe, omega
+        return sharpe, omega*dd
 
 
 def delete_last_day_and_clean_returns(df, morning_hour, evening_hour, respect_overnight=True):
