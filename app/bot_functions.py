@@ -420,7 +420,7 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=Fa
     cross = int(df['cross'].sum()) ** 0.85 + 2
     sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 6)
     omega = omega_ratio(df['return'])
-    dd = final_drowdown(df['return'].tolist())
+    dd = final_drowdown(df['return'])
     if check_end_result:
         end_result, risk_data = wlr_rr(df)
         return sharpe, omega*dd, end_result, risk_data
