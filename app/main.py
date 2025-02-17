@@ -242,6 +242,15 @@ class Bot:
         idf['candles_sum'] = abs(idf['close']-idf['open']).rolling(3).sum()
         idf['mean_'] = idf['candles_sum'].rolling(3).mean()
         volatility_condition = idf['candles_sum'].iloc[-1] > idf['mean_'].iloc[-1]
+
+        high0 = idf['high'].iloc[-3]
+        high1 = idf['high'].iloc[-2]
+        high2 = idf['high'].iloc[-1]
+
+        low0 = idf['low'].iloc[-3]
+        low1 = idf['low'].iloc[-2]
+        low2 = idf['low'].iloc[-1]
+
         open0 = idf['open'].iloc[-3]
         close0 = idf['close'].iloc[-3]
         close1 = idf['close'].iloc[-2]
@@ -305,8 +314,9 @@ class Bot:
             self.max_close = close2 if (close2 > self.max_close) else self.max_close
             if self.max_close > old_max:
                 self.fake_counter+=1
-                if close0 > self.fake_stoploss:
-                    self.fake_stoploss = close0
+                new_stop = min([low0, low1, low2])
+                if new_stop > self.fake_stoploss:
+                    self.fake_stoploss = new_stop
 
             if self.real_fake_pos:
                 if (close2 < self.fake_stoploss):
@@ -324,8 +334,9 @@ class Bot:
             self.max_close = close2 if (close2 < self.max_close) else self.max_close
             if self.max_close < old_max:
                 self.fake_counter+=1
-                if close0 < self.fake_stoploss:
-                    self.fake_stoploss = close0
+                new_stop = max([high0, high1, high2])
+                if new_stop < self.fake_stoploss:
+                    self.fake_stoploss = new_stop
 
             if self.real_fake_pos:
                 if (close2 > self.fake_stoploss):
