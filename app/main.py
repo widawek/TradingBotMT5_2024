@@ -764,6 +764,7 @@ class Bot:
             positions_ = mt.positions_get(symbol=self.symbol)
             if not self.real_fake_pos:
                 if len(positions_) == 0:
+                    minute_ = 0
                     while True:
                         if self.fresh_signal:
                             break
@@ -782,7 +783,10 @@ class Bot:
                         if self.check_new_bar():
                             return self.actual_position_democracy(number_of_bars=number_of_bars*20)
                         pos = 'LONG' if position==0 else "SHORT"
-                        printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
+                        new_minute = dt.now().minute
+                        if minute_ != new_minute:
+                            printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
+                            minute_ = new_minute
 
                         if self.use_tracker:
                             self.positionTracker.checkout()

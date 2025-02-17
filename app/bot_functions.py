@@ -210,14 +210,14 @@ def calculate_strategy_returns(df, leverage):
     return df, density
 
 
-def calmar_ratio(returns, periods_per_year=252):
-    avg_return = np.mean(returns)
-    annualized_return = (1 + avg_return) ** periods_per_year - 1
-    cumulative_returns = np.cumsum(returns)
-    running_max = np.maximum.accumulate(cumulative_returns)
-    drawdowns = running_max - cumulative_returns
-    max_drawdown = np.max(drawdowns)
-    return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
+# def calmar_ratio(returns, periods_per_year=252):
+#     avg_return = np.mean(returns)
+#     annualized_return = (1 + avg_return) ** periods_per_year - 1
+#     cumulative_returns = np.cumsum(returns)
+#     running_max = np.maximum.accumulate(cumulative_returns)
+#     drawdowns = running_max - cumulative_returns
+#     max_drawdown = np.max(drawdowns)
+#     return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
 
 
 def garch_metric(excess_returns):
