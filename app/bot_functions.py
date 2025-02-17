@@ -10,8 +10,61 @@ from math import ceil
 import sys
 sys.path.append("..")
 from app.functions import get_data
-from app.mg_functions import omega_ratio
+from scipy.stats import linregress
+#from app.mg_functions import omega_ratio
 mt.initialize()
+
+
+def sharpe_ratio(returns, risk_free_rate=0):
+    """Sharpe ratio = (średni zwrot - stopa wolna od ryzyka) / odchylenie standardowe zwrotów"""
+    excess_returns = returns - risk_free_rate
+    return excess_returns.mean() / excess_returns.std()
+
+
+def omega_ratio(returns, threshold=0):
+    """Omega ratio = suma zwrotów powyżej threshold / suma zwrotów poniżej threshold"""
+    gains = returns[returns > threshold].sum()
+    losses = abs(returns[returns < threshold].sum())
+    return gains / losses if losses != 0 else 1.2
+
+
+def max_drawdown(strategy):
+    """Max Drawdown = największe obsunięcie kapitału"""
+    peak = strategy.cummax()
+    drawdown = (strategy - peak) / peak
+    return drawdown.min()
+
+
+def ulcer_index(strategy):
+    """Ulcer Index = średnia kwadratowa drawdownów"""
+    peak = strategy.cummax()
+    drawdown = (strategy - peak) / peak
+    return np.sqrt(np.mean(drawdown**2))
+
+
+def cagr(strategy, years):
+    """CAGR = skumulowana roczna stopa zwrotu"""
+    return (strategy.iloc[-1] / strategy.iloc[0])**(1/years) - 1
+
+
+def equity_curve_stability(strategy):
+    """R^2 dopasowania equity curve do regresji liniowej"""
+    x = np.arange(len(strategy))
+    log_strategy = np.log(strategy)
+    slope, intercept, r_value, _, _ = linregress(x, log_strategy)
+    return r_value**2
+
+
+def strategy_score(returns, sharpe_multiplier, years=1):
+    """Finalna metryka"""
+    sharpe = sharpe_multiplier*sharpe_ratio(returns)
+    omega = omega_ratio(returns)
+    strategy = (1+returns).cumprod()
+    #mdd = abs(max_drawdown(strategy))
+    ui = ulcer_index(strategy)
+    cagr_value = cagr(strategy, years)
+    stability = equity_curve_stability(strategy)
+    return (sharpe * omega * cagr_value * stability) / ui
 
 
 def rename_files_in_directory(old_phrase, new_phrase, catalog):
@@ -398,18 +451,6 @@ def wlr_rr(df_raw):
     return round(end_result*garch, 5), package
 
 
-def final_drowdown(returns_):
-    peak = 1
-    max_drawdown = 0
-    cumulative_returns = (1 + returns_).cumprod()
-    for value in cumulative_returns:
-        peak = max(peak, value)
-        drawdown = (peak - value) / peak
-        max_drawdown = max(max_drawdown, drawdown)
-    final_return = cumulative_returns.iloc[-1]
-    return (final_return/max_drawdown)
-
-
 def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=False):
     if check_week_ago:
         today = dt.now().date()
@@ -418,14 +459,14 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=Fa
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
     cross = int(df['cross'].sum()) ** 0.85 + 2
-    sharpe = round(sharpe_multiplier*((df['return'].mean()/df['return'].std()))/cross, 6)
-    omega = omega_ratio(df['return'])
-    dd = final_drowdown(df['return'])
+    x = sharpe_multiplier/cross
+    sharpe = 1
+    final_result = strategy_score(df['return'], x)
     if check_end_result:
         end_result, risk_data = wlr_rr(df)
-        return sharpe, omega*dd, end_result, risk_data
+        return sharpe, final_result, end_result, risk_data
     else:
-        return sharpe, omega*dd
+        return sharpe, final_result
 
 
 def delete_last_day_and_clean_returns(df, morning_hour, evening_hour, respect_overnight=True):

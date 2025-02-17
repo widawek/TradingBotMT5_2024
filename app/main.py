@@ -1016,7 +1016,7 @@ class Bot:
 
         sharpe_multiplier = interval_time_sharpe(interval)
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
-        small_bt_bars = calculate_bars_to_past(df_raw)
+        #small_bt_bars = calculate_bars_to_past(df_raw)
 
         #if not strategy.__name__.startswith('model'):
         results = []
