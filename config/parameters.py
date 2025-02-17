@@ -30,7 +30,7 @@ symbols:                                list = [
 
 #                                       model_generator_params
 intervals: list                         = ['M10']
-leverage: int                           = 30
+leverage: int                           = 6
 delete_old_models: bool                 = True
 min_factor: int                         = 6
 max_factor: int                         = 23

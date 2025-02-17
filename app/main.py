@@ -629,11 +629,11 @@ class Bot:
         if (info_.margin_free < info_.balance/10) and (not x):
             max_pos_margin = max_pos_margin / 5
 
-        leverage = info_.leverage
+        leverage_ = info_.leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
         price = mt.symbol_info_tick(self.symbol)._asdict()
         margin_min = round(((symbol_info["volume_min"] *
-                        symbol_info["trade_contract_size"])/leverage) *
+                        symbol_info["trade_contract_size"])/leverage_) *
                         price["bid"], 2)
         account = info_._asdict()
         max_pos_margin = round(account["balance"] * (max_pos_margin/100) /
