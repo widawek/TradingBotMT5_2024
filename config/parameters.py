@@ -23,7 +23,6 @@ symbols:                                list = [
                                             'USDCHF',
                                             'USDJPY',
                                             'US30',
-                                            'DXY',
                                             'AUDUSD',
                                             'CADJPY'
                                             ]

@@ -92,6 +92,7 @@ class GlobalProfitTracker:
 class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
+    real_fake_robot = False
     def __init__(self, symbol):
         self.fake_position_first = False
         self.real_fake_pos = False
@@ -199,7 +200,7 @@ class Bot:
 
     @class_errors
     def fake_position_off(self):
-        print("FAKE POSITION ON")
+        print("FAKE POSITION OFF")
         self.fake_position = False
         self.max_close = None
         self.fake_stoploss = 0
@@ -290,8 +291,9 @@ class Bot:
             self.fake_position = True
             self.max_close = close2
             self.fake_stoploss = close0
-            if real_fake_position:
-                self.real_fake_pos = True
+            if Bot.real_fake_robot:
+                if real_fake_position:
+                    self.real_fake_pos = True
 
         if not self.fake_position:
             if (((pos_type == 0) and long_cond and (open_price < open0)) or\
@@ -846,8 +848,9 @@ class Bot:
         self.base_fake_interval = self.interval
         self.comment = f'{name_}_{fast}_{slow}_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
 
-        if self.real_fake_pos:
-            self.comment = f'{name_}_0_0_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
+        if Bot.real_fake_robot:
+            if self.real_fake_pos:
+                self.comment = f'{name_}_0_0_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
 
         request = {
             "action": action,
