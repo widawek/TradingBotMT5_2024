@@ -459,9 +459,10 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=Fa
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
     cross = int(df['cross'].sum()) ** 0.85 + 2
+    days = len(list(np.unique(df['date_xy'])))
     x = sharpe_multiplier/cross
     sharpe = 1
-    final_result = strategy_score(df['return'], x)
+    final_result = strategy_score(df['return'], x, days)
     if check_end_result:
         end_result, risk_data = wlr_rr(df)
         return sharpe, final_result, end_result, risk_data
