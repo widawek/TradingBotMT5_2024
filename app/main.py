@@ -616,14 +616,14 @@ class Bot:
                     antitrend = 1
                 else:
                     self.if_position_with_trend = 'n'
-                    antitrend = 0.7
+                    antitrend = 0.8
             else:
                 if (bonus <= 0 and posType == 0) or (bonus >= 0 and posType == 1):
                     self.if_position_with_trend = 'n'
                     antitrend = 1
                 else:
                     self.if_position_with_trend = 'y'
-                    antitrend = 0.7
+                    antitrend = 0.8
         except Exception as e:
             print('volume_calc anti trend', e)
         # if self.real_fake_pos:
