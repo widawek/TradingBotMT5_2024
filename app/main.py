@@ -94,11 +94,7 @@ class GlobalProfitTracker:
 class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
-    real_fake_robot = False
     def __init__(self, symbol):
-        self.fake_position_first = False
-        self.real_fake_pos = False
-        self.fake_pos_gate = False
         self.if_position_with_trend = 'n'
         self.fresh_daily_target = False
         self.currency = mt.account_info().currency
@@ -123,9 +119,6 @@ class Bot:
         self.tiktok = 0
         self.number_of_positions = 0
         self.profit_max = 0
-        self.fake_stoploss = 0
-        self.fake_counter = 0
-        self.fake_position = False
         self.profits = []
         self.close_profits = []
         self.global_positions_stats = []
@@ -181,177 +174,24 @@ class Bot:
         else:
             last_two = 0
 
-        if '_0_0_' not in self.comment:
-            if self.tiktok < 1:
-                if (profit_ > 0) and (last_two >= 0):
-                    self.tiktok -= 1
-                elif (profit_ < 0):# or (last_two < 0):
-                    self.tiktok += 1
-                else:
-                    pass
+        #if '_0_0_' not in self.comment:
+        if self.tiktok < 1:
+            if (profit_ > 0) and (last_two >= 0):
+                self.tiktok -= 1
+            elif (profit_ < 0):# or (last_two < 0):
+                self.tiktok += 1
             else:
-                if (profit_ > 0) and (last_two >= 0):
-                    self.tiktok -= 1
-                else:
-                    self.strategy_number += 1
-                    self.tiktok = 0
-            if not backtest:
-                if self.strategy_number > len(self.strategies)-1:
-                    self.test_strategies()
-            self.tiktok = 0 if self.tiktok < 0 else self.tiktok
-
-    @class_errors
-    def fake_position_off(self):
-        print("FAKE POSITION OFF")
-        self.fake_position = False
-        self.max_close = None
-        self.fake_stoploss = 0
-        self.fake_counter = 0
-        self.real_fake_pos = False
-        self.fake_pos_gate = False
-        self.fake_position_first = False
-        return self.actual_position_democracy()
-
-    @class_errors
-    def fake_position_robot(self):
-        intervals_ = ['M1', 'M2', 'M3', 'M5', 'M10', 'M15', 'M30']
-        base_interval_index = intervals_.index(self.interval)
-
-        def internal_interval(number):
-            if base_interval_index + number > len(intervals_) - 1:
-                return intervals_[len(intervals_) - 1]
-            return intervals_[base_interval_index + number]
-
-        first_val, jump, counter = 4, 2, 5
-        levels = [first_val + jump*i for i in range(counter)]
-
-        mode = 2
-        if self.fake_counter <= levels[0]:
-            interval = internal_interval(mode)
-        elif self.fake_counter <= levels[1]:
-            interval = internal_interval(mode+1)
-        elif self.fake_counter <= levels[2]:
-            interval = internal_interval(mode+2)
-        elif self.fake_counter <= levels[3]:
-            interval = internal_interval(mode+3)
-        elif self.fake_counter <= levels[4]:
-            interval = internal_interval(mode+4)
+                pass
         else:
-            interval = internal_interval(mode+5)
-        printer("Fake robot interval", interval)
-        idf = get_data(self.symbol, interval, 1, 7)
-        idf['grow'] = idf['close'] > idf['open']
-        idf['decrease'] = idf['close'] < idf['open']
-        idf['candles_sum'] = abs(idf['close']-idf['open']).rolling(3).sum()
-        idf['mean_'] = idf['candles_sum'].rolling(3).mean()
-        volatility_condition = idf['candles_sum'].iloc[-1] > idf['mean_'].iloc[-1]
-
-        high0 = idf['high'].iloc[-3]
-        high1 = idf['high'].iloc[-2]
-        high2 = idf['high'].iloc[-1]
-
-        low0 = idf['low'].iloc[-3]
-        low1 = idf['low'].iloc[-2]
-        low2 = idf['low'].iloc[-1]
-
-        open0 = idf['open'].iloc[-3]
-        close0 = idf['close'].iloc[-3]
-        close1 = idf['close'].iloc[-2]
-        close2 = idf['close'].iloc[-1]
-        long_cond = all([all(idf['grow'].to_list()), idf['close'].is_monotonic_increasing, volatility_condition])
-        short_cond = all([all(idf['decrease'].to_list()), idf['close'].is_monotonic_decreasing, volatility_condition])
-        printer("Fake position robot long_cond", long_cond)
-        printer("Fake position robot short_cond", short_cond)
-        try:
-            pos_type = self.positions[0].type
-            open_price = self.positions[0].price_open
-            profit_ = self.positions[0].profit
-        except Exception:
-            direction, open_price = get_last_closed_position_direction(self.symbol)
-            printer("position direction function", [direction, open_price])
-            pos_type = 0 if long_cond else 1 if short_cond else direction
-            if pos_type is None:
-                return self.fake_position_off()
-            profit_ = 0
-
-        # try:
-        #     if self.base_fake_interval != interval:
-        #         test = get_data(self.symbol, interval, 1, 200)
-        #         test['better_close'] = np.where(((test['close']>test['close'].shift(1)) & (test['close']>test['close'].shift(2)) & (pos_type==0)) |
-        #                                         ((test['close']<test['close'].shift(1)) & (test['close']<test['close'].shift(2)) & (pos_type==1)), 1, 0)
-        #         test_better = test[test['better_close']==1]
-        #         test_better.reset_index()
-        #         self.fake_stoploss = test_better['close'].iloc[0]
-        #         self.base_fake_interval = interval
-        #         return pos_type
-        # except Exception as e:
-        #     print("fake_position_robot", e)
-        #     pass
-
-        def fake_position_on(real_fake_position=False):
-            print("FAKE POSITION ON")
-            self.fake_position = True
-            self.max_close = close2
-            self.fake_stoploss = close0
-            if Bot.real_fake_robot:
-                if real_fake_position:
-                    self.real_fake_pos = True
-
-        if not self.fake_position:
-            if (((pos_type == 0) and long_cond and (open_price < open0)) or\
-                ((pos_type == 1) and short_cond and (open_price > open0))) and\
-                    (profit_ > 0):
-                fake_position_on()
-            elif (((pos_type == 1) and long_cond and (open_price < open0)) or\
-                ((pos_type == 0) and short_cond and (open_price > open0))) and\
-                    (profit_ <= 0):
-                fake_position_on(True)
-
-        elif self.too_much_risk() > 1:
-            return self.fake_position_off()
-
-        if (not self.fake_pos_gate) and (self.real_fake_pos):
-            return pos_type
-
-        elif self.fake_position and pos_type == 0:
-            old_max = self.max_close
-            self.max_close = close2 if (close2 > self.max_close) else self.max_close
-            if self.max_close > old_max:
-                self.fake_counter+=1
-                new_stop = min([low0, low1, low2])
-                if new_stop > self.fake_stoploss:
-                    self.fake_stoploss = new_stop
-
-            if self.real_fake_pos:
-                if (close2 < self.fake_stoploss):
-                    return self.fake_position_off()
-                else:
-                    return pos_type
+            if (profit_ > 0) and (last_two >= 0):
+                self.tiktok -= 1
             else:
-                if (close2 < self.fake_stoploss) or (profit_ < 0):
-                    return self.fake_position_off()
-                else:
-                    return pos_type
-
-        elif self.fake_position and pos_type == 1:
-            old_max = self.max_close
-            self.max_close = close2 if (close2 < self.max_close) else self.max_close
-            if self.max_close < old_max:
-                self.fake_counter+=1
-                new_stop = max([high0, high1, high2])
-                if new_stop < self.fake_stoploss:
-                    self.fake_stoploss = new_stop
-
-            if self.real_fake_pos:
-                if (close2 > self.fake_stoploss):
-                    return self.fake_position_off()
-                else:
-                    return pos_type
-            else:
-                if (close2 > self.fake_stoploss) or (profit_ < 0):
-                    return self.fake_position_off()
-                else:
-                    return pos_type
+                self.strategy_number += 1
+                self.tiktok = 0
+        if not backtest:
+            if self.strategy_number > len(self.strategies)-1:
+                self.test_strategies()
+        self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
     @class_errors
     def check_trigger(self, backtest=False):
@@ -379,33 +219,15 @@ class Bot:
                     printer("Decline factor:", f"{self.profit_decline_factor}")
                     printer("Close position if profit is less than", f"{round(self.profit_max * self.profit_decline_factor, 2)} {self.currency}")
 
-                # 10.02.2024 change value change to tp_money and sl_money
-
-                if self.fake_position:
-                    _ = self.fake_position_robot()
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif profit < -self.sl_money/self.too_much_risk():# and profit > 0.91 * self.profit_min:
                     self.clean_orders(backtest)
-                # elif profit < -self.profit_needed*profit_decrease_barrier/self.too_much_risk():# and profit > 0.91 * self.profit_min:
-                #     self.clean_orders(backtest)
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif ((self.profit_max > self.tp_money/multi and profit < self.profit_max * self.profit_decline_factor) or
                     (self.fresh_daily_target and profit < self.profit_max * (self.profit_decline_factor-0.06))):
                     self.clean_orders(backtest)
-                # elif ((self.profit_max > self.profit_needed/multi and profit < self.profit_max * self.profit_decline_factor) or
-                #     (self.fresh_daily_target and profit < self.profit_max * (self.profit_decline_factor-0.06))):
-                #     self.clean_orders(backtest)
-
-                # Jeżeli zysk większy niż zysk graniczny oraz czas pozycji większy niż czas interwału oraz zysk mniejszy niż zysk maksymalny pozycji pomnożony przez współczynnik spadku
-                elif (profit > self.tp_money/(profit_factor*1.5)):
-                    _ = self.fake_position_robot()
-                # elif (profit > self.profit_needed/(profit_factor*1.5)):
-                #     _ = self.fake_position_robot()
-
-                elif (profit < 0):# and self.get_open_positions_durations() > 7.5*self.pos_time):
-                    _ = self.fake_position_robot()
 
                 if self.print_condition():
                     printer("TIKTOK:", self.tiktok)
@@ -556,8 +378,6 @@ class Bot:
         printer("Profit to margin:", f"{profit_to_margin:.2f} %")
         printer("Profit to balance:", f"{profit_to_balance:.2f} %")
         printer("Actual position from model:", self.pos_type)
-        printer("Fake position:", self.fake_position)
-        printer("Fake counter:", self.fake_counter)
         #printer("Trend:", self.trend)
         try:
             printer("Strategy name:", self.strategies[self.strategy_number][0])
@@ -576,15 +396,6 @@ class Bot:
         self.profit0 = None
         self.profit_max = 0
         self.fresh_daily_target = False
-        # add reset fake_robot parameters
-        if not self.real_fake_pos:
-            self.fake_position = False
-            self.max_close = None
-            self.fake_stoploss = 0
-            self.fake_counter = 0
-            print(f"The bot was reset fake_position features.")
-        else:
-            print(f"The bot was reset without fake_position features.")
 
     @class_errors
     def avg_daily_vol(self):
@@ -630,8 +441,7 @@ class Bot:
                     antitrend = 0.8
         except Exception as e:
             print('volume_calc anti trend', e)
-        # if self.real_fake_pos:
-        #     antitrend = 1 if antitrend == 0.7 else 0.7
+
         trend_bonus = bonus if posType == 0 else -bonus
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
         max_pos_margin = (max_pos_margin + max_pos_margin*trend_bonus)*antitrend*self.volume_reducer(posType, 'M10')
@@ -717,17 +527,6 @@ class Bot:
     @class_errors
     def actual_position_democracy(self, number_of_bars=250):
         try:
-            if self.fake_position and self.fake_position_first and self.real_fake_pos:
-                print("Wariant real fake position")
-                return self.fake_position_robot()
-            elif self.fake_position and not self.real_fake_pos:
-                print("Wariant fake position")
-                return self.fake_position_robot()
-            # market = 'e' if dt.now().hour < change_hour else 'u'
-            # if market != self.market:
-            #     self.market = market
-            #     self.load_models_democracy(catalog)
-
             try:
                 strategy = self.strategies[self.strategy_number]
             except IndexError as e:
@@ -777,36 +576,35 @@ class Bot:
                     return self.actual_position_democracy()
 
             positions_ = mt.positions_get(symbol=self.symbol)
-            if not self.real_fake_pos:
-                if len(positions_) == 0:
-                    minute_ = 0
-                    while True:
-                        if self.fresh_signal:
-                            break
-                        self.is_this_the_end()
-                        # check if price is nice to open
-                        tick = mt.symbol_info_tick(self.symbol)
-                        price = round((tick.ask + tick.bid) / 2, self.round_number)
-                        diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
-                        match position:
-                            case 0: self.good_price_to_open_pos = True if price <= self.strategy_pos_open_price else False
-                            case 1: self.good_price_to_open_pos = True if price >= self.strategy_pos_open_price else False
-                            #case 2: self.good_price_to_open_pos = True if abs(diff) < self.mdv else False
-                        if self.good_price_to_open_pos:
-                            break
+            if len(positions_) == 0:
+                minute_ = 0
+                while True:
+                    if self.fresh_signal:
+                        break
+                    self.is_this_the_end()
+                    # check if price is nice to open
+                    tick = mt.symbol_info_tick(self.symbol)
+                    price = round((tick.ask + tick.bid) / 2, self.round_number)
+                    diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
+                    match position:
+                        case 0: self.good_price_to_open_pos = True if price <= self.strategy_pos_open_price else False
+                        case 1: self.good_price_to_open_pos = True if price >= self.strategy_pos_open_price else False
+                        #case 2: self.good_price_to_open_pos = True if abs(diff) < self.mdv else False
+                    if self.good_price_to_open_pos:
+                        break
 
-                        if self.check_new_bar():
-                            return self.actual_position_democracy(number_of_bars=number_of_bars*20)
-                        pos = 'LONG' if position==0 else "SHORT"
-                        new_minute = dt.now().minute
-                        if minute_ != new_minute:
-                            printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
-                            minute_ = new_minute
+                    if self.check_new_bar():
+                        return self.actual_position_democracy(number_of_bars=number_of_bars*20)
+                    pos = 'LONG' if position==0 else "SHORT"
+                    new_minute = dt.now().minute
+                    if minute_ != new_minute:
+                        printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
+                        minute_ = new_minute
 
-                        if self.use_tracker:
-                            self.positionTracker.checkout()
+                    if self.use_tracker:
+                        self.positionTracker.checkout()
 
-                        time.sleep(5)
+                    time.sleep(5)
         except KeyError as e:
             try:
                 print("actual_position_democracy", e)
@@ -816,13 +614,7 @@ class Bot:
                 print(e)
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
-        if self.real_fake_pos:
-            print("Wariant odwrócenia pozycji.")
-            position = int(0) if position == 1 else int(1)
-            self.fake_position_first = True
-            print("Pozycja Fake", "Long" if position == 0 else "Short" if position != 0 else "None")
-        else:
-            print("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
+        printer("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
         return position
 
     @class_errors
@@ -839,20 +631,11 @@ class Bot:
         print("POSTYPE: ", posType)
         print("POSTYPE TYPE: ", type(posType))
         self.volume_calc(self.position_size, posType, True)
-        # if self.trend_or_not:
-        #     letter = "t"
-        # else:
-        #     letter = "f"
 
         name_ = self.strategies[self.strategy_number][0][:6]
         fast = self.strategies[self.strategy_number][3]
         slow = self.strategies[self.strategy_number][4]
-        self.base_fake_interval = self.interval
         self.comment = f'{name_}_{fast}_{slow}_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
-
-        if Bot.real_fake_robot:
-            if self.real_fake_pos:
-                self.comment = f'{name_}_0_0_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
 
         request = {
             "action": action,
@@ -885,10 +668,6 @@ class Bot:
 
     @class_errors
     def check_new_bar(self):
-        if (not self.fake_pos_gate) and (self.real_fake_pos):
-            self.fake_pos_gate = True
-            return True
-
         if self.change == 0:
             bar = mt.copy_rates_from_pos(
                 self.symbol, timeframe_(self.interval), 0, 1) # change self.interval to 'M1'
@@ -992,10 +771,7 @@ class Bot:
                 profit_max=self.profit_max,
                 profit0=self.profit0,
                 mean_profit=mean_profit,
-                spread=spread,
-                fake_position=self.fake_position,
-                fake_position_counter=self.fake_counter,
-                fake_position_stoploss=self.fake_stoploss
+                spread=spread
             )
         except Exception as e:
             print("write_to_database", e)

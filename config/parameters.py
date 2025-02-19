@@ -24,7 +24,8 @@ symbols:                                list = [
                                             'USDJPY',
                                             'US30',
                                             'AUDUSD',
-                                            'CADJPY'
+                                            'CADJPY',
+                                            'USDPLN'
                                             ]
 
 
