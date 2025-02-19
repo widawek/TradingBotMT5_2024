@@ -79,7 +79,7 @@ class Reverse:
         if len(symbol_profits < 2):
             return self.condition
 
-        if any(df['cond'].tolist()) and symbol_profit < 0 and profit_symbol < 0:
+        if df['cond'].iloc[-1] and symbol_profit < 0 and profit_symbol < 0:
             self.condition = True
         return self.condition
 
