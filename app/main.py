@@ -697,8 +697,8 @@ class Bot:
         df = win_ratio(df, 'return', window_)
         cond2 = df['win_ratio_fast'].iloc[-1] > df['win_ratio_slow'].iloc[-1]
         cond = df['cond'].rolling(window_).sum()
-        df['date_xc'] = df['time'].dt.date
-        df = df[df['date_xc'] == dt.now().date()]
+        df['date_xy'] = df['time'].dt.date
+        df = df[df['date_xy'] == dt.now().date()]
         if not respect_overnight:
             df['return'] = np.where((df['time'].dt.hour < morning_hour-1) | (df['time'].dt.hour > evening_hour+1), np.NaN, df['return'])
             df = df.dropna()
