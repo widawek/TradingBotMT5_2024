@@ -76,7 +76,7 @@ class Reverse:
             profit_symbol = 0
 
         symbol_profit, symbol_profits = self.closed_pos(self.symbol)
-        if len(symbol_profits < 2):
+        if len(symbol_profits) < 2:
             return self.condition
 
         if df['cond'].iloc[-1] and symbol_profit < 0 and profit_symbol < 0:
