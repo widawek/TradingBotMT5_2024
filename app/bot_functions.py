@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import tqdm
 from math import ceil
 import sys
+import json
 sys.path.append("..")
 from app.functions import get_data
 from scipy.stats import linregress
@@ -60,11 +61,11 @@ def strategy_score(returns, sharpe_multiplier, years=1):
     sharpe = sharpe_multiplier*sharpe_ratio(returns)
     omega = omega_ratio(returns)
     strategy = (1+returns).cumprod()
-    #mdd = abs(max_drawdown(strategy))
+    mdd = abs(max_drawdown(strategy))
     ui = ulcer_index(strategy)
     cagr_value = cagr(strategy, years)
     stability = equity_curve_stability(strategy)
-    return (sharpe * omega * cagr_value * stability) / ui
+    return (sharpe * omega * cagr_value * stability) / (ui*mdd)
 
 
 def rename_files_in_directory(old_phrase, new_phrase, catalog):
@@ -436,9 +437,13 @@ def wlr_rr(df_raw):
     tp_plus_std = mean_tp - 0.1*series_tp.std()
     sl_plus_std = mean_sl + 0.1*series_sl.std()
     
-    risk_reward_ratio = round(mean_tp / sl_plus_std, 3)
+    risk_reward_ratio = round(tp_plus_std / sl_plus_std, 3)
+    if risk_reward_ratio < 1.3:
+        return 0, [0,0,0,0]
     try:
         win_loss_ratio = round(len(stats_df[stats_df['result'] > 0])/len(stats_df[stats_df['result'] < 0]), 3)
+        if win_loss_ratio < 0.9:
+            return 0, [0,0,0,0]
     except ZeroDivisionError:
         win_loss_ratio = 1
     end_result = round(risk_reward_ratio * win_loss_ratio, 2)
@@ -685,3 +690,9 @@ def get_last_closed_position_direction(symbol):
     last_deal = closed_positions[0]
     return int(0) if last_deal.type == mt.DEAL_TYPE_BUY else int(1), last_deal.price
 
+
+def volume_metrics_data():
+    with open(os.path.join('volume_metrics', 'm10.json'), "r") as file:
+        data = json.load(file)
+
+    print(data)  # Otrzymasz listę list

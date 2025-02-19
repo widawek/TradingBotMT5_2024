@@ -17,6 +17,8 @@ from app.decorators import class_errors
 from config.parameters import *
 from app.database_class import TradingProcessor
 from app.bot_functions import *
+import json
+import importlib
 from tqdm import trange
 sys.path.append("..")
 mt.initialize()
@@ -632,7 +634,7 @@ class Bot:
         #     antitrend = 1 if antitrend == 0.7 else 0.7
         trend_bonus = bonus if posType == 0 else -bonus
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
-        max_pos_margin = (max_pos_margin + max_pos_margin*trend_bonus)*antitrend
+        max_pos_margin = (max_pos_margin + max_pos_margin*trend_bonus)*antitrend*self.volume_reducer(posType, 'M10')
         x, _ = Bot.target_class.checkTarget()
         if x:
             max_pos_margin = max_pos_margin / 5
@@ -1034,7 +1036,7 @@ class Bot:
 
         #if not strategy.__name__.startswith('model'):
         results = []
-        for slow in trange(5, 50):
+        for slow in trange(5, 51):
             for fast in range(2, 21):
                 try:
                     if fast == slow:
@@ -1180,6 +1182,54 @@ class Bot:
             duration = (server_time - time_open).total_seconds() / 60
             durations.append((pos.ticket, duration))
         return durations[0][1]
+
+    @class_errors
+    def volume_metrics_data(self, name_):
+        def mini_data():
+            with open(f'{name_}.json', "r") as file:
+                data = json.load(file)
+            for i in data:
+                if i[0] == self.symbol:
+                    return i
+            return []
+
+        my_data = mini_data()
+        if my_data == []:
+            return None
+        module_name = "volume_metrics.universal_strategies"  # Nazwa modułu
+        function_name = my_data[1]   # Nazwa funkcji w module
+
+        # Importujemy moduł dynamicznie
+        module = importlib.import_module(module_name)
+        function = getattr(module, function_name)
+        my_data[1] = function
+        print(my_data)
+        return my_data
+
+    @class_errors
+    def volume_reducer(self, pos_type, name_):
+        data = self.volume_metrics_data(name_)
+        if data == []:
+            return if_not_ok
+        if_not_ok = 0.7
+        if_ok = 1
+        strategy = data[1]
+        fast = data[2]
+        slow = data[3]
+        df = get_data(self.symbol, data[-1], 1, 5000)
+        df = strategy(df, fast, slow)
+        position = int(0) if df['stance'].iloc[-1] == 1 else int(1) if df['stance'].iloc[-1] == -1 else None
+        if position is None:
+            print(f'volume_reducer {name_} not ok')
+            return if_not_ok
+        if pos_type == position:
+            print(f'volume_reducer {name_} ok')
+            return if_ok
+        print(f'volume_reducer {name_} not ok')
+        return if_not_ok
+
+
+
 
 if __name__ == '__main__':
     print('Yo, wtf?')

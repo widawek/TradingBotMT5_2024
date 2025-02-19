@@ -27,6 +27,7 @@ symbols:                                list = [
                                             'CADJPY'
                                             ]
 
+
 #                                       model_generator_params
 intervals: list                         = ['M10']
 leverage: int                           = 6
