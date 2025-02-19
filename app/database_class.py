@@ -121,8 +121,7 @@ class DatabaseManager:
             print(f"Dodano nową pozycję z ticketem {ticket}.")
         session.close()
 
-    def add_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread,
-                   fake_position,fake_position_counter,fake_position_stoploss):
+    def add_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread):
         session = self.Session()
         position = session.query(Position).filter_by(ticket=ticket).first()
         if position:
@@ -133,10 +132,7 @@ class DatabaseManager:
                 mean_profit=mean_profit,
                 spread=spread,
                 ticket=ticket,
-                position=position,
-                fake_position=fake_position,
-                fake_position_counter=fake_position_counter,
-                fake_position_stoploss=fake_position_stoploss
+                position=position
             )
             session.add(new_profit)
             session.commit()
@@ -192,8 +188,7 @@ class TradingProcessor:
             marker=marker
         )
 
-    def process_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread,
-                       fake_position,fake_position_counter,fake_position_stoploss):
+    def process_profit(self, ticket, profit, profit_max, profit0, mean_profit, spread):
         # Przetwarzanie profitu
         # Dodajemy profit do bazy danych
         self.db_manager.add_profit(
@@ -202,12 +197,11 @@ class TradingProcessor:
             profit_max=profit_max,
             profit0=profit0,
             mean_profit=mean_profit,
-            spread=spread,
-            fake_position=fake_position,
-            fake_position_counter=fake_position_counter,
-            fake_position_stoploss=fake_position_stoploss)
+            spread=spread
+            )
 
-    def process_backtest(self, symbol, strategy_short_name, strategy_full_name, interval, result, kind, fast, slow, end_result, tp_sl):
+    def process_backtest(self, symbol, strategy_short_name, strategy_full_name,
+                         interval, result, kind, fast, slow, end_result, tp_sl):
         # Przetwarzanie profitu
         # Dodajemy profit do bazy danych
         self.db_manager.add_bt_result(

@@ -68,14 +68,18 @@ class Reverse:
         df['boll_up'] = df['profits_sum_mean'] + df['profits_sum_std']
         df['boll_down'] = df['profits_sum_mean'] - df['profits_sum_std']
         df['cond'] = (df['boll_up'] < df['mean_profits'])&(df['boll_up'].shift() < df['mean_profits'].shift())
-        pos = [i for i in mt.positions_get() if i.symbol == self.symbol]
-        print(pos[0].profit)
+        try:
+            pos = [i for i in mt.positions_get() if i.symbol == self.symbol]
+            profit_symbol = pos[0].profit
+            print(profit_symbol)
+        except Exception:
+            profit_symbol = 0
 
         symbol_profit, symbol_profits = self.closed_pos(self.symbol)
         if len(symbol_profits < 2):
             return self.condition
 
-        if any(df['cond'].tolist()) and symbol_profit < 0 and pos[0].profit < 0:
+        if any(df['cond'].tolist()) and symbol_profit < 0 and profit_symbol < 0:
             self.condition = True
         return self.condition
 
