@@ -31,6 +31,55 @@ catalog = f'{parent_catalog}\\models'
 processor = TradingProcessor()
 
 
+class Reverse:
+    def __init__(self, symbol):
+        self.symbol = symbol
+        self.condition = False
+
+    def closed_pos(self, symbol: str = 'all'):
+        dzisiaj = dt.now().date()
+        poczatek_dnia = dt.combine(dzisiaj, dt.min.time())
+        koniec_dnia = dt.combine(dzisiaj, dt.max.time())
+        zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia)
+        if zamkniete_transakcje is None or len(zamkniete_transakcje) == 0:
+            return 0
+        # Filtrujemy transakcje po podanym symbolu
+        if symbol != 'all':
+            zamkniete_transakcje = [deal for deal in zamkniete_transakcje if deal.symbol == symbol]
+        if not zamkniete_transakcje:
+            return 0
+        profit_list = [deal.profit for deal in zamkniete_transakcje if deal.profit != 0]
+        suma_zyskow = sum(profit_list)
+        print(f"Suma zysków z zamkniętych pozycji dla {symbol} dzisiaj: {suma_zyskow:.2f} USD")
+        return suma_zyskow, profit_list
+
+    def reverse_or_not(self):
+        if self.condition:
+            return self.condition
+        factor = 3
+        std_ = 3
+        df = pd.DataFrame({'profits': self.closed_pos()[1]})
+        if len(df) < 5:
+            return self.condition
+        df['profits_sum'] = df['profits'].cumsum()
+        df['mean_profits'] = df['profits_sum'].expanding().mean()
+        df['profits_sum_mean'] = df['profits_sum'].rolling(factor).mean()
+        df['profits_sum_std'] = std_*df['profits_sum'].rolling(factor).std()
+        df['boll_up'] = df['profits_sum_mean'] + df['profits_sum_std']
+        df['boll_down'] = df['profits_sum_mean'] - df['profits_sum_std']
+        df['cond'] = (df['boll_up'] < df['mean_profits'])&(df['boll_up'].shift() < df['mean_profits'].shift())
+        pos = [i for i in mt.positions_get() if i.symbol == self.symbol]
+        print(pos[0].profit)
+
+        symbol_profit, symbol_profits = self.closed_pos(self.symbol)
+        if len(symbol_profits < 2):
+            return self.condition
+
+        if any(df['cond'].tolist()) and symbol_profit < 0 and pos[0].profit < 0:
+            self.condition = True
+        return self.condition
+
+
 class Target:
     def __init__(self, target=0.03):
         self.start_balance = mt.account_info().balance - closed_pos()
@@ -95,6 +144,7 @@ class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.reverse = Reverse(symbol)
         self.if_position_with_trend = 'n'
         self.fresh_daily_target = False
         self.currency = mt.account_info().currency
@@ -614,6 +664,12 @@ class Bot:
                 print(e)
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
+
+        self.reverse.reverse_or_not()
+        if self.reverse.condition:
+            print("REVERSE MODE")
+            position = int(0) if position == 1 else int(1)
+
         printer("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
         return position
 
