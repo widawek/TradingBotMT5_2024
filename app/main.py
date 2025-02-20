@@ -80,7 +80,7 @@ class Reverse:
             if len(symbol_profits) < 2:
                 return self.condition
 
-            if df['cond'].iloc[-1] and symbol_profit < 0 and profit_symbol < 0 and symbol_profits[-1] < 0:
+            if df['cond'].iloc[-1] and symbol_profit < 0 and profit_symbol <= 0 and symbol_profits[-1] < 0:
                 self.condition = True
             return self.condition
         except Exception:
@@ -958,7 +958,11 @@ class Bot:
             self.write_to_backtest(name_, interval, result, kind, fast, slow, end_result, tp_sl)
 
         self.strategies = [i for i in self.strategies_raw if ((i[5] != np.inf) and (i[5] > 0))]
-        self.strategies = self.sort_strategies()
+        try:
+            self.strategies = self.sort_strategies()
+        except Exception:
+            sleep(1800)
+            self.test_strategies()
 
         time_info(time.time()-super_start_time, 'Total duration')
 
@@ -1045,8 +1049,6 @@ class Bot:
             return if_ok
         print(f'volume_reducer {name_} not ok')
         return if_not_ok
-
-
 
 
 if __name__ == '__main__':
