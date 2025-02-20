@@ -54,34 +54,37 @@ class Reverse:
         return suma_zyskow, profit_list
 
     def reverse_or_not(self):
-        if self.condition:
-            return self.condition
-        factor = 3
-        std_ = 3
-        df = pd.DataFrame({'profits': self.closed_pos()[1]})
-        if len(df) < 5:
-            return self.condition
-        df['profits_sum'] = df['profits'].cumsum()
-        df['mean_profits'] = df['profits_sum'].expanding().mean()
-        df['profits_sum_mean'] = df['profits_sum'].rolling(factor).mean()
-        df['profits_sum_std'] = std_*df['profits_sum'].rolling(factor).std()
-        df['boll_up'] = df['profits_sum_mean'] + df['profits_sum_std']
-        df['boll_down'] = df['profits_sum_mean'] - df['profits_sum_std']
-        df['cond'] = (df['boll_up'] < df['mean_profits'])&(df['boll_up'].shift() < df['mean_profits'].shift())
         try:
-            pos = [i for i in mt.positions_get() if i.symbol == self.symbol]
-            profit_symbol = pos[0].profit
-            print(profit_symbol)
-        except Exception:
-            profit_symbol = 0
+            if self.condition:
+                return self.condition
+            factor = 3
+            std_ = 3
+            df = pd.DataFrame({'profits': self.closed_pos()[1]})
+            if len(df) < 5:
+                return self.condition
+            df['profits_sum'] = df['profits'].cumsum()
+            df['mean_profits'] = df['profits_sum'].expanding().mean()
+            df['profits_sum_mean'] = df['profits_sum'].rolling(factor).mean()
+            df['profits_sum_std'] = std_*df['profits_sum'].rolling(factor).std()
+            df['boll_up'] = df['profits_sum_mean'] + df['profits_sum_std']
+            df['boll_down'] = df['profits_sum_mean'] - df['profits_sum_std']
+            df['cond'] = (df['boll_up'] < df['mean_profits'])&(df['boll_up'].shift() < df['mean_profits'].shift())
+            try:
+                pos = [i for i in mt.positions_get() if i.symbol == self.symbol]
+                profit_symbol = pos[0].profit
+                print(profit_symbol)
+            except Exception:
+                profit_symbol = 0
 
-        symbol_profit, symbol_profits = self.closed_pos(self.symbol)
-        if len(symbol_profits) < 2:
+            symbol_profit, symbol_profits = self.closed_pos(self.symbol)
+            if len(symbol_profits) < 2:
+                return self.condition
+
+            if df['cond'].iloc[-1] and symbol_profit < 0 and profit_symbol < 0:
+                self.condition = True
             return self.condition
-
-        if df['cond'].iloc[-1] and symbol_profit < 0 and profit_symbol < 0:
-            self.condition = True
-        return self.condition
+        except Exception:
+            return self.condition
 
 
 class Target:
@@ -669,8 +672,7 @@ class Bot:
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
 
-        self.reverse.reverse_or_not()
-        if self.reverse.condition:
+        if self.reverse.reverse_or_not():
             print("REVERSE MODE")
             position = int(0) if position == 1 else int(1)
 
