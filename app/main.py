@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import random
 import MetaTrader5 as mt
 import time
 import sys
@@ -8,12 +7,9 @@ import os
 from datetime import timedelta, timezone
 from datetime import datetime as dt
 from time import sleep
-from icecream import ic
-import xgboost as xgb
 from extensions.symbols_rank import symbol_stats, tp_sl_in_currency
 from app.functions import *
 from app.decorators import class_errors
-#from app.model_generator import data_operations, evening_hour, probability_edge
 from config.parameters import *
 from app.database_class import TradingProcessor
 from app.bot_functions import *
@@ -607,7 +603,7 @@ class Bot:
             self.actual_force = True if self.actual_force == 1 else False
             # printer("Strategy force", self.force)
             # printer("Strategy actual position", self.actual_force)
-            
+
             position = int(0) if position == 1 else int(1)
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
             self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
