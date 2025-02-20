@@ -675,6 +675,8 @@ class Bot:
         if self.reverse.reverse_or_not():
             print("REVERSE MODE")
             position = int(0) if position == 1 else int(1)
+        else:
+            print("NORMAL MODE")
 
         printer("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
         return position

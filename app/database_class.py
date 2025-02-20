@@ -52,9 +52,6 @@ class Profit(Base):
     mean_profit = Column(Float, nullable=False)
     spread = Column(Float, nullable=False)
     ticket = Column(Integer, ForeignKey('positions.ticket'), nullable=False)
-    fake_position = Column(Boolean, nullable=False)
-    fake_position_counter = Column(Integer, nullable=False)
-    fake_position_stoploss = Column(Float, nullable=False)
 
     # Relacja do tabeli Position
     position = relationship("Position", back_populates="profits")
