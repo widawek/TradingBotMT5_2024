@@ -480,28 +480,34 @@ class Bot:
         except Exception as e:
             print('volume_calc anti trend no strategy', e)
 
-        try:
-            if_trend = str(strategy[0]).split('_')[-2]
-            if if_trend == 'trend':
-                if (bonus >= 0 and posType == 0) or (bonus <= 0 and posType == 1):
-                    self.if_position_with_trend = 'y'
-                    antitrend = 1
-                else:
-                    self.if_position_with_trend = 'n'
-                    antitrend = 0.8
-            else:
-                if (bonus <= 0 and posType == 0) or (bonus >= 0 and posType == 1):
-                    self.if_position_with_trend = 'n'
-                    antitrend = 1
-                else:
-                    self.if_position_with_trend = 'y'
-                    antitrend = 0.8
-        except Exception as e:
-            print('volume_calc anti trend', e)
+        # try:
+        #     if_trend = str(strategy[0]).split('_')[-2]
+        #     if if_trend == 'trend':
+        #         if (bonus >= 0 and posType == 0) or (bonus <= 0 and posType == 1):
+        #             self.if_position_with_trend = 'y'
+        #             antitrend = 1
+        #         else:
+        #             self.if_position_with_trend = 'n'
+        #             antitrend = 0.8
+        #     else:
+        #         if (bonus <= 0 and posType == 0) or (bonus >= 0 and posType == 1):
+        #             self.if_position_with_trend = 'n'
+        #             antitrend = 1
+        #         else:
+        #             self.if_position_with_trend = 'y'
+        #             antitrend = 0.8
+        # except Exception as e:
+        #     print('volume_calc anti trend', e)
 
         trend_bonus = bonus if posType == 0 else -bonus
+        volume_m10 = self.volume_reducer(posType, 'M10')
+        if volume_m10 == 1:
+            self.if_position_with_trend = 'y'
+        else:
+            self.if_position_with_trend = 'n'
+
         max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
-        max_pos_margin = (max_pos_margin + max_pos_margin*trend_bonus)*antitrend*self.volume_reducer(posType, 'M10')
+        max_pos_margin = (max_pos_margin + max_pos_margin*trend_bonus)*volume_m10
         x, _ = Bot.target_class.checkTarget()
         if x:
             max_pos_margin = max_pos_margin / 5

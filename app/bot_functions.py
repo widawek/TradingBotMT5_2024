@@ -58,14 +58,15 @@ def equity_curve_stability(strategy):
 
 def strategy_score(returns, sharpe_multiplier, years=1):
     """Finalna metryka"""
+    years=1
     sharpe = sharpe_multiplier*sharpe_ratio(returns)
     omega = omega_ratio(returns)
     strategy = (1+returns).cumprod()
-    mdd = abs(max_drawdown(strategy))
+    #mdd = abs(max_drawdown(strategy))
     ui = ulcer_index(strategy)
     cagr_value = cagr(strategy, years)
     stability = equity_curve_stability(strategy)
-    return (sharpe * omega * cagr_value * stability) / (ui*mdd)
+    return (sharpe * omega * cagr_value * stability) / ui#*mdd)
 
 
 def rename_files_in_directory(old_phrase, new_phrase, catalog):
