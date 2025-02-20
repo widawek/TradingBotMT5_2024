@@ -50,7 +50,7 @@ class Reverse:
             return 0
         profit_list = [deal.profit for deal in zamkniete_transakcje if deal.profit != 0]
         suma_zyskow = sum(profit_list)
-        print(f"Suma zysków z zamkniętych pozycji dla {symbol} dzisiaj: {suma_zyskow:.2f} USD")
+        printer(f"\nSuma zysków z zamkniętych pozycji dla {symbol} dzisiaj:",  f"{suma_zyskow:.2f} PLN")
         return suma_zyskow, profit_list
 
     def reverse_or_not(self):
@@ -72,7 +72,7 @@ class Reverse:
             try:
                 pos = [i for i in mt.positions_get() if i.symbol == self.symbol]
                 profit_symbol = pos[0].profit
-                print(profit_symbol)
+                printer("Aktualny zysk z otwartych pozycji:", f"{profit_symbol:.2f} PLN")
             except Exception:
                 profit_symbol = 0
 
@@ -80,7 +80,7 @@ class Reverse:
             if len(symbol_profits) < 2:
                 return self.condition
 
-            if df['cond'].iloc[-1] and symbol_profit < 0 and profit_symbol < 0:
+            if df['cond'].iloc[-1] and symbol_profit < 0 and profit_symbol < 0 and symbol_profits[-1] < 0:
                 self.condition = True
             return self.condition
         except Exception:
@@ -163,11 +163,9 @@ class Bot:
         self.number_of_bars_for_backtest = 16000
         printer(dt.now(), symbol)
         self.symbol = symbol
-        #self.active_session()
+        self.active_session()
         self.magic = magic_(symbol, 'bot_2025')
-        self.model_counter = None
         self.profit0 = None
-        self.max_close = None
         self.fresh_signal = None
         self.strategy_pos_open_price = None
         self.good_price_to_open_pos = None
@@ -180,18 +178,14 @@ class Bot:
         self.close_profits = []
         self.global_positions_stats = []
         self.position_size = position_size
-        self.trigger = start_trigger # 'model' 'moving_averages'
-        #self.market = 'e' if dt.now().hour < change_hour else 'u'
-        self.trend = 'neutral' # long_strong, long_weak, long_normal, short_strong, short_weak, short_normal, neutral
+        self.trend = 'neutral'
         self.trigger_model_divider = avg_daily_vol_for_divider(symbol, trigger_model_divider_factor)
         self.trend_or_not = trend_or_not(symbol)
         self.df_d1 = get_data(symbol, "D1", 1, 30)
         self.avg_daily_vol()
         self.round_number = round_number_(symbol)
-        #self.mdv = self.mdv_() / 100
         self.volume_calc(position_size, 0, True)
         self.positions_()
-        #self.load_models_democracy(catalog)
         self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_("M1"), 0, 1)[0][0]
         self.interval = "M1"
         self.test_strategies()
@@ -266,7 +260,6 @@ class Bot:
                 self.profits.append(profit+self.profit0)
                 self.profit_max = max(self.profits)
                 self.profit_min = min(self.profits)
-                mean_profits = np.mean(self.profits)
                 self.self_decline_factor()
                 if self.print_condition():
                     printer("Change value:", f"{round(self.profit_needed, 2):.2f} ({self.profit_needed_min:.2f}) {self.currency}")
@@ -275,7 +268,6 @@ class Bot:
                     printer("Max profit:", f"{self.profit_max:.2f} {self.currency}")
                     printer("Decline factor:", f"{self.profit_decline_factor}")
                     printer("Close position if profit is less than", f"{round(self.profit_max * self.profit_decline_factor, 2)} {self.currency}")
-
 
                 # Jeżeli strata mniejsza od straty granicznej
                 elif profit < -self.sl_money/self.too_much_risk():# and profit > 0.91 * self.profit_min:
@@ -435,7 +427,6 @@ class Bot:
         printer("Profit to margin:", f"{profit_to_margin:.2f} %")
         printer("Profit to balance:", f"{profit_to_balance:.2f} %")
         printer("Actual position from model:", self.pos_type)
-        #printer("Trend:", self.trend)
         try:
             printer("Strategy name:", self.strategies[self.strategy_number][0])
             printer("Last backtest:", self.backtest_time)
@@ -474,7 +465,8 @@ class Bot:
             another_new_volume_multiplier_from_win_rate_condition = 0.6
 
         bonus = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
-        antitrend = 1
+
+        # antitrend = 1
         try:
             strategy = self.strategies[self.strategy_number]
         except Exception as e:
@@ -600,12 +592,7 @@ class Bot:
             self.interval = strategy[0].split('_')[-1]
             fast = strategy[3]
             slow = strategy[4]
-            print("Interwał", self.interval)
 
-            # if 'model' in strategy[0]:
-            #     dfx, position = self.model_position(number_of_bars, backtest=False)
-            #     printer(f'Position from {strategy[0]}:', position)
-            # else:
             dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + 3440)) # how_many_bars
             dfx, position = strategy[1](dfx, slow, fast)
             if position not in [-1, 1]:
@@ -617,20 +604,14 @@ class Bot:
 
             self.force, self.actual_force, self.win_ratio_cond, daily_return = self.calc_pos_condition(dfx)
             self.actual_force = True if self.actual_force == 1 else False
-            printer("Strategy force", self.force)
-            printer("Strategy actual position", self.actual_force)
-            printer("Daily return", daily_return)
-            # if self.actual_force < 1:
-            #     print("Next strategy, because the strategy is too weak.")
-
-            print("Wariant normal position")
+            # printer("Strategy force", self.force)
+            # printer("Strategy actual position", self.actual_force)
+            
             position = int(0) if position == 1 else int(1)
-
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
             self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
             cross = dfx[dfx['cross'] == 1]
             self.strategy_pos_open_price = cross['close'].iloc[-1]
-
             printer("Last open position time by MetaTrader", f"{cross['time'].iloc[-1]}", base_just=60)
             if dt.now().hour > 12:
                 if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
@@ -679,12 +660,15 @@ class Bot:
         self.pos_time = interval_time(self.interval)
 
         if self.reverse.reverse_or_not():
+            mode__ = "REVERSE"
             print("REVERSE MODE")
             position = int(0) if position == 1 else int(1)
         else:
+            mode__ = "NORMAL"
             print("NORMAL MODE")
 
-        printer("Pozycja", "Long" if position == 0 else "Short" if position != 0 else "None")
+        printer("Daily return", daily_return)
+        printer("POZYCJA", "LONG" if position == 0 else "SHORT" if position != 0 else "None" + f"w trybie {mode__}")
         return position
 
     @class_errors
@@ -698,14 +682,15 @@ class Bot:
             else:
                 posType = pendings["short_stop"]
 
-        print("POSTYPE: ", posType)
-        print("POSTYPE TYPE: ", type(posType))
         self.volume_calc(self.position_size, posType, True)
 
         name_ = self.strategies[self.strategy_number][0][:6]
         fast = self.strategies[self.strategy_number][3]
         slow = self.strategies[self.strategy_number][4]
         self.comment = f'{name_}_{fast}_{slow}_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
+
+        if self.reverse.condition:
+            self.comment = '8'+self.comment[1:]
 
         request = {
             "action": action,
@@ -801,12 +786,9 @@ class Bot:
 
     @class_errors
     def pos_creator(self):
-        # try:
         self.strategy_number += 1
         return self.actual_position_democracy()
-        # except NameError as e:
-        #     print(e)
-        #     return random.randint(0, 1)
+
 
     @class_errors
     def write_to_database(self, profit, spread):
@@ -911,14 +893,6 @@ class Bot:
             return None
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
         return f_result[0], f_result[1], round(f_result[2]*f_result[3]*f_result[6]*100, 4), f_result[4], f_result[5], f_result[6], f_result[7]
-        # else:
-        #     df1 = self.model_position(500, backtest=True)
-        #     sharpe, calmar = calc_result(df1, sharpe_multiplier)
-        #     self.number_of_bars_for_backtest = small_bt_bars
-        #     df2 = self.model_position(500, backtest=True)
-        #     sharpe2, calmar2 = calc_result(df2, sharpe_multiplier)
-        #     self.number_of_bars_for_backtest = 20000
-        #     return 0, 0, round(((sharpe+sharpe2)/2)*(calmar+calmar2)/2, 3)
 
     @class_errors
     def sort_strategies(self):
@@ -956,14 +930,8 @@ class Bot:
             self.is_this_the_end()
             self.check_trigger(backtest=True)
             name_ = strategy.__name__
-            # if name_ == 'model':
-            #     if self.model_counter == 0:
-            #         continue
-            #     interval = self.model_interval
-            # else:
             interval = name_.split('_')[-1]
             kind = name_.split('_')[-2]
-            #marker = "trend" if "_trend_" in name_ else "swing" if "_counter_" in name_ else "none"
             print(f'Strategy {i} from {len(strategies)}')
             i += 1
             results_pack = self.trend_backtest(strategy)
@@ -1065,6 +1033,7 @@ class Bot:
         df = get_data(self.symbol, data[-1], 1, 5000)
         df = strategy(df, fast, slow)
         position = int(0) if df['stance'].iloc[-1] == 1 else int(1) if df['stance'].iloc[-1] == -1 else None
+        self.trend = "Long" if position == 0 else "SHORT"
         if position is None:
             print(f'volume_reducer {name_} not ok')
             return if_not_ok
