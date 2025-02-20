@@ -586,6 +586,7 @@ class Bot:
                 strategy = self.strategies[self.strategy_number]
             except IndexError as e:
                 print("actual_position_democracy", e)
+                self.number_of_bars_for_backtest = int(self.number_of_bars_for_backtest/2)
                 self.test_strategies()
                 strategy = self.strategies[self.strategy_number]
             print("Strategia", strategy[0])
@@ -773,8 +774,10 @@ class Bot:
             order_result = mt.order_send(request)
 
         if (not self.after_change_hour) and (dt.now().hour >= change_hour):
-            self.after_change_hour = True
-            self.test_strategies()
+            sum_, prof_list = self.reverse.closed_pos(self.symbol)
+            if sum_ < 0 and prof_list[-1] < 0:
+                self.after_change_hour = True
+                self.test_strategies()
         if self.fresh_daily_target:
             self.fresh_daily_target = False
             time_sleep = 120
