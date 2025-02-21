@@ -31,6 +31,7 @@ class Reverse:
     def __init__(self, symbol):
         self.symbol = symbol
         self.condition = False
+        self.one_percent_balance = -round(mt.account_info().balance/100, 2)
 
     def closed_pos(self, symbol: str = 'all'):
         dzisiaj = dt.now().date()
@@ -55,7 +56,8 @@ class Reverse:
                 return self.condition
             factor = 3
             std_ = 3
-            df = pd.DataFrame({'profits': self.closed_pos()[1]})
+            cp = self.closed_pos()
+            df = pd.DataFrame({'profits': cp[1]})
             if len(df) < 5:
                 return self.condition
             df['profits_sum'] = df['profits'].cumsum()
@@ -76,7 +78,7 @@ class Reverse:
             if len(symbol_profits) < 2:
                 return self.condition
 
-            if df['cond'].iloc[-1] and symbol_profit < 0 and profit_symbol <= 0 and symbol_profits[-1] < 0:
+            if df['cond'].iloc[-1] and symbol_profit < 0 and profit_symbol <= 0 and symbol_profits[-1] < 0 and cp[0] < self.one_percent_balance:
                 self.condition = True
             return self.condition
         except Exception:

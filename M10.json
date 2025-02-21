@@ -1,51 +1,9 @@
 [
     [
-        "CADJPY",
-        "hhll",
-        22,
-        5,
-        "M10"
-    ],
-    [
-        "USDCAD",
-        "macd_divergence_strategy",
-        20,
-        38,
-        "M10"
-    ],
-    [
-        "USDCHF",
-        "altrend",
-        14,
-        5,
-        "M10"
-    ],
-    [
-        "EURUSD",
-        "emaboll",
-        14,
-        59,
-        "M10"
-    ],
-    [
         "US30",
-        "altrend",
-        20,
-        47,
-        "M10"
-    ],
-    [
-        "USDJPY",
-        "sup_res_numpy",
-        4,
-        23,
-        "M10"
-    ],
-    [
-        "AUDUSD",
-        "hhll",
-        16,
-        5,
+        "avs_aka_atr_vol_stoch",
+        18,
+        44,
         "M10"
     ],
     [
@@ -57,9 +15,51 @@
     ],
     [
         "EURJPY",
+        "sup_res_numpy",
+        22,
+        8,
+        "M10"
+    ],
+    [
+        "USDJPY",
+        "engminmax",
+        8,
+        5,
+        "M10"
+    ],
+    [
+        "EURUSD",
+        "sup_res_numpy",
+        8,
+        11,
+        "M10"
+    ],
+    [
+        "CADJPY",
         "avs_aka_atr_vol_stoch",
-        18,
-        23,
+        2,
+        35,
+        "M10"
+    ],
+    [
+        "USDCAD",
+        "macd_divergence_strategy",
+        20,
+        38,
+        "M10"
+    ],
+    [
+        "AUDUSD",
+        "avs_aka_atr_vol_stoch",
+        8,
+        17,
+        "M10"
+    ],
+    [
+        "USDCHF",
+        "macd_divergence_strategy",
+        20,
+        17,
         "M10"
     ]
 ]
