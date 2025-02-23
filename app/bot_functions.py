@@ -593,6 +593,8 @@ def play_with_trend_bt(symbol):
     df_raw['weekday'] = df_raw.time.dt.weekday
 
     today = dt.now().weekday()
+    if today > 4:
+        today = 4
 
     def trend_strategy(short, long, dev):
         df = df_raw.copy()

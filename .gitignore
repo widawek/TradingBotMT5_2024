@@ -2,6 +2,7 @@
 **/venv/
 **/trash/
 **/extensions/
+**.json
 class_errors.txt
 symbols.py
 **/models/
