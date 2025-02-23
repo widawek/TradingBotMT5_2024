@@ -28,15 +28,32 @@ strategies_M10 = [
         hhll,
         emaboll,
         sup_res_numpy,
-        altrend
+        altrend,
+        mas_t3_mad,
+        engulf
+            ]
+
+
+strategies_M20 = [
+        rsi_divergence_strategy,
+        t52_moving_average_close,
+        macd_divergence_strategy,
+        avs_aka_atr_vol_stoch,
+        engminmax,
+        hhll,
+        emaboll,
+        sup_res_numpy,
+        altrend,
+        mas_t3_mad,
+        engulf
             ]
 
 
 def calc_result_modified(dfx):
     df = dfx.copy()
     df = df.dropna()
-    years = len(list(np.unique(df['time'].dt.date)))
-    return strategy_score(df['return'], years)
+    #years = len(list(np.unique(df['time'].dt.date)))
+    return strategy_score(df['return'], 1)
 
 
 def returns_bt(df):
@@ -118,7 +135,7 @@ def give_me_all_returns(strategies_to_bt, bars, interval):
     i = 0
     for strategy, interval, symbol, strategy_name, fast, slow, _ in tqdm(strategies_to_bt):
         df_raw = get_data(symbol, interval, 1, bars)
-        dfx = strategy(df_raw.copy(), fast, slow)
+        dfx = strategy(df_raw.copy(), slow, fast)
         dfx = returns_(dfx, symbol)
         dfx = dfx.rename(columns={f'return_{symbol}': f'return_{symbol}_{strategy_name}_{fast}_{slow}'})
         if i == 0:
@@ -158,7 +175,7 @@ class Backtest:
         for slow in range(5, self.slow, 3):
             for fast in range(2, self.fast, 2):
                 try:
-                    df = returns_bt(strategy(df, fast, slow))
+                    df = returns_bt(strategy(df, slow, fast))
                     if (len(df) > 0.8*self.bars) or (df['cross'].sum() > 7):
                         results.append([symbol, strategy.__name__, fast, slow, calc_result_modified(df)])
                     else:
@@ -231,4 +248,8 @@ class SymbolsByProfile:
 
 def m10_strategies():
     symbolz = SymbolsByProfile(symbols, "M10", strategies_M10, 11000)
+    symbolz.all_the_work()
+
+def m20_strategies():
+    symbolz = SymbolsByProfile(symbols, "M20", strategies_M10, 9000)
     symbolz.all_the_work()

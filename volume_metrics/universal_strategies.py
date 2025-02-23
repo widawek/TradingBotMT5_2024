@@ -24,6 +24,32 @@ def find_support_resistance_numpy(df, slow, fast):
     df['resistance'] = df['resistance'].ffill()
     return df
 
+
+def mas_t3_mad(df_raw, long, short):
+    df = df_raw.copy()
+    df['ma1'] = df.ta.t3(length=long, a=0.7)
+    df['ma2'] = df.ta.t3(length=short, a=0.7)
+    df['stance'] = np.where((df['close']> df['ma1'])&(df['ma1']> df['ma2']), 1, np.nan)
+    df['stance'] = np.where((df['close']< df['ma1'])&(df['ma1']< df['ma2']), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    return df
+
+
+def engulf(df_raw, long, short):
+    df = df_raw.copy()
+    df['volume_mean'] = df['volume'].rolling(short).mean()
+    df['vol_cond'] = df['volume'] > df['volume_mean']
+    df['highmean'] = df['high'].rolling(long).mean()
+    df['lowmean'] = df['low'].rolling(long).mean()
+    df['engulf_long'] = np.where((df['close'].shift()<df['open'].shift())&(df['close']>df['open'])&(df['high']>df['high'].shift())&(df['close']>df['open'].shift()), 1, 0)
+    df['engulf_short'] = np.where((df['close'].shift()>df['open'].shift())&(df['close']<df['open'])&(df['low']<df['low'].shift())&(df['close']<df['open'].shift()), 1, 0)
+    df['engulf_sum'] = df['engulf_long'].rolling(long).sum() - df['engulf_short'].rolling(long).sum()
+    df['stance'] = np.where((df['engulf_sum'] > 0)&(df['vol_cond'])&(df['close']>df['lowmean']), -1, np.NaN)
+    df['stance'] = np.where((df['engulf_sum'] < 0)&(df['vol_cond'])&(df['close']<df['highmean']), 1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    return df
+
+
 def rsi_divergence_strategy(df_raw, slow, fast):
     df = df_raw.copy()
     df['rsi'] = ta.rsi(df['close'], length=slow)
@@ -174,9 +200,9 @@ def sup_res_numpy(df, slow, fast):
     return df
 
 
-def altrend(df, short, long):
+def altrend(df, long, short):
     long *= 2
-    short *= 3
+    short *= 2
     df['res_long'] = df.close-df.open
     df['dir_long'] = np.where(df.res_long>0, 1, -1)
     df['trend_long'] = df['res_long'].rolling(long).sum()*df['dir_long'].rolling(short).mean()
@@ -189,3 +215,4 @@ def altrend(df, short, long):
     df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
     df['stance'] = df['stance'].ffill()
     return df
+
