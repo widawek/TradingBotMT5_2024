@@ -1041,7 +1041,7 @@ class Bot:
         fast = data[2]
         slow = data[3]
         df = get_data(self.symbol, data[-1], 1, 5000)
-        df = strategy(df, fast, slow)
+        df = strategy(df, slow, fast)
         position = int(0) if df['stance'].iloc[-1] == 1 else int(1) if df['stance'].iloc[-1] == -1 else None
         self.trend = "Long" if position == 0 else "SHORT"
         if position is None:
