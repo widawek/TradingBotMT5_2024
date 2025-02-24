@@ -912,8 +912,8 @@ class Bot:
         printer("Daily starter", first_)
         self.actual_today_best = first_
         second_ = 'trend' if first_ == 'counter' else 'counter'
-        group_t = [item for item in sorted_data if item[7] == first_]
-        group_n = [item for item in sorted_data if item[7] == second_]
+        group_t = [item for item in sorted_data if item[7] == second_] # first
+        group_n = [item for item in sorted_data if item[7] == first_] # second
         alternating_data = []
         max_len = max(len(group_t), len(group_n))
 
