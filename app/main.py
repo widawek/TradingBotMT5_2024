@@ -871,8 +871,8 @@ class Bot:
 
         #if not strategy.__name__.startswith('model'):
         results = []
-        for slow in trange(5, 51):
-            for fast in range(2, 21):
+        for slow in trange(5, 62, 3):
+            for fast in range(2, 21, 2):
                 try:
                     if fast == slow:
                         continue

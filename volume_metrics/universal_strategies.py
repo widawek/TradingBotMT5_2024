@@ -133,7 +133,8 @@ def avs_aka_atr_vol_stoch(df_raw, slow, fast):
     return df
 
 
-def engminmax(df, slow, fast):
+def engminmax(df_raw, slow, fast):
+    df = df_raw.copy()
     fast = fast-1
     df['local_max'] = df.high.rolling(slow).max()
     df['new_max'] = np.where(df['local_max']>df['local_max'].shift(1), 1, 0)
@@ -147,7 +148,8 @@ def engminmax(df, slow, fast):
     return df
 
 
-def hhll(df, slow, fast):
+def hhll(df_raw, slow, fast):
+    df = df_raw.copy()
     fast = fast-1
     df['max_']=df['high'].rolling(slow).max()
     df['min_']=df['low'].rolling(slow).min()
@@ -169,7 +171,8 @@ def hhll(df, slow, fast):
     return df
 
 
-def emaboll(df, slow, fast):
+def emaboll(df_raw, slow, fast):
+    df = df_raw.copy()
     fast = fast-1
     df['ema'] = df.ta.ema(length=slow)
     df['ema_high'] = ta.sma(df.high, length=slow*5)
@@ -191,7 +194,8 @@ def emaboll(df, slow, fast):
     return df
 
 
-def sup_res_numpy(df, slow, fast):
+def sup_res_numpy(df_raw, slow, fast):
+    df = df_raw.copy()
     # import in function for report script
     df = find_support_resistance_numpy(df, slow, fast)
     df['stance'] = np.where(df['close'] < df['support'], -1, np.NaN)
@@ -200,7 +204,8 @@ def sup_res_numpy(df, slow, fast):
     return df
 
 
-def altrend(df, long, short):
+def altrend(df_raw, long, short):
+    df = df_raw.copy()
     long *= 2
     short *= 2
     df['res_long'] = df.close-df.open
