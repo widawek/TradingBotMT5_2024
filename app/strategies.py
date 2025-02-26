@@ -50,17 +50,6 @@ def rsi1_divergence_strategy_counter_M1(df_raw, slow, fast):
     return df, position
 
 
-def t52_moving_average_close_trend_M2(df_raw, slow, fast):
-    df = df_raw.copy()
-    df['adj'] = (df['close'] + df['high'] + df['low']) / 3
-    ma1 = ta.t3(df['adj'], length=round(fast*slow/4), a=0.6)
-    df['stance'] = np.where((df['close']>ma1), 1, np.NaN)
-    df['stance'] = np.where((df['close']<ma1), -1, df['stance'])
-    df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position
-
-
 def macd4_divergence_strategy_counter_M1(df_raw, slow, fast):
     df = df_raw.copy()
     macd = df.ta.macd(fast=round(slow), slow=round(slow*2), signal=round(slow*3/4))

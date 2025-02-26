@@ -451,6 +451,7 @@ class Bot:
 
     @class_errors
     def volume_calc(self, max_pos_margin: float, posType: int, min_volume: bool) -> None:
+
         def atr():
             length = 14
             df = get_data(self.symbol, 'M5', 1, 100)
@@ -505,7 +506,7 @@ class Bot:
         max_pos_margin = (max_pos_margin + max_pos_margin*trend_bonus)*volume_m10*volume_m20
         x, _ = Bot.target_class.checkTarget()
         if x:
-            max_pos_margin = max_pos_margin / 5
+            max_pos_margin = max_pos_margin / 2
         print('max_pos_margin', round(max_pos_margin, 3))
 
         info_ = mt.account_info()
@@ -783,7 +784,7 @@ class Bot:
                 self.test_strategies()
         if self.fresh_daily_target:
             self.fresh_daily_target = False
-            time_sleep = 120
+            time_sleep = 60
             print(dt.now())
             print(f"Target was reached. {time_sleep} minutes brake.")
             sleep(time_sleep*60)

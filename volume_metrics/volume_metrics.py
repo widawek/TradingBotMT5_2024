@@ -251,5 +251,5 @@ def m10_strategies():
     symbolz.all_the_work()
 
 def m20_strategies():
-    symbolz = SymbolsByProfile(symbols, "M20", strategies_M10, 9000)
+    symbolz = SymbolsByProfile(symbols, "M20", strategies_M20, 9000)
     symbolz.all_the_work()
