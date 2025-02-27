@@ -19,7 +19,7 @@ fast_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, bars=
 fast_test.full_analize()
 fast_test.output()
 
-# print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.10)/60)
-# fast_test = Backtest_complex(symbols, slow_intervals, strategies, metrics, bars=9000)
-# fast_test.full_analize()
-# fast_test.output()
+print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.10)/60)
+fast_test = Backtest_complex(symbols, slow_intervals, strategies, metrics, bars=9000)
+fast_test.full_analize()
+fast_test.output()

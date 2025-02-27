@@ -1,4 +1,5 @@
-from volume_metrics.universal_strategies import *
+from strategies_analize.global_strategies import *
+from strategies_analize.metrics import *
 from app.bot_functions import *
 import MetaTrader5 as mt
 import pandas as pd
@@ -19,34 +20,34 @@ mt.initialize()
 warnings.filterwarnings('ignore')
 
 
-strategies_M10 = [
-        rsi_divergence_strategy,
-        t52_moving_average_close,
-        macd_divergence_strategy,
-        avs_aka_atr_vol_stoch,
-        engminmax,
-        hhll,
-        emaboll,
-        sup_res_numpy,
-        altrend,
-        mas_t3_mad,
-        engulf
-            ]
+# strategies_M10 = [
+#         rsi_divergence_strategy,
+#         t52_moving_average_close,
+#         macd_divergence_strategy,
+#         avs_aka_atr_vol_stoch,
+#         engminmax,
+#         hhll,
+#         emaboll,
+#         sup_res_numpy,
+#         altrend,
+#         mas_t3_mad,
+#         engulf
+#             ]
 
 
-strategies_M20 = [
-        rsi_divergence_strategy,
-        t52_moving_average_close,
-        macd_divergence_strategy,
-        avs_aka_atr_vol_stoch,
-        engminmax,
-        hhll,
-        emaboll,
-        sup_res_numpy,
-        altrend,
-        mas_t3_mad,
-        engulf
-            ]
+# strategies_M20 = [
+#         rsi_divergence_strategy,
+#         t52_moving_average_close,
+#         macd_divergence_strategy,
+#         avs_aka_atr_vol_stoch,
+#         engminmax,
+#         hhll,
+#         emaboll,
+#         sup_res_numpy,
+#         altrend,
+#         mas_t3_mad,
+#         engulf
+#             ]
 
 
 def calc_result_modified(dfx):
@@ -132,10 +133,12 @@ def returns_(df, symbol):
 
 
 def give_me_all_returns(strategies_to_bt, bars, interval):
+    print("STRATEGIES TO BT:", strategies_to_bt)
     i = 0
     for strategy, interval, symbol, strategy_name, fast, slow, _ in tqdm(strategies_to_bt):
+        print(strategy)
         df_raw = get_data(symbol, interval, 1, bars)
-        dfx = strategy(df_raw.copy(), slow, fast)
+        dfx = strategy(df_raw.copy(), slow, fast, symbol)[0]
         dfx = returns_(dfx, symbol)
         dfx = dfx.rename(columns={f'return_{symbol}': f'return_{symbol}_{strategy_name}_{fast}_{slow}'})
         if i == 0:
@@ -150,34 +153,43 @@ def give_me_all_returns(strategies_to_bt, bars, interval):
 
 
 class Backtest:
-    def __init__(self, symbols: list, interval: str, strategies: list, max_fast: int=23, max_slow: int=62, bars: int=9000):
-        self.symbols = symbols
+    def __init__(self, interval, max_fast: int=23, max_slow: int=62, bars: int=9000):
         self.interval = interval
-        self.strategies = strategies
+        self.strategies = self.load_strategies_from_json()
+        self.bt_metric = globals()[self.strategies[0][3]]
         self.fast = max_fast
         self.slow = max_slow
         self.bars = bars
         self.strategies_to_test = []
 
-    def backtest_strategies(self):
-        self.strategies_to_test = []
-        for strategy in tqdm(self.strategies):
-            for symbol in self.symbols:
-                df_raw = get_data(symbol, self.interval, 1, self.bars)
-                try:
-                    result = [strategy, self.interval]+self.strategy_bt(strategy, df_raw.copy(), symbol)
-                    self.strategies_to_test.append(result)
-                except Exception:
-                    continue
+    def load_strategies_from_json(self):
+        with open("slow.json", "r", encoding="utf-8") as f:
+            loaded_data = json.load(f)
+        output = [i for i in loaded_data if i[2] == self.interval]
+        for i in output:
+            print(i)
+        return output
 
-    def strategy_bt(self, strategy, df, symbol):
+    def backtest_strategies(self):
+        for symbol, strategy_, _, _ in tqdm(self.strategies):
+            df_raw = get_data(symbol, self.interval, 1, self.bars)
+            strategy = globals()[strategy_]
+            try:
+                result = [strategy, self.interval]+self.strategy_bt(strategy, df_raw.copy(), symbol)
+                self.strategies_to_test.append(result)
+            except Exception as e:
+                print(e)
+                input()
+                continue
+
+    def strategy_bt(self, strategy, df_raw, symbol):
         results = []
         for slow in range(5, self.slow, 3):
             for fast in range(2, self.fast, 2):
                 try:
-                    df = returns_bt(strategy(df, slow, fast))
+                    df = returns_bt(strategy(df_raw.copy(), slow, fast, symbol)[0])
                     if (len(df) > 0.8*self.bars) or (df['cross'].sum() > 7):
-                        results.append([symbol, strategy.__name__, fast, slow, calc_result_modified(df)])
+                        results.append([symbol, strategy.__name__, fast, slow, self.bt_metric(df)])
                     else:
                         continue
                 except Exception as e:
@@ -186,11 +198,9 @@ class Backtest:
 
 
 class SymbolsByProfile:
-
-    def __init__(self, symbols: list, interval: str, strategies: list, bars: int):
-        self.strategies = strategies
+    def __init__(self, symbols: list, interval: str, bars: int):
         self.interval = interval
-        self.backtest = Backtest(symbols, interval, strategies)
+        self.backtest = Backtest(interval)
         self.backtest.backtest_strategies()
         self.min_number_of_symbols = len(symbols)
         self.bars = bars
@@ -247,9 +257,9 @@ class SymbolsByProfile:
 
 
 def m10_strategies():
-    symbolz = SymbolsByProfile(symbols, "M10", strategies_M10, 11000)
+    symbolz = SymbolsByProfile(symbols, "M10", 9000)
     symbolz.all_the_work()
 
 def m20_strategies():
-    symbolz = SymbolsByProfile(symbols, "M20", strategies_M20, 9000)
+    symbolz = SymbolsByProfile(symbols, "M20", 9000)
     symbolz.all_the_work()

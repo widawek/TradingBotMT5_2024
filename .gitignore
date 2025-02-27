@@ -3,6 +3,7 @@
 **/trash/
 **/extensions/
 **.json
+**.xlsx
 class_errors.txt
 symbols.py
 **/models/

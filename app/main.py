@@ -88,7 +88,7 @@ class Reverse:
 
 
 class Target:
-    def __init__(self, target=0.03):
+    def __init__(self, target=0.04):
         self.start_balance = mt.account_info().balance - closed_pos()
         self.target = target
         self.result = False
@@ -694,7 +694,7 @@ class Bot:
         name_ = self.strategies[self.strategy_number][0][:6]
         fast = self.strategies[self.strategy_number][3]
         slow = self.strategies[self.strategy_number][4]
-        self.comment = f'{name_}{self.interval[-1]}_{fast}_{slow}_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
+        self.comment = f'{name_}{self.interval[-1:]}_{fast}_{slow}_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
 
         if self.reverse.condition:
             self.comment = '8'+self.comment[1:]
@@ -855,51 +855,6 @@ class Bot:
             print("write_to_backtest", e)
             pass
 
-    # @class_errors
-    # def trend_backtest(self, strategy):
-    #     print(strategy.__name__)
-
-    #     if strategy.__name__ == 'model':
-    #         interval = self.model_interval
-    #     else:
-    #         interval = strategy.__name__.split('_')[-1]
-
-    #     sharpe_multiplier = interval_time_sharpe(interval)
-    #     df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
-    #     #small_bt_bars = calculate_bars_to_past(df_raw)
-
-    #     #if not strategy.__name__.startswith('model'):
-    #     results = []
-    #     for slow in trange(5, 62, 3):
-    #         for fast in range(2, 21, 2):
-    #             try:
-    #                 if fast == slow:
-    #                     continue
-    #                 df1, _ = strategy(df_raw, slow, fast)
-    #                 if len(df1) < self.number_of_bars_for_backtest/2:
-    #                     continue
-    #                 df1, density = calculate_strategy_returns(df1, leverage)
-    #                 if (len(df1) < self.number_of_bars_for_backtest/2) or (density < 1/500):
-    #                     continue
-    #                 df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
-    #                 #df2 = df1.copy()[-small_bt_bars:]
-    #                 sharpe, omega = calc_result(df1, sharpe_multiplier, False, False)
-    #                 sharpe2, omega2, end_result, risk_data = calc_result(df1, sharpe_multiplier, True, True)
-    #                 #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
-    #                 _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
-    #                 results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(omega+omega2),
-    #                                 actual_condition, daily_return, end_result, risk_data))
-    #             except Exception as e:
-    #                 print("trend_backtest", e)
-    #                 continue
-
-    #     try:
-    #         f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
-    #     except IndexError:
-    #         return None
-    #     print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
-    #     return f_result[0], f_result[1], round(f_result[2]*f_result[3]*f_result[6]*100, 4), f_result[4], f_result[5], f_result[6], f_result[7]
-
     @class_errors
     def sort_strategies(self):
         if dt.now().hour >= change_hour or all([i[6] == -2 for i in self.strategies]):
@@ -923,67 +878,6 @@ class Bot:
             if i < len(group_n):
                 alternating_data.append(group_n[i])
         return alternating_data
-
-    # @class_errors
-    # def test_strategies(self, add_number=0):
-    #     self.backtest_time = dt.now().strftime("%H:%M")
-    #     strategies_number = 4 + add_number
-    #     super_start_time = time.time()
-    #     strategies = import_strategies(['find_support_resistance_numpy'])
-    #     self.strategies_raw = []
-    #     i = 1
-    #     for strategy in strategies:
-    #         self.is_this_the_end()
-    #         self.check_trigger(backtest=True)
-    #         name_ = strategy.__name__
-    #         interval = name_.split('_')[-1]
-    #         kind = name_.split('_')[-2]
-    #         print(f'Strategy {i} from {len(strategies)}')
-    #         i += 1
-    #         results_pack = self.trend_backtest(strategy)
-    #         if results_pack is None:
-    #             print("This strategy have no results.")
-    #             continue
-    #         fast, slow, result, actual_condition, daily_return, end_result, risk_data = results_pack
-    #         tp, sl, tp_std, sl_std = risk_data
-    #         printer("TP/TP_STD", f'{tp, tp_std}')
-    #         printer("SL/SL_STD", f'{sl, sl_std}')
-    #         print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, "\n")
-    #         self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std))
-
-    #     for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std in self.strategies_raw:
-    #         try:
-    #             tp_sl = round(tp_std/sl_std, 3)
-    #         except ZeroDivisionError:
-    #             tp_sl = 0
-    #         if end_result is None:
-    #             end_result = 0
-    #         self.write_to_backtest(name_, interval, result, kind, fast, slow, end_result, tp_sl)
-
-    #     self.strategies = [i for i in self.strategies_raw if ((i[5] != np.inf) and (i[5] > 0))]
-    #     try:
-    #         self.strategies = self.sort_strategies()
-    #     except Exception:
-    #         sleep(1800)
-    #         self.test_strategies()
-
-    #     time_info(time.time()-super_start_time, 'Total duration')
-
-    #     # use only four best strategies
-    #     if len(self.strategies) > strategies_number:
-    #         self.strategies = self.strategies[:strategies_number]
-
-    #     if len(self.strategies) == 0:
-    #         self.close_request()
-    #         print("You don't have any strategy to open position right now. Waiting a half an hour for backtest.")
-    #         sleep(1800)
-    #         self.test_strategies()
-    #     else:
-    #         for i in self.strategies:
-    #             print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9], i[10], i[11])
-    #         self.strategy_number = 0
-    #         self.tiktok = 0
-    #         self.reset_bot()
 
     @class_errors
     def too_much_risk(self):
@@ -1020,13 +914,14 @@ class Bot:
         my_data = mini_data()
         if my_data == []:
             return None
-        module_name = "volume_metrics.universal_strategies"  # Nazwa modułu
+        # module_name = "volume_metrics.universal_strategies"  # Nazwa modułu
         function_name = my_data[1]   # Nazwa funkcji w module
 
-        # Importujemy moduł dynamicznie
-        module = importlib.import_module(module_name)
-        function = getattr(module, function_name)
-        my_data[1] = function
+        # # Importujemy moduł dynamicznie
+        # module = importlib.import_module(module_name)
+        # function = getattr(module, function_name)
+        # my_data[1] = function
+        my_data[1] = globals()[function_name]
         print(my_data)
         return my_data
 
@@ -1040,8 +935,8 @@ class Bot:
         strategy = data[1]
         fast = data[2]
         slow = data[3]
-        df = get_data(self.symbol, data[-1], 1, 5000)
-        df = strategy(df, slow, fast)
+        df_raw = get_data(self.symbol, data[-1], 1, 5000)
+        df = strategy(df_raw.copy(), slow, fast, self.symbol)[0]
         position = int(0) if df['stance'].iloc[-1] == 1 else int(1) if df['stance'].iloc[-1] == -1 else None
         self.trend = "Long" if position == 0 else "SHORT"
         if position is None:
