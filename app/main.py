@@ -691,7 +691,7 @@ class Bot:
 
         self.volume_calc(self.position_size, posType, True)
 
-        name_ = self.strategies[self.strategy_number][0][:6]
+        name_ = self.strategies[self.strategy_number][0][:5]
         fast = self.strategies[self.strategy_number][3]
         slow = self.strategies[self.strategy_number][4]
         self.comment = f'{name_}{self.interval[-1:]}_{fast}_{slow}_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
