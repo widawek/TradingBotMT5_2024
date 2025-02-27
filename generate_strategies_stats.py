@@ -1,3 +1,8 @@
+# import sys
+# import os
+
+# sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
 from config.parameters import symbols
 from strategies_analize.global_strategies import *
 from strategies_analize.complex_backtest_class import *
@@ -10,11 +15,11 @@ slow_intervals = ['M10', 'M20']
 metrics = [only_strategy_metric, sharpe_metric, wlr_rr_metric, mix_rrsimple_metric]
 
 print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.10)/60)
-full_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, bars=16000)
-full_test.full_analize()
-full_test.output()
-x = full_test.df_metrics
-x = x.sort_values(by='result', ascending=False)
-x.to_excel('strategy_results_Mhigh.xlsx')
+fast_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, bars=16000)
+fast_test.full_analize()
+fast_test.output()
 
-input()
+# print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.10)/60)
+# fast_test = Backtest_complex(symbols, slow_intervals, strategies, metrics, bars=9000)
+# fast_test.full_analize()
+# fast_test.output()

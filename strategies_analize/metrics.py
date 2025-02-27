@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-
+import sys
+sys.path.append("..")
 
 def wlr_rr_metric(dfx):
     df = dfx.copy()

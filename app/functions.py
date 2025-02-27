@@ -381,30 +381,30 @@ def marker(df):
         )
 
 
-def import_strategies(to_delate: list) -> list:
-    from collections import Counter
+# def import_strategies(to_delate: list) -> list:
+#     from collections import Counter
 
-    def find_non_unique_elements(lst):
-        # Liczymy wystąpienia każdego elementu
-        element_counts = Counter(lst)
-        # Zwracamy elementy, które pojawiają się więcej niż raz
-        return [item for item, count in element_counts.items() if count > 1]
+#     def find_non_unique_elements(lst):
+#         # Liczymy wystąpienia każdego elementu
+#         element_counts = Counter(lst)
+#         # Zwracamy elementy, które pojawiają się więcej niż raz
+#         return [item for item, count in element_counts.items() if count > 1]
 
 
-    import inspect
-    to_delate += ['np', 'dt', 'pd', 'ta']
-    import app.strategies
-    atrybuty = inspect.getmembers(app.strategies)
-    funkcje = [element for element in atrybuty if
-               inspect.isfunction(element[1])]
-    strategiesList = [i[1] for i in funkcje if i[0] not in to_delate]
-    print(f"Number of strategies to check {len(strategiesList)}")
-    test_list = [i.__name__[:6] for i in strategiesList]
-    print(find_non_unique_elements(test_list))
-    assert len(test_list) == len(list(set(test_list))), \
-        "Some of strategies have the same first 6 letters in name."
+#     import inspect
+#     to_delate += ['np', 'dt', 'pd', 'ta']
+#     import app.strategies
+#     atrybuty = inspect.getmembers(app.strategies)
+#     funkcje = [element for element in atrybuty if
+#                inspect.isfunction(element[1])]
+#     strategiesList = [i[1] for i in funkcje if i[0] not in to_delate]
+#     print(f"Number of strategies to check {len(strategiesList)}")
+#     test_list = [i.__name__[:6] for i in strategiesList]
+#     print(find_non_unique_elements(test_list))
+#     assert len(test_list) == len(list(set(test_list))), \
+#         "Some of strategies have the same first 6 letters in name."
 
-    return strategiesList
+#     return strategiesList
 
 
 def interval_time_sharpe(interval):

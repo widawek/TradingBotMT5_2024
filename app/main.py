@@ -596,15 +596,15 @@ class Bot:
                 self.test_strategies()
                 strategy = self.strategies[self.strategy_number]
             print("Strategia", strategy[0])
-            self.interval = strategy[0].split('_')[-1]
+            self.interval = strategy[2]
             fast = strategy[3]
             slow = strategy[4]
 
             dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + 3440)) # how_many_bars
-            dfx, position = strategy[1](dfx, slow, fast)
+            dfx, position = strategy[1](dfx, slow, fast, self.symbol)
             if position not in [-1, 1]:
                 dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + number_of_bars*20)) # how_many_bars
-                dfx, position = strategy[1](dfx, slow, fast)
+                dfx, position = strategy[1](dfx, slow, fast, self.symbol)
 
                 printer(f'Position from {strategy[0]}:', f'fast={fast} slow={slow}', base_just=60)
                 printer(f'Position from {strategy[0]}:', position)
@@ -694,7 +694,7 @@ class Bot:
         name_ = self.strategies[self.strategy_number][0][:6]
         fast = self.strategies[self.strategy_number][3]
         slow = self.strategies[self.strategy_number][4]
-        self.comment = f'{name_}_{fast}_{slow}_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
+        self.comment = f'{name_}{self.interval[-1]}_{fast}_{slow}_{self.actual_today_best[:1]}_{self.if_position_with_trend}'
 
         if self.reverse.condition:
             self.comment = '8'+self.comment[1:]
@@ -741,7 +741,6 @@ class Bot:
         else:
             self.change = 0
             return True
-
 
     @class_errors
     def mdv_(self):
@@ -792,12 +791,10 @@ class Bot:
             sleep(time_sleep*60)
             self.test_strategies()
 
-
     @class_errors
     def pos_creator(self):
         self.strategy_number += 1
         return self.actual_position_democracy()
-
 
     @class_errors
     def write_to_database(self, profit, spread):
@@ -858,50 +855,50 @@ class Bot:
             print("write_to_backtest", e)
             pass
 
-    @class_errors
-    def trend_backtest(self, strategy):
-        print(strategy.__name__)
+    # @class_errors
+    # def trend_backtest(self, strategy):
+    #     print(strategy.__name__)
 
-        if strategy.__name__ == 'model':
-            interval = self.model_interval
-        else:
-            interval = strategy.__name__.split('_')[-1]
+    #     if strategy.__name__ == 'model':
+    #         interval = self.model_interval
+    #     else:
+    #         interval = strategy.__name__.split('_')[-1]
 
-        sharpe_multiplier = interval_time_sharpe(interval)
-        df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
-        #small_bt_bars = calculate_bars_to_past(df_raw)
+    #     sharpe_multiplier = interval_time_sharpe(interval)
+    #     df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
+    #     #small_bt_bars = calculate_bars_to_past(df_raw)
 
-        #if not strategy.__name__.startswith('model'):
-        results = []
-        for slow in trange(5, 62, 3):
-            for fast in range(2, 21, 2):
-                try:
-                    if fast == slow:
-                        continue
-                    df1, _ = strategy(df_raw, slow, fast)
-                    if len(df1) < self.number_of_bars_for_backtest/2:
-                        continue
-                    df1, density = calculate_strategy_returns(df1, leverage)
-                    if (len(df1) < self.number_of_bars_for_backtest/2) or (density < 1/500):
-                        continue
-                    df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
-                    #df2 = df1.copy()[-small_bt_bars:]
-                    sharpe, omega = calc_result(df1, sharpe_multiplier, False, False)
-                    sharpe2, omega2, end_result, risk_data = calc_result(df1, sharpe_multiplier, True, True)
-                    #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
-                    _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
-                    results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(omega+omega2),
-                                    actual_condition, daily_return, end_result, risk_data))
-                except Exception as e:
-                    print("trend_backtest", e)
-                    continue
+    #     #if not strategy.__name__.startswith('model'):
+    #     results = []
+    #     for slow in trange(5, 62, 3):
+    #         for fast in range(2, 21, 2):
+    #             try:
+    #                 if fast == slow:
+    #                     continue
+    #                 df1, _ = strategy(df_raw, slow, fast)
+    #                 if len(df1) < self.number_of_bars_for_backtest/2:
+    #                     continue
+    #                 df1, density = calculate_strategy_returns(df1, leverage)
+    #                 if (len(df1) < self.number_of_bars_for_backtest/2) or (density < 1/500):
+    #                     continue
+    #                 df1 = delete_last_day_and_clean_returns(df1, morning_hour, evening_hour, respect_overnight)
+    #                 #df2 = df1.copy()[-small_bt_bars:]
+    #                 sharpe, omega = calc_result(df1, sharpe_multiplier, False, False)
+    #                 sharpe2, omega2, end_result, risk_data = calc_result(df1, sharpe_multiplier, True, True)
+    #                 #sharpe3, _ = calc_result(df1, sharpe_multiplier, True)
+    #                 _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
+    #                 results.append((fast, slow, round(np.mean(sharpe+sharpe2), 3), np.mean(omega+omega2),
+    #                                 actual_condition, daily_return, end_result, risk_data))
+    #             except Exception as e:
+    #                 print("trend_backtest", e)
+    #                 continue
 
-        try:
-            f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
-        except IndexError:
-            return None
-        print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
-        return f_result[0], f_result[1], round(f_result[2]*f_result[3]*f_result[6]*100, 4), f_result[4], f_result[5], f_result[6], f_result[7]
+    #     try:
+    #         f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
+    #     except IndexError:
+    #         return None
+    #     print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
+    #     return f_result[0], f_result[1], round(f_result[2]*f_result[3]*f_result[6]*100, 4), f_result[4], f_result[5], f_result[6], f_result[7]
 
     @class_errors
     def sort_strategies(self):
@@ -927,66 +924,66 @@ class Bot:
                 alternating_data.append(group_n[i])
         return alternating_data
 
-    @class_errors
-    def test_strategies(self, add_number=0):
-        self.backtest_time = dt.now().strftime("%H:%M")
-        strategies_number = 4 + add_number
-        super_start_time = time.time()
-        strategies = import_strategies(['find_support_resistance_numpy'])
-        self.strategies_raw = []
-        i = 1
-        for strategy in strategies:
-            self.is_this_the_end()
-            self.check_trigger(backtest=True)
-            name_ = strategy.__name__
-            interval = name_.split('_')[-1]
-            kind = name_.split('_')[-2]
-            print(f'Strategy {i} from {len(strategies)}')
-            i += 1
-            results_pack = self.trend_backtest(strategy)
-            if results_pack is None:
-                print("This strategy have no results.")
-                continue
-            fast, slow, result, actual_condition, daily_return, end_result, risk_data = results_pack
-            tp, sl, tp_std, sl_std = risk_data
-            printer("TP/TP_STD", f'{tp, tp_std}')
-            printer("SL/SL_STD", f'{sl, sl_std}')
-            print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, "\n")
-            self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std))
+    # @class_errors
+    # def test_strategies(self, add_number=0):
+    #     self.backtest_time = dt.now().strftime("%H:%M")
+    #     strategies_number = 4 + add_number
+    #     super_start_time = time.time()
+    #     strategies = import_strategies(['find_support_resistance_numpy'])
+    #     self.strategies_raw = []
+    #     i = 1
+    #     for strategy in strategies:
+    #         self.is_this_the_end()
+    #         self.check_trigger(backtest=True)
+    #         name_ = strategy.__name__
+    #         interval = name_.split('_')[-1]
+    #         kind = name_.split('_')[-2]
+    #         print(f'Strategy {i} from {len(strategies)}')
+    #         i += 1
+    #         results_pack = self.trend_backtest(strategy)
+    #         if results_pack is None:
+    #             print("This strategy have no results.")
+    #             continue
+    #         fast, slow, result, actual_condition, daily_return, end_result, risk_data = results_pack
+    #         tp, sl, tp_std, sl_std = risk_data
+    #         printer("TP/TP_STD", f'{tp, tp_std}')
+    #         printer("SL/SL_STD", f'{sl, sl_std}')
+    #         print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, "\n")
+    #         self.strategies_raw.append((name_, strategy, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std))
 
-        for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std in self.strategies_raw:
-            try:
-                tp_sl = round(tp_std/sl_std, 3)
-            except ZeroDivisionError:
-                tp_sl = 0
-            if end_result is None:
-                end_result = 0
-            self.write_to_backtest(name_, interval, result, kind, fast, slow, end_result, tp_sl)
+    #     for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std in self.strategies_raw:
+    #         try:
+    #             tp_sl = round(tp_std/sl_std, 3)
+    #         except ZeroDivisionError:
+    #             tp_sl = 0
+    #         if end_result is None:
+    #             end_result = 0
+    #         self.write_to_backtest(name_, interval, result, kind, fast, slow, end_result, tp_sl)
 
-        self.strategies = [i for i in self.strategies_raw if ((i[5] != np.inf) and (i[5] > 0))]
-        try:
-            self.strategies = self.sort_strategies()
-        except Exception:
-            sleep(1800)
-            self.test_strategies()
+    #     self.strategies = [i for i in self.strategies_raw if ((i[5] != np.inf) and (i[5] > 0))]
+    #     try:
+    #         self.strategies = self.sort_strategies()
+    #     except Exception:
+    #         sleep(1800)
+    #         self.test_strategies()
 
-        time_info(time.time()-super_start_time, 'Total duration')
+    #     time_info(time.time()-super_start_time, 'Total duration')
 
-        # use only four best strategies
-        if len(self.strategies) > strategies_number:
-            self.strategies = self.strategies[:strategies_number]
+    #     # use only four best strategies
+    #     if len(self.strategies) > strategies_number:
+    #         self.strategies = self.strategies[:strategies_number]
 
-        if len(self.strategies) == 0:
-            self.close_request()
-            print("You don't have any strategy to open position right now. Waiting a half an hour for backtest.")
-            sleep(1800)
-            self.test_strategies()
-        else:
-            for i in self.strategies:
-                print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9], i[10], i[11])
-            self.strategy_number = 0
-            self.tiktok = 0
-            self.reset_bot()
+    #     if len(self.strategies) == 0:
+    #         self.close_request()
+    #         print("You don't have any strategy to open position right now. Waiting a half an hour for backtest.")
+    #         sleep(1800)
+    #         self.test_strategies()
+    #     else:
+    #         for i in self.strategies:
+    #             print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9], i[10], i[11])
+    #         self.strategy_number = 0
+    #         self.tiktok = 0
+    #         self.reset_bot()
 
     @class_errors
     def too_much_risk(self):
@@ -1056,12 +1053,6 @@ class Bot:
         print(f'volume_reducer {name_} not ok')
         return if_not_ok
 
-
-
-
-
-
-
     @class_errors
     def load_strategies_from_json(self):
         with open("fast.json", "r", encoding="utf-8") as f:
@@ -1072,8 +1063,7 @@ class Bot:
         return output
 
     @class_errors
-    def test_strategies_test(self, add_number=0):
-        
+    def test_strategies(self, add_number=0):
         self.backtest_time = dt.now().strftime("%H:%M")
         strategies_number = 4 + add_number
         super_start_time = time.time()
@@ -1137,7 +1127,7 @@ class Bot:
             self.reset_bot()
 
     @class_errors
-    def trend_backtest_test(self, strategy, interval):
+    def trend_backtest(self, strategy, interval):
         print(strategy.__name__)
         sharpe_multiplier = interval_time_sharpe(interval)
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
@@ -1154,7 +1144,8 @@ class Bot:
                     if (len(df1) < self.number_of_bars_for_backtest/2) or (density < 1/500):
                         continue
                     result = self.bt_metric(df1)
-                    _, _, end_result, risk_data = calc_result(df1, sharpe_multiplier, True, True)
+                    df1['date_xy'] = df1['time'].dt.date
+                    _, _, end_result, risk_data = calc_result_metric(df1, sharpe_multiplier, self.bt_metric, False, True)
 
                     _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
                     results.append((fast, slow, result, result,
@@ -1162,7 +1153,6 @@ class Bot:
                 except Exception as e:
                     print("trend_backtest", e)
                     continue
-
         try:
             f_result = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
         except IndexError:

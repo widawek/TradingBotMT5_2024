@@ -150,7 +150,7 @@ def give_me_all_returns(strategies_to_bt, bars, interval):
 
 
 class Backtest:
-    def __init__(self, symbols: list, interval: str, strategies: list, max_fast: int=23, max_slow: int=62, bars: int=16000):
+    def __init__(self, symbols: list, interval: str, strategies: list, max_fast: int=23, max_slow: int=62, bars: int=9000):
         self.symbols = symbols
         self.interval = interval
         self.strategies = strategies

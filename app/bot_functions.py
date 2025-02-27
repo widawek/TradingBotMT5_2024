@@ -439,12 +439,12 @@ def wlr_rr(df_raw):
     sl_plus_std = mean_sl + 0.1*series_sl.std()
     
     risk_reward_ratio = round(tp_plus_std / sl_plus_std, 3)
-    if risk_reward_ratio < 1.3:
-        return 0, [0,0,0,0]
+    # if risk_reward_ratio < 1.3:
+    #     return 0, [0,0,0,0]
     try:
         win_loss_ratio = round(len(stats_df[stats_df['result'] > 0])/len(stats_df[stats_df['result'] < 0]), 3)
-        if win_loss_ratio < 0.9:
-            return 0, [0,0,0,0]
+        # if win_loss_ratio < 0.9:
+        #     return 0, [0,0,0,0]
     except ZeroDivisionError:
         win_loss_ratio = 1
     end_result = round(risk_reward_ratio * win_loss_ratio, 2)
@@ -469,6 +469,25 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=Fa
     x = sharpe_multiplier/cross
     sharpe = 1
     final_result = strategy_score(df['return'], x, days)
+    if check_end_result:
+        end_result, risk_data = wlr_rr(df)
+        return sharpe, final_result, end_result, risk_data
+    else:
+        return sharpe, final_result
+
+
+def calc_result_metric(df, sharpe_multiplier, metric, check_week_ago=False, check_end_result=False):
+    if check_week_ago:
+        today = dt.now().date()
+        week_ago_date = today - timedelta(days=7)
+        df = df[(df['date_xy'] >= week_ago_date)]
+    df = df.dropna()
+    df.reset_index(drop=True, inplace=True)
+    cross = int(df['cross'].sum()) ** 0.85 + 2
+    days = len(list(np.unique(df['date_xy'])))
+    x = sharpe_multiplier/cross
+    sharpe = 1
+    final_result = metric(df)
     if check_end_result:
         end_result, risk_data = wlr_rr(df)
         return sharpe, final_result, end_result, risk_data
@@ -586,8 +605,10 @@ def play_with_trend(symbol, short, long, dev, divider):
 
 
 def play_with_trend_bt(symbol):
-    longs = range(1300, 1501, 25)#range(1100, 2001, 25)
-    shorts = range(350, 721, 15)
+
+    return 10, 20, 2, 1
+    longs = range(1350, 1501, 25)#range(1100, 2001, 25)
+    shorts = range(350, 621, 20)
     devs = range(10, 23, 2)
     df_raw = get_data(symbol, 'M5', 1, 75000)
     df_raw['weekday'] = df_raw.time.dt.weekday

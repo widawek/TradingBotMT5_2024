@@ -4,8 +4,8 @@ import numpy as np
 from tqdm import tqdm
 import warnings
 import json
-from global_strategies import *
-from metrics import *
+from strategies_analize.global_strategies import *
+from strategies_analize.metrics import *
 from config.parameters import symbols
 mt.initialize()
 warnings.filterwarnings('ignore')
@@ -111,7 +111,7 @@ class Backtest_complex:
             for fast in range(2, self.fast, 2):
                 try:
                     df = df_raw.copy()
-                    df = returns_bt(strategy(df, slow, fast, symbol))
+                    df = returns_bt(strategy(df, slow, fast, symbol)[0])
                     if (len(df) > 0.8*self.bars) or (df['cross'].sum() > 7):
                         for i in self.metrics:
                             results.append([i.__name__, symbol, fast, slow, i(df)])
@@ -143,7 +143,7 @@ class Backtest_complex:
                         for df_raw, df_test in tqdm(self.full_anal):
                             best_strategies = self.strategy_bt(symbol, strategy, df_raw)
                             for metric, symbol, fast, slow, _ in best_strategies:
-                                df = returns_bt_full_anal(strategy(df_test, slow, fast, symbol))
+                                df = returns_bt_full_anal(strategy(df_test, slow, fast, symbol)[0])
                                 df['strategy'] = (1+df['return']).cumprod() - 1
                                 results.append((metric, df['strategy'].iloc[-1]))
 
@@ -220,7 +220,7 @@ class Backtest_complex:
         print(len(symbol_strategy_sharpe), symbol_strategy_sharpe['sharpe'].mean())
         symbol_strategy_sharpe['metric'] = best_metric
 
-        to_json = [(row.symbol, row.strategy, row.interval) for row in symbol_strategy_sharpe.itertuples()]
+        to_json = [(row.symbol, row.strategy, row.interval, row.metric) for row in symbol_strategy_sharpe.itertuples()]
 
         # Zapis do pliku JSON
         name_ = 'fast' if 'M1' in self.intervals else 'slow' if 'M10' in self.intervals else 'dontknow'
