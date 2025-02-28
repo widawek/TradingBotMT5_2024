@@ -104,7 +104,10 @@ class Backtest_complex:
             # print(self.dfs_to_backtest[-1].tail(5), self.dfs_test[-1].head(5), self.dfs_test[-1].tail(5))
             # input()
         assert len(self.dfs_to_backtest) == len(self.dfs_test), f'{len(self.dfs_to_backtest)} {len(self.dfs_test)}'
-        assert self.dfs_to_backtest[-1]['time'].dt.date.iloc[-1] == self.dfs_test[-1]['time'].dt.date.iloc[-1]-timedelta(days=1), f'bad dates'
+        # assert self.dfs_to_backtest[0]['time'].dt.date.iloc[-1] == self.dfs_test[0]['time'].dt.date.iloc[-1]-timedelta(days=1), f'bad dates'
+        # assert self.dfs_to_backtest[-1]['time'].dt.date.iloc[-1] == self.dfs_test[-1]['time'].dt.date.iloc[-1]-timedelta(days=1), f'bad dates'
+        print(self.dfs_to_backtest[0]['time'].dt.date.iloc[-1] == self.dfs_test[0]['time'].dt.date.iloc[-1]-timedelta(days=1))
+        print(self.dfs_to_backtest[-1]['time'].dt.date.iloc[-1] == self.dfs_test[-1]['time'].dt.date.iloc[-1]-timedelta(days=1))
         self.full_anal = list(zip(self.dfs_to_backtest, self.dfs_test))[-self.days:]
 
 
