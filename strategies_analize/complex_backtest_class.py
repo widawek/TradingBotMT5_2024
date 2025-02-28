@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 import warnings
 import json
+from datetime import timedelta
 from strategies_analize.global_strategies import *
 from strategies_analize.metrics import *
 from config.parameters import symbols
@@ -67,11 +68,12 @@ def returns_bt_full_anal(df_raw):
 
 class Backtest_complex:
     def __init__(self, symbols: list, intervals: list, strategies: list,
-                 metrics: list, max_fast: int=21, max_slow: int=62, bars: int=16000, excel=True):
+                 metrics: list, days=10, max_fast: int=21, max_slow: int=62, bars: int=16000, excel=True):
         self.symbols = symbols
         self.metrics = metrics
         self.intervals = intervals
         self.strategies = strategies
+        self.days = days
         self.fast = max_fast
         self.slow = max_slow
         self.bars = bars
@@ -90,19 +92,20 @@ class Backtest_complex:
         self.main_df = df_raw.copy()
         df_raw['new_date'] = np.where(df_raw['date'] != df_raw['date'].shift(), 1, 0)
         if interval not in ['M10', 'M15', 'M20', 'M30']:
-            indexes = df_raw[df_raw['new_date'] == 1].index.tolist()[-21:-1]
-            dates = df_raw[df_raw['new_date'] == 1]['date'].tolist()[-22:-1]
-            self.dfs_to_backtest = [self.main_df.iloc[i-self.bars:i-1] for i in indexes]
-            self.dfs_test = [self.main_df[(self.main_df['date'] >= dates[i-1])&(self.main_df['date'] <= dates[i])] for i in range(len(dates)) if i > 0]
+            indexes = df_raw[df_raw['new_date'] == 1].index.tolist()[-self.days-10:]
+            dates = df_raw[df_raw['new_date'] == 1]['date'].tolist()[-self.days-10:]
+            self.dfs_to_backtest = [self.main_df.iloc[i-self.bars:i] for i in indexes]
+            self.dfs_test = [self.main_df[(self.main_df['date'] >= dates[i])&(self.main_df['date'] <= dates[i])] for i in range(len(dates))]
         else:
-            indexes = df_raw[df_raw['new_date'] == 1].index.tolist()[-21:-1]
-            dates = df_raw[df_raw['new_date'] == 1]['date'].tolist()[-30:-1]
-            self.dfs_to_backtest = [self.main_df.iloc[i-self.bars:i-1] for i in indexes]
-            self.dfs_test = [self.main_df[(self.main_df['date'] >= dates[i-9])&(self.main_df['date'] <= dates[i])] for i in range(len(dates)) if i > 8]
+            indexes = df_raw[df_raw['new_date'] == 1].index.tolist()[-self.days-10:]
+            dates = df_raw[df_raw['new_date'] == 1]['date'].tolist()[-self.days-19:]
+            self.dfs_to_backtest = [self.main_df.iloc[i-self.bars:i] for i in indexes]
+            self.dfs_test = [self.main_df[(self.main_df['date'] >= dates[i-9])&(self.main_df['date'] <= dates[i])] for i in range(len(dates)) if i >= 9]
             # print(self.dfs_to_backtest[-1].tail(5), self.dfs_test[-1].head(5), self.dfs_test[-1].tail(5))
             # input()
         assert len(self.dfs_to_backtest) == len(self.dfs_test), f'{len(self.dfs_to_backtest)} {len(self.dfs_test)}'
-        self.full_anal = list(zip(self.dfs_to_backtest, self.dfs_test))
+        assert self.dfs_to_backtest[-1]['time'].dt.date.iloc[-1] == self.dfs_test[-1]['time'].dt.date.iloc[-1]-timedelta(days=1), f'bad dates'
+        self.full_anal = list(zip(self.dfs_to_backtest, self.dfs_test))[-self.days:]
 
 
     def strategy_bt(self, symbol, strategy, df_raw):
