@@ -156,7 +156,7 @@ class Backtest:
     def __init__(self, interval, max_fast: int=23, max_slow: int=62, bars: int=9000):
         self.interval = interval
         self.strategies = self.load_strategies_from_json()
-        self.bt_metric = globals()[self.strategies[0][3]]
+        #self.bt_metric = globals()[self.strategies[0][3]]
         self.fast = max_fast
         self.slow = max_slow
         self.bars = bars
@@ -171,25 +171,26 @@ class Backtest:
         return output
 
     def backtest_strategies(self):
-        for symbol, strategy_, _, _ in tqdm(self.strategies):
+        for symbol, strategy_, _, bt_metric_ in tqdm(self.strategies):
             df_raw = get_data(symbol, self.interval, 1, self.bars)
             strategy = globals()[strategy_]
+            bt_metric = globals()[bt_metric_]
             try:
-                result = [strategy, self.interval]+self.strategy_bt(strategy, df_raw.copy(), symbol)
+                result = [strategy, self.interval]+self.strategy_bt(strategy, bt_metric, df_raw.copy(), symbol)
                 self.strategies_to_test.append(result)
             except Exception as e:
                 print(e)
                 input()
                 continue
 
-    def strategy_bt(self, strategy, df_raw, symbol):
+    def strategy_bt(self, strategy, bt_metric, df_raw, symbol):
         results = []
         for slow in range(5, self.slow, 3):
             for fast in range(2, self.fast, 2):
                 try:
                     df = returns_bt(strategy(df_raw.copy(), slow, fast, symbol)[0])
                     if (len(df) > 0.8*self.bars) or (df['cross'].sum() > 7):
-                        results.append([symbol, strategy.__name__, fast, slow, self.bt_metric(df)])
+                        results.append([symbol, strategy.__name__, fast, slow, bt_metric(df)])
                     else:
                         continue
                 except Exception as e:
