@@ -107,7 +107,7 @@ class Backtest_complex:
 
     def strategy_bt(self, symbol, strategy, df_raw):
         results = []
-        for slow in range(5, self.slow, 3):
+        for slow in range(5, self.slow, 2):
             for fast in range(2, self.fast, 2):
                 try:
                     df = df_raw.copy()
@@ -200,7 +200,7 @@ class Backtest_complex:
             ).sort_values(by='final_mean', ascending=False)
         interval_sharpe = interval_sharpe.reset_index()
         interval_sharpe['final'] = interval_sharpe['final_mean'] * interval_sharpe['count']
-        
+
         best_metric = interval_sharpe['metric'].iloc[0]
         osm = self.df_metrics.copy()
         osm = osm[osm['metric'] == best_metric]
@@ -224,7 +224,7 @@ class Backtest_complex:
 
         # Zapis do pliku JSON
         name_ = 'fast' if 'M1' in self.intervals else 'slow' if 'M10' in self.intervals else 'dontknow'
-        with open(f"{name_}.json", "w", encoding="utf-8") as f:
+        with open(f"{name_}.json", "w+", encoding="utf-8") as f:
             json.dump(to_json, f, indent=4)
 
 

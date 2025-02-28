@@ -33,7 +33,7 @@ class Reverse:
     def __init__(self, symbol):
         self.symbol = symbol
         self.condition = False
-        self.one_percent_balance = -round(mt.account_info().balance/100, 2)
+        self.one_percent_balance = -3 * round(mt.account_info().balance/100, 2)
 
     def closed_pos(self, symbol: str = 'all'):
         dzisiaj = dt.now().date()
@@ -1027,8 +1027,8 @@ class Bot:
         sharpe_multiplier = interval_time_sharpe(interval)
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
         results = []
-        for slow in trange(5, 62, 3):
-            for fast in range(2, 21, 2):
+        for slow in trange(5, 62):
+            for fast in range(2, 21):
                 try:
                     if fast == slow:
                         continue
@@ -1040,10 +1040,10 @@ class Bot:
                         continue
                     result = self.bt_metric(df1)
                     df1['date_xy'] = df1['time'].dt.date
-                    _, _, end_result, risk_data = calc_result_metric(df1, sharpe_multiplier, self.bt_metric, False, True)
+                    _, result2, end_result, risk_data = calc_result_metric(df1, sharpe_multiplier, self.bt_metric, True, True)
 
                     _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
-                    results.append((fast, slow, result, result,
+                    results.append((fast, slow, result, result2,
                                     actual_condition, daily_return, end_result, risk_data))
                 except Exception as e:
                     print("trend_backtest", e)
