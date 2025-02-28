@@ -184,13 +184,19 @@ class Backtest_complex:
                         if self.excel:
                             self.df_metrics = pd.DataFrame(metrics_results, columns=['symbol', 'strategy', 'metric', 'interval', 'sharpe', 'result', 'density'])
                             self.df_metrics = self.df_metrics.sort_values(by='result', ascending=False)
-                            try:
-                                self.df_metrics.to_excel("buffer_highint.xlsx")
-                            except Exception:
-                                self.df_metrics.to_excel("buffer_highint2.xlsx")
+                            if 'M10' in self.intervals:
+                                try:
+                                    self.df_metrics.to_excel("bufferh.xlsx")
+                                except Exception:
+                                    self.df_metrics.to_excel("bufferh2.xlsx")
+                            else:
+                                try:
+                                    self.df_metrics.to_excel("buffer.xlsx")
+                                except Exception:
+                                    self.df_metrics.to_excel("buffer2.xlsx")
                     except Exception as e:
                         print('excel', e)
-                        continue
+                    continue
 
         self.df_metrics = pd.DataFrame(metrics_results, columns=['symbol', 'strategy', 'metric', 'interval', 'sharpe', 'result', 'density'])
 
