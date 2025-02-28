@@ -221,6 +221,12 @@ class Backtest_complex:
 
         # Zapis do pliku JSON
         name_ = 'fast' if 'M1' in self.intervals else 'slow' if 'M10' in self.intervals else 'dontknow'
+
+        if name_ == 'fast':
+            df.to_excel('fast.xlsx')
+        elif name_ == 'slow':
+            df.to_excel('slow.xlsx')
+
         with open(f"{name_}.json", "w+", encoding="utf-8") as f:
             json.dump(to_json, f, indent=4)
 
