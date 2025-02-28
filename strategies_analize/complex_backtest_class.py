@@ -194,7 +194,8 @@ class Backtest_complex:
             dfs = df[(df['sharpe'] > 0)&(df['density']>0.5)]
             dfs = dfs.groupby(['symbol', 'metric']).agg(sharpe_mean=('sharpe', 'mean'),
                                                 counter=('sharpe', 'size')).reset_index()
-            dfs = dfs[dfs['counter']>=4]
+            if ('M1' in self.intervals) or ('M2' in self.intervals) or ('M3' in self.intervals):
+                dfs = dfs[dfs['counter']>=4]
             idx = dfs.groupby('symbol')['sharpe_mean'].idxmax()
             result_ = dfs.loc[idx, ['symbol', 'metric']]
             result_ = result_.reset_index(drop=True)
