@@ -190,40 +190,33 @@ class Backtest_complex:
 
 
     def output(self):
-        osm = self.df_metrics.copy()
-        osm['final'] = np.where((osm['result']>0) & (osm['sharpe']>0), osm['result']*osm['sharpe'], np.nan)
-        osm=osm.dropna()
-        osm = osm.sort_values(by='sharpe', ascending=False)
-        osm.reset_index(drop=True, inplace=True)
-        print(np.unique(osm['strategy']))
+        def group_to_get_metric(df):
+            dfs = df[(df['sharpe'] > 0)&(df['density']>0.5)]
+            dfs = dfs.groupby(['symbol', 'metric']).agg(sharpe_mean=('sharpe', 'mean'),
+                                                counter=('sharpe', 'size')).reset_index()
+            dfs = dfs[dfs['counter']>=4]
+            idx = dfs.groupby('symbol')['sharpe_mean'].idxmax()
+            result_ = dfs.loc[idx, ['symbol', 'metric']]
+            result_ = result_.reset_index(drop=True)
+            return result_
 
-        interval_sharpe = osm.groupby('metric').agg(
-        final_mean=('sharpe', 'sum'),
-        count=('sharpe', 'size')  # Liczba pozycji w każdej grupie
-            ).sort_values(by='final_mean', ascending=False)
-        interval_sharpe = interval_sharpe.reset_index()
-        interval_sharpe['final'] = interval_sharpe['final_mean'] * interval_sharpe['count']
+        def symbol_to_metric(symbol, df):
+            try:
+                return [(row.metric) for row in result_.itertuples() if row.symbol == symbol][0]
+            except Exception:
+                return None
 
-        best_metric = interval_sharpe['metric'].iloc[0]
-        osm = self.df_metrics.copy()
-        osm = osm[osm['metric'] == best_metric]
-        osm=osm.dropna()
-        osm = osm.sort_values(by='sharpe', ascending=False)
-        osm.reset_index(drop=True, inplace=True)
-        print(np.unique(osm['strategy']))
+        df = self.df_metrics.copy()
+        result_ = group_to_get_metric(df)
 
-        symbol_strategy_sharpe = osm.groupby(['symbol', 'strategy', 'interval', 'metric']).agg({'sharpe': 'mean'}).sort_values(by=['symbol', 'strategy', 'interval'])
-        symbol_strategy_sharpe = symbol_strategy_sharpe[symbol_strategy_sharpe['sharpe'] > 0]
-        symbol_strategy_sharpe = symbol_strategy_sharpe.sort_values(by='sharpe', ascending=False)
-        n = int(len(symbol_strategy_sharpe) * 0.2)
-        symbol_strategy_sharpe = symbol_strategy_sharpe.iloc[:1-n]
-        symbol_strategy_sharpe = symbol_strategy_sharpe.reset_index()
-        symbol_strategy_sharpe = symbol_strategy_sharpe.sort_values(by=['symbol', 'strategy', 'interval'])
-        symbol_strategy_sharpe.reset_index(drop=True, inplace=True)
-        print(len(symbol_strategy_sharpe), symbol_strategy_sharpe['sharpe'].mean())
-        symbol_strategy_sharpe['metric'] = best_metric
+        df = df[(df['sharpe'] > 0) & (df['density'] > 0.5)]
+        df['best_metric'] = df['symbol'].apply(lambda x: symbol_to_metric(x, result_))
+        df = df[df['metric'] == df['best_metric']]
+        df = df.sort_values(by=['symbol', 'sharpe'])
+        df = df[['strategy', 'symbol', 'interval', 'metric']]
+        df.reset_index(drop=True, inplace=True)
 
-        to_json = [(row.symbol, row.strategy, row.interval, row.metric) for row in symbol_strategy_sharpe.itertuples()]
+        to_json = [(row.symbol, row.strategy, row.interval, row.metric) for row in df.itertuples()]
 
         # Zapis do pliku JSON
         name_ = 'fast' if 'M1' in self.intervals else 'slow' if 'M10' in self.intervals else 'dontknow'

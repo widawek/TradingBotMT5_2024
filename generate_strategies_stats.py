@@ -14,7 +14,7 @@ fast_intervals = ['M1', 'M2', 'M3']
 slow_intervals = ['M10', 'M20']
 metrics = [only_strategy_metric, sharpe_metric, wlr_rr_metric, mix_rrsimple_metric, sharpe_drawdown_metric, complex_metric]
 
-if input() == 'fast':
+if input('Fast or slow: ') == 'fast':
     print("FAST")
     print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.10)/60)
     fast_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, bars=16000)
