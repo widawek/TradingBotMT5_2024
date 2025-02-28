@@ -20,36 +20,6 @@ mt.initialize()
 warnings.filterwarnings('ignore')
 
 
-# strategies_M10 = [
-#         rsi_divergence_strategy,
-#         t52_moving_average_close,
-#         macd_divergence_strategy,
-#         avs_aka_atr_vol_stoch,
-#         engminmax,
-#         hhll,
-#         emaboll,
-#         sup_res_numpy,
-#         altrend,
-#         mas_t3_mad,
-#         engulf
-#             ]
-
-
-# strategies_M20 = [
-#         rsi_divergence_strategy,
-#         t52_moving_average_close,
-#         macd_divergence_strategy,
-#         avs_aka_atr_vol_stoch,
-#         engminmax,
-#         hhll,
-#         emaboll,
-#         sup_res_numpy,
-#         altrend,
-#         mas_t3_mad,
-#         engulf
-#             ]
-
-
 def calc_result_modified(dfx):
     df = dfx.copy()
     df = df.dropna()
@@ -185,8 +155,8 @@ class Backtest:
 
     def strategy_bt(self, strategy, bt_metric, df_raw, symbol):
         results = []
-        for slow in range(5, self.slow, 3):
-            for fast in range(2, self.fast, 2):
+        for slow in range(5, self.slow):
+            for fast in range(2, self.fast):
                 try:
                     df = returns_bt(strategy(df_raw.copy(), slow, fast, symbol)[0])
                     if (len(df) > 0.8*self.bars) or (df['cross'].sum() > 7):
