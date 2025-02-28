@@ -57,7 +57,7 @@ def returns_bt_full_anal(df_raw):
     df['hour'] = df['time'].dt.hour
     date = list(np.unique(df['date']))
     date.sort()
-    df = df[(df['date'] == date[-1])&(df['hour']>=6)&(df['hour']<23)]
+    df = df[(df['date'] == date[-1])]
     df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
                                     ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
     df['mkt_move'] = np.log(df.close/df.close.shift(1))
@@ -145,7 +145,10 @@ class Backtest_complex:
                             for metric, symbol, fast, slow, _ in best_strategies:
                                 df = returns_bt_full_anal(strategy(df_test, slow, fast, symbol)[0])
                                 df['strategy'] = (1+df['return']).cumprod() - 1
-                                results.append((metric, df['strategy'].iloc[-1]))
+                                results.append((metric,
+                                                round(np.mean([df['strategy'].min(),
+                                                               df['strategy'].max(),
+                                                               df['strategy'].iloc[-1]]), 5)))
 
                         results_df = pd.DataFrame(results, columns=['metric', 'final_strategy'])
                         grouped_results = results_df.groupby('metric')['final_strategy']

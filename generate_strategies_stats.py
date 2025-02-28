@@ -12,14 +12,17 @@ from strategies_analize.metrics import *
 strategies = [rsidi_counter, macdd_counter, avs1s_trend, eng2m_counter, hhllx_counter, ema1b_trend, sup1n_trend, altre_trend, mo1to_trend, engulf_counter]
 fast_intervals = ['M1', 'M2', 'M3']
 slow_intervals = ['M10', 'M20']
-metrics = [only_strategy_metric, sharpe_metric, wlr_rr_metric, mix_rrsimple_metric]
+metrics = [only_strategy_metric, sharpe_metric, wlr_rr_metric, mix_rrsimple_metric, sharpe_drawdown_metric, complex_metric]
 
-print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.10)/60)
-fast_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, bars=16000)
-fast_test.full_analize()
-fast_test.output()
-
-# print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.10)/60)
-# fast_test = Backtest_complex(symbols, slow_intervals, strategies, metrics, bars=9000)
-# fast_test.full_analize()
-# fast_test.output()
+if input() == 'fast':
+    print("FAST")
+    print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.10)/60)
+    fast_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, bars=16000)
+    fast_test.full_analize()
+    fast_test.output()
+else:
+    print("SLOW")
+    print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.10)/60)
+    fast_test = Backtest_complex(symbols, slow_intervals, strategies, metrics, bars=9000)
+    fast_test.full_analize()
+    fast_test.output()
