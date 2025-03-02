@@ -927,11 +927,14 @@ class Bot:
 
     @class_errors
     def volume_reducer(self, pos_type, name_):
-        data = self.volume_metrics_data(name_)
-        if data == []:
-            return if_not_ok
         if_not_ok = 0.7
         if_ok = 1
+        try:
+            data = self.volume_metrics_data(name_)
+        except Exception:
+            return if_not_ok
+        if data == []:
+            return if_not_ok
         strategy = data[1]
         fast = data[2]
         slow = data[3]

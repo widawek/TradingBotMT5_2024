@@ -203,7 +203,7 @@ class Backtest_complex:
 
     def output(self):
         def group_to_get_metric(df):
-            dfs = df[(df['sharpe'] > 0)&(df['density']>0.5)]
+            dfs = df[(df['sharpe'] > 0)&(df['density']>=0.5)]
             dfs = dfs.groupby(['symbol', 'metric']).agg(sharpe_mean=('sharpe', 'mean'),
                                                 counter=('sharpe', 'size')).reset_index()
             if ('M1' in self.intervals) or ('M2' in self.intervals) or ('M3' in self.intervals):
@@ -222,7 +222,7 @@ class Backtest_complex:
         df = self.df_metrics.copy()
         result_ = group_to_get_metric(df)
 
-        df = df[(df['sharpe'] > 0) & (df['density'] > 0.5)]
+        df = df[(df['sharpe'] > 0) & (df['density'] >= 0.5)]
         df['best_metric'] = df['symbol'].apply(lambda x: symbol_to_metric(x, result_))
         df = df[df['metric'] == df['best_metric']]
         df = df.sort_values(by=['symbol', 'sharpe'])
