@@ -1042,7 +1042,7 @@ class Bot:
                     if len(df1) < self.number_of_bars_for_backtest/2:
                         continue
                     df1, density = calculate_strategy_returns(df1, leverage)
-                    if (len(df1) < self.number_of_bars_for_backtest/2) or (density < 1/500) or (density > 0.1):
+                    if (len(df1) < self.number_of_bars_for_backtest/2) or (density < 1/500) or (density > 0.2):
                         continue
                     result = self.bt_metric(df1)
                     df1['date_xy'] = df1['time'].dt.date
