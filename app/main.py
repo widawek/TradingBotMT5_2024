@@ -33,7 +33,7 @@ class Reverse:
     def __init__(self, symbol):
         self.symbol = symbol
         self.condition = False
-        self.one_percent_balance = -3 * round(mt.account_info().balance/100, 2)
+        self.one_percent_balance = -10 * round(mt.account_info().balance/100, 2)
 
     def closed_pos(self, symbol: str = 'all'):
         dzisiaj = dt.now().date()
