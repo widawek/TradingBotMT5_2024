@@ -153,8 +153,8 @@ class Backtest_complex:
                                 df['strategy'] = (1+df['return']).cumprod() - 1
                                 results.append((metric,
                                                 round(np.mean([df['strategy'].min(),
-                                                               df['strategy'].max(),
-                                                               df['strategy'].iloc[-1]]), 5)))
+                                                               #df['strategy'].max(),
+                                                               df['strategy'].iloc[-1]]), 6)))
 
                         results_df = pd.DataFrame(results, columns=['metric', 'final_strategy'])
                         grouped_results = results_df.groupby('metric')['final_strategy']
