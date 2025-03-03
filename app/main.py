@@ -927,29 +927,32 @@ class Bot:
 
     @class_errors
     def volume_reducer(self, pos_type, name_):
-        if_not_ok = 0.7
-        if_ok = 1
         try:
-            data = self.volume_metrics_data(name_)
-        except Exception:
-            return if_not_ok
-        if data == []:
-            return if_not_ok
-        strategy = data[1]
-        fast = data[2]
-        slow = data[3]
-        df_raw = get_data(self.symbol, data[-1], 1, 5000)
-        df = strategy(df_raw.copy(), slow, fast, self.symbol)[0]
-        position = int(0) if df['stance'].iloc[-1] == 1 else int(1) if df['stance'].iloc[-1] == -1 else None
-        self.trend = "Long" if position == 0 else "SHORT"
-        if position is None:
+            if_not_ok = 0.7
+            if_ok = 1
+            try:
+                data = self.volume_metrics_data(name_)
+            except Exception:
+                return if_not_ok
+            if data == []:
+                return if_not_ok
+            strategy = data[1]
+            fast = data[2]
+            slow = data[3]
+            df_raw = get_data(self.symbol, data[-1], 1, 5000)
+            df = strategy(df_raw.copy(), slow, fast, self.symbol)[0]
+            position = int(0) if df['stance'].iloc[-1] == 1 else int(1) if df['stance'].iloc[-1] == -1 else None
+            self.trend = "Long" if position == 0 else "SHORT"
+            if position is None:
+                print(f'volume_reducer {name_} not ok')
+                return if_not_ok
+            if pos_type == position:
+                print(f'volume_reducer {name_} ok')
+                return if_ok
             print(f'volume_reducer {name_} not ok')
             return if_not_ok
-        if pos_type == position:
-            print(f'volume_reducer {name_} ok')
-            return if_ok
-        print(f'volume_reducer {name_} not ok')
-        return if_not_ok
+        except Exception:
+            return if_not_ok
 
     @class_errors
     def load_strategies_from_json(self):

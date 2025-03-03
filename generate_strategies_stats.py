@@ -10,7 +10,7 @@ from strategies_analize.metrics import *
 
 
 strategies = [rsidi_counter, macdd_counter, avs1s_trend, eng2m_counter, hhllx_counter, ema1b_trend, sup1n_trend, altre_trend, mo1to_trend, engulf_counter]
-fast_intervals = ['M1', 'M2', 'M3']
+fast_intervals = ['M1', 'M2', 'M3', 'M5']
 slow_intervals = ['M10', 'M20']
 metrics = [only_strategy_metric, sharpe_metric, wlr_rr_metric, mix_rrsimple_metric, sharpe_drawdown_metric, complex_metric]
 
