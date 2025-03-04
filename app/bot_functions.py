@@ -296,7 +296,7 @@ def monte_carlo_with_shuffle(returns, num_trials=200, dropout_rate=0.1):
         negative_values = [x for x in lst if x <= 0]
         new_lst = negative_values + filtered_positives
         return pd.Series(new_lst)
-    
+
     def calc_base(returns_):
         peak = 1
         max_drawdown = 0
@@ -311,7 +311,7 @@ def monte_carlo_with_shuffle(returns, num_trials=200, dropout_rate=0.1):
 
     final_ = calc_base(returns)
     #returns = remove_lowest_10_percent(returns)
-    
+
     #results_to_plot = []
     #results_to_plot.append((1 + returns).cumprod())
     results = []
@@ -384,6 +384,43 @@ def outlier_replacement(df, column_name, percentile=0.03):
     return df[column_name]
 
 
+
+def drift_function(results_from_df):
+    drift = "Neutral"
+    dict_with_returns = {}
+    dict_with_floats = {}
+    dict_with_returns['base_res'] = [i for i in results_from_df if i!=0]
+    dict_with_floats['base_sum'] = sum(results_from_df)
+    br = dict_with_returns['base_res']
+    dict_with_returns['courage_after_loss_only'] = [br[0]]+[float(br[i]) if br[i-1]<0 else 0 for i in range(1, len(br))]
+    dict_with_floats['courage_after_loss_only_sum'] = sum(dict_with_returns['courage_after_loss_only'])
+    dict_with_returns['courage_after_win_only'] = [br[0]]+[float(br[i]) if br[i-1]>0 else 0 for i in range(1, len(br))]
+    dict_with_floats['courage_after_win_only_sum'] = sum(dict_with_returns['courage_after_win_only'])
+
+    # dict_with_returns['courage_after_two_only_loss'] = br[:2]+[float(br[i])*2 if br[i-1]<0 and br[i-2]<0 else 0 for i in range(2, len(br))]
+    # dict_with_floats['courage_after_two_only_loss_sum'] = sum(dict_with_returns['courage_after_two_only_loss'])
+    # dict_with_returns['courage_after_two_only_win'] = br[:2]+[float(br[i])*2 if br[i-1]>0 and br[i-2]>0 else 0 for i in range(2, len(br))]
+    # dict_with_floats['courage_after_two_only_win_sum'] = sum(dict_with_returns['courage_after_two_only_win'])
+
+    # "Neutral" "Strong loss" "Weak loss" "Strong win" "Weak win"
+    if dict_with_floats['courage_after_loss_only_sum'] > dict_with_floats['courage_after_win_only_sum']:
+        if dict_with_floats['courage_after_loss_only_sum'] > dict_with_floats['base_sum']:
+            drift = "Strong loss"
+        else:
+            drift = "Weak loss"
+    elif dict_with_floats['courage_after_loss_only_sum'] < dict_with_floats['courage_after_win_only_sum']:
+        if dict_with_floats['courage_after_win_only_sum'] > dict_with_floats['base_sum']:
+            drift = "Strong win"
+        else:
+            drift = "Weak win"
+    else:
+        pass
+
+    return drift
+
+
+
+
 def wlr_rr(df_raw):
     df = df_raw.copy()
     df['stance'] = df['stance'].shift(1)
@@ -416,7 +453,7 @@ def wlr_rr(df_raw):
         stats.append((result, min_result, max_result))
     # --- creating dataframe with statistics ---
     stats_df = pd.DataFrame(stats, columns=['result', 'min_result', 'max_result'])
-
+    drift = drift_function(stats_df['result'].tolist())
     percent_best = 2
     number = round((percent_best/100)*len(stats_df))
     # --- normalize data to get tp and sl ---
@@ -437,7 +474,7 @@ def wlr_rr(df_raw):
     mean_sl = series_sl.mean()
     tp_plus_std = mean_tp - 0.1*series_tp.std()
     sl_plus_std = mean_sl + 0.1*series_sl.std()
-    
+
     risk_reward_ratio = round(tp_plus_std / sl_plus_std, 3)
     # if risk_reward_ratio < 1.3:
     #     return 0, [0,0,0,0]
@@ -450,10 +487,10 @@ def wlr_rr(df_raw):
     end_result = round(risk_reward_ratio * win_loss_ratio, 2)
     if (end_result == np.inf) or (end_result > 2):
         end_result = 2.0
-    
+
     garch = garch_metric(stats_df['result'])
     package = (mean_tp, mean_sl, tp_plus_std, sl_plus_std)
-    package = [round(float(i), 4) for i in package]
+    package = [round(float(i), 4) for i in package] + [drift]
     return round(end_result*garch, 5), package
 
 
@@ -673,7 +710,7 @@ def play_with_trend_bt(symbol):
                     get_this_fuck_out = sorted(get_this_fuck_out, key=lambda x: x[1], reverse=True)
                     get_this_fuck_out = [i[0] for i in get_this_fuck_out]
                     ind_ = get_this_fuck_out.index(today)
-                    
+
                     match ind_:
                         case 0: divider = 1
                         case 1: divider = 1.1
@@ -699,18 +736,18 @@ def get_last_closed_position_direction(symbol):
     today = dt.now().date()
     from_date = dt(today.year, today.month, today.day)
     to_date = dt.now()
-    
+
     history = mt.history_deals_get(from_date, to_date)
     if history is None:
         print("Brak historii transakcji")
         return None, None
 
     closed_positions = sorted([deal for deal in history if deal.symbol == symbol and deal.type in (mt.DEAL_TYPE_BUY, mt.DEAL_TYPE_SELL)], key=lambda x: x.time, reverse=True)
-    
+
     if not closed_positions:
         print("Brak zamkniętych pozycji dla symbolu", symbol)
         return None, None
-    
+
     last_deal = closed_positions[0]
     return int(0) if last_deal.type == mt.DEAL_TYPE_BUY else int(1), last_deal.price
 

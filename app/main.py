@@ -188,6 +188,7 @@ class Bot:
         self.positions_()
         self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_("M1"), 0, 1)[0][0]
         self.interval = "M1"
+        self.drift = "Neutral"
         self.test_strategies()
 
     @class_errors
@@ -200,19 +201,44 @@ class Bot:
 
     @class_errors
     def if_tiktok(self, backtest=False):
+        try:
+            try:
+                self.drift = self.strategies[self.strategy_number][12]
+            except Exception:
+                self.drift = self.strategies[self.strategy_number-1][12]
+        except Exception:
+            self.drift = self.drift
+
         pos = mt.positions_get(symbol=self.symbol)
         profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].magic == self.magic])
         self.close_profits.append((profit_, self.comment[:-1]))
         if len(self.close_profits) >= 2:
             x = self.close_profits[-2:]
-            if all([i[0] < 0 for i in x]):
-                self.position_size -= 0.1*self.position_size
-                if self.position_size < 0.5*position_size:
-                    self.position_size = 0.5*position_size
-            elif all([i[0] > 0 for i in x]):
-                self.position_size += 0.2*self.position_size
-                if self.position_size > 2*position_size:
-                    self.position_size = 2*position_size
+            last_profit = self.close_profits[-1][0]
+
+            # "Neutral" "Strong loss" "Weak loss" "Strong win" "Weak win"
+            match self.drift:
+                case "Neutral": decline, increase = 0.9, 1.11
+                case "Strong loss": decline, increase = 1.43, 0.7
+                case "Weak loss": decline, increase = 0.8, 1.25
+                case "Strong win": decline, increase = 0.7, 1.43
+                case "Weak win": decline, increase = 1.25, 0.8
+
+            if last_profit < 0 and x[0][1][:6] == x[1][1][:6]:
+                self.position_size = decline*self.position_size
+            elif last_profit > 0 and x[0][1][:6] == x[1][1][:6]:
+                self.position_size = increase*self.position_size
+            else:
+                pass
+            
+            # if all([i[0] < 0 for i in x]):
+            #     self.position_size = decline*self.position_size
+            #     if self.position_size < 0.5*position_size:
+            #         self.position_size = 0.5*position_size
+            # elif all([i[0] > 0 for i in x]):
+            #     self.position_size = increase*self.position_size
+            #     if self.position_size > 2*position_size:
+            #         self.position_size = 2*position_size
             try:
                 last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment[:-1]]
                 if len(last_to_by_comment) >= 2:
@@ -226,7 +252,7 @@ class Bot:
             last_two = 0
 
         #if '_0_0_' not in self.comment:
-        if self.tiktok < 1:
+        if self.tiktok < 2:
             if (profit_ > 0) and (last_two >= 0):
                 self.tiktok -= 1
             elif (profit_ < 0):# or (last_two < 0):
@@ -239,6 +265,7 @@ class Bot:
             else:
                 self.strategy_number += 1
                 self.tiktok = 0
+                self.position_size = position_size
         if not backtest:
             if self.strategy_number > len(self.strategies)-1:
                 self.test_strategies()
@@ -914,13 +941,7 @@ class Bot:
         my_data = mini_data()
         if my_data == []:
             return None
-        # module_name = "volume_metrics.universal_strategies"  # Nazwa modułu
-        function_name = my_data[1]   # Nazwa funkcji w module
-
-        # # Importujemy moduł dynamicznie
-        # module = importlib.import_module(module_name)
-        # function = getattr(module, function_name)
-        # my_data[1] = function
+        function_name = my_data[1]
         my_data[1] = globals()[function_name]
         print(my_data)
         return my_data
@@ -987,13 +1008,13 @@ class Bot:
                 print("This strategy have no results.")
                 continue
             fast, slow, result, actual_condition, daily_return, end_result, risk_data = results_pack
-            tp, sl, tp_std, sl_std = risk_data
+            tp, sl, tp_std, sl_std, drift = risk_data
             printer("TP/TP_STD", f'{tp, tp_std}')
             printer("SL/SL_STD", f'{sl, sl_std}')
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, "\n")
-            self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std))
+            self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift))
 
-        for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std in self.strategies_raw:
+        for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift in self.strategies_raw:
             try:
                 tp_sl = round(tp_std/sl_std, 3)
             except ZeroDivisionError:
@@ -1021,8 +1042,8 @@ class Bot:
             sleep(1800)
             self.test_strategies()
         else:
-            for i in self.strategies:
-                print(i[0], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9], i[10], i[11])
+            for strategy in self.strategies:
+                print([strategy[n] for n in range(len(strategy)) if n!=1])
             self.strategy_number = 0
             self.tiktok = 0
             self.reset_bot()
