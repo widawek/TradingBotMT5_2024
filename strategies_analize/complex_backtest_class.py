@@ -152,9 +152,12 @@ class Backtest_complex:
                                 df = returns_bt_full_anal(strategy(df_test, slow, fast, symbol)[0])
                                 df['strategy'] = (1+df['return']).cumprod() - 1
                                 results.append((metric,
-                                                round(np.mean([df['strategy'].min(),
-                                                               #df['strategy'].max(),
-                                                               df['strategy'].iloc[-1]]), 6)))
+                                                round(np.mean([
+                                                    #df['strategy'].min(),
+                                                    #df['strategy'].max(),
+                                                    df['strategy'].iloc[-1]]),
+                                                               6))
+                                                               )
 
                         results_df = pd.DataFrame(results, columns=['metric', 'final_strategy'])
                         grouped_results = results_df.groupby('metric')['final_strategy']

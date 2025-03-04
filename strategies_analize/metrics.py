@@ -6,7 +6,7 @@ from scipy.stats import linregress
 sys.path.append("..")
 
 
-def exponential_penalty(dfx, alpha: int = 15) -> float:
+def exponential_penalty(dfx, alpha: int = 10) -> float:
     cross = np.where(dfx.stance != dfx.stance.shift(), 1, 0)
     density = cross.sum()/len(dfx)
     threshold = 0.05  # Próg akceptowalnej gęstości
