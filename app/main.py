@@ -520,7 +520,7 @@ class Bot:
         #     print('volume_calc anti trend', e)
 
         trend_bonus = bonus if posType == 0 else -bonus
-        volume_m10 = self.volume_reducer(posType, 'M10')
+        volume_m10 = self.volume_reducer(posType, 'M15')
         volume_m20 = self.volume_reducer(posType, 'M20')
         if volume_m10 == 1 and volume_m20 == 1:
             self.if_position_with_trend = 'y'
@@ -531,16 +531,16 @@ class Bot:
         elif volume_m10 != 1 and volume_m20 == 1:
             self.if_position_with_trend = 'l'
 
-        max_pos_margin = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
-        max_pos_margin = (max_pos_margin + max_pos_margin*trend_bonus)*volume_m10*volume_m20
+        max_pos_margin2 = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
+        max_pos_margin2 = (max_pos_margin2 + max_pos_margin2*trend_bonus)*volume_m10*volume_m20
         x, _ = Bot.target_class.checkTarget()
         if x:
-            max_pos_margin = max_pos_margin / 2
-        print('max_pos_margin', round(max_pos_margin, 3))
+            max_pos_margin2 = max_pos_margin2 / 2
+        print('max_pos_margin', round(max_pos_margin2, 3))
 
         info_ = mt.account_info()
         if (info_.margin_free < info_.balance/10) and (not x):
-            max_pos_margin = max_pos_margin / 5
+            max_pos_margin2 = max_pos_margin2 / 5
 
         leverage_ = info_.leverage
         symbol_info = mt.symbol_info(self.symbol)._asdict()
@@ -549,17 +549,17 @@ class Bot:
                         symbol_info["trade_contract_size"])/leverage_) *
                         price["bid"], 2)
         account = info_._asdict()
-        max_pos_margin = round(account["balance"] * (max_pos_margin/100) /
+        max_pos_margin2 = round(account["balance"] * (max_pos_margin2/100) /
                             (self.avg_vol * 100))
         divider_condition = 1 if self.too_much_risk() == 1 else 2
         if "JP" not in self.symbol:
-            volume = round((max_pos_margin / (margin_min*divider_condition))) *\
+            volume = round((max_pos_margin2 / (margin_min*divider_condition))) *\
                             symbol_info["volume_min"]
-            printer('Volume from value:', round((max_pos_margin / margin_min), 2))
+            printer('Volume from value:', round((max_pos_margin2 / margin_min), 2))
         else:
-            volume = round((max_pos_margin * 100 / (margin_min*divider_condition))) *\
+            volume = round((max_pos_margin2 * 100 / (margin_min*divider_condition))) *\
                             symbol_info["volume_min"]
-            printer('Volume from value:', round((max_pos_margin * 100 / margin_min), 2))
+            printer('Volume from value:', round((max_pos_margin2 * 100 / margin_min), 2))
         if volume > symbol_info["volume_max"]:
             volume = float(symbol_info["volume_max"])
         self.volume = volume
@@ -949,7 +949,7 @@ class Bot:
     @class_errors
     def volume_reducer(self, pos_type, name_):
         try:
-            if_not_ok = 0.7
+            if_not_ok = 0.6
             if_ok = 1
             try:
                 data = self.volume_metrics_data(name_)

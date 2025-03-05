@@ -173,7 +173,7 @@ class SymbolsByProfile:
         self.interval = interval
         self.backtest = Backtest(interval)
         self.backtest.backtest_strategies()
-        self.min_number_of_symbols = len(symbols) - 5
+        self.min_number_of_symbols = len(symbols) - 4
         self.bars = bars
 
     def all_returns_please(self):
@@ -227,9 +227,15 @@ class SymbolsByProfile:
         self.generate_output()
 
 
-def m10_strategies():
-    symbolz = SymbolsByProfile(symbols, "M10", 9000)
+# def m10_strategies():
+#     symbolz = SymbolsByProfile(symbols, "M10", 9000)
+#     symbolz.all_the_work()
+
+
+def m15_strategies():
+    symbolz = SymbolsByProfile(symbols, "M15", 9000)
     symbolz.all_the_work()
+
 
 def m20_strategies():
     symbolz = SymbolsByProfile(symbols, "M20", 9000)
