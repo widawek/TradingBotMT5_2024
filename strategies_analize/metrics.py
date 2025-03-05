@@ -9,7 +9,7 @@ sys.path.append("..")
 def exponential_penalty(dfx, alpha: int = 10) -> float:
     cross = np.where(dfx.stance != dfx.stance.shift(), 1, 0)
     density = cross.sum()/len(dfx)
-    threshold = 0.07  # Próg akceptowalnej gęstości
+    threshold = 0.065  # Próg akceptowalnej gęstości
     return math.exp(-alpha * max(0, density - threshold))
 
 

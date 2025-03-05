@@ -1011,7 +1011,7 @@ class Bot:
             tp, sl, tp_std, sl_std, drift = risk_data
             printer("TP/TP_STD", f'{tp, tp_std}')
             printer("SL/SL_STD", f'{sl, sl_std}')
-            print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, "\n")
+            print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, drift, "\n")
             self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift))
 
         for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift in self.strategies_raw:
