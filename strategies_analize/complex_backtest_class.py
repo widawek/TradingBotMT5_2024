@@ -187,7 +187,7 @@ class Backtest_complex:
                         if self.excel:
                             self.df_metrics = pd.DataFrame(metrics_results, columns=['symbol', 'strategy', 'metric', 'interval', 'sharpe', 'result', 'density'])
                             self.df_metrics = self.df_metrics.sort_values(by='result', ascending=False)
-                            if 'M10' in self.intervals:
+                            if 'M20' in self.intervals:
                                 try:
                                     self.df_metrics.to_excel("bufferh.xlsx")
                                 except Exception:
@@ -205,17 +205,6 @@ class Backtest_complex:
 
 
     def output(self):
-        # def group_to_get_metric(df):
-        #     dfs = df[(df['sharpe'] > 0)&(df['density']>=0.5)]
-        #     dfs = dfs.groupby(['symbol', 'metric']).agg(sharpe_mean=('sharpe', 'mean'),
-        #                                         counter=('sharpe', 'size')).reset_index()
-        #     intervals_ = ['M1', 'M2', 'M3', 'M4', 'M5']
-        #     if any([intervals_[i] in self.intervals for i in range(len(intervals_))]):
-        #         dfs = dfs[dfs['counter']>=4]
-        #     idx = dfs.groupby('symbol')['sharpe_mean'].idxmax()
-        #     result_ = dfs.loc[idx, ['symbol', 'metric']]
-        #     result_ = result_.reset_index(drop=True)
-        #     return result_
 
         def group_to_get_metric(df):
             dfs = df[(df['sharpe'] > 0) & (df['density'] >= 0.5)]
@@ -223,7 +212,7 @@ class Backtest_complex:
                 sharpe_mean=('sharpe', 'mean'),
                 counter=('sharpe', 'size')
             ).reset_index()
-            
+
             intervals_ = ['M1', 'M2', 'M3', 'M4', 'M5']
             filter_condition = any(interval in self.intervals for interval in intervals_)
 
@@ -240,13 +229,13 @@ class Backtest_complex:
 
             # Tworzenie słownika symbol -> najlepsza metryka (najpierw warunek counter >= 4, potem fallback)
             best_metrics = {}
-            
+
             for symbol in dfs['symbol'].unique():
                 if symbol in dfs_high_counter['symbol'].values:
                     best_metrics[symbol] = dfs.loc[idx_high_counter[dfs_high_counter['symbol'] == symbol], ['symbol', 'metric']]
                 else:
                     best_metrics[symbol] = dfs.loc[idx_fallback[dfs['symbol'] == symbol], ['symbol', 'metric']]
-            
+
             # Łączenie wyników w jeden DataFrame
             result_ = pd.concat(best_metrics.values()).reset_index(drop=True)
 
@@ -271,7 +260,7 @@ class Backtest_complex:
         to_json = [(row.symbol, row.strategy, row.interval, row.metric) for row in df.itertuples()]
 
         # Zapis do pliku JSON
-        name_ = 'fast' if 'M1' in self.intervals else 'slow' if 'M10' in self.intervals else 'dontknow'
+        name_ = 'fast' if 'M1' in self.intervals else 'slow' if 'M20' in self.intervals else 'dontknow'
 
         if name_ == 'fast':
             df.to_excel('fast.xlsx')
