@@ -53,27 +53,27 @@ def macdd_counter(df_raw, slow, fast, symbol):
     return df, position
 
 
-def avs1s_trend(df_raw, slow, fast, symbol):
-    df = df_raw.copy()
-    factor = slow*(fast-1)
-    df['vol_sum'] = df.volume.rolling(factor).sum()
-    df['atr'] = df.ta.atr(length=factor) * df['vol_sum']
-    df['my_atr'] = (df.high-df.low).rolling(factor).sum() * df['vol_sum']
-    df['atr_up'] = df['atr'] + df['atr'].rolling(round(factor)).std()
-    df['atr_down'] = df['atr'] - df['atr'].rolling(round(factor)).std()
-    df['atr_norm'] = ((df['atr'] - df['atr_down'].rolling(factor).min())/ \
-        (df['atr_up'].rolling(factor).max() - df['atr_down'].rolling(factor).min()))
-    df['atr_norm'] = df['atr_norm'] - 0.5
-    df['atr_norm_ma'] = df['atr_norm'].rolling(factor).mean()
-    k = df.ta.stoch(k=factor).iloc[:,0]
-    d = df.ta.stoch(k=factor, d=factor).iloc[:,1]
-    df['k'] = k * df['atr_norm']
-    df['d'] = d * df['atr_norm']
-    df['stance'] = np.where((df['k']<0)&(df['k'].shift(factor)>0)&(df['k']<df['d']), -1, np.NaN)
-    df['stance'] = np.where((df['k']>0)&(df['k'].shift(factor)<0)&(df['k']>df['d']), 1, df.stance)
-    df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position
+# def avs1s_trend(df_raw, slow, fast, symbol):
+#     df = df_raw.copy()
+#     factor = slow*(fast-1)
+#     df['vol_sum'] = df.volume.rolling(factor).sum()
+#     df['atr'] = df.ta.atr(length=factor) * df['vol_sum']
+#     df['my_atr'] = (df.high-df.low).rolling(factor).sum() * df['vol_sum']
+#     df['atr_up'] = df['atr'] + df['atr'].rolling(round(factor)).std()
+#     df['atr_down'] = df['atr'] - df['atr'].rolling(round(factor)).std()
+#     df['atr_norm'] = ((df['atr'] - df['atr_down'].rolling(factor).min())/ \
+#         (df['atr_up'].rolling(factor).max() - df['atr_down'].rolling(factor).min()))
+#     df['atr_norm'] = df['atr_norm'] - 0.5
+#     df['atr_norm_ma'] = df['atr_norm'].rolling(factor).mean()
+#     k = df.ta.stoch(k=factor).iloc[:,0]
+#     d = df.ta.stoch(k=factor, d=factor).iloc[:,1]
+#     df['k'] = k * df['atr_norm']
+#     df['d'] = d * df['atr_norm']
+#     df['stance'] = np.where((df['k']<0)&(df['k'].shift(factor)>0)&(df['k']<df['d']), -1, np.NaN)
+#     df['stance'] = np.where((df['k']>0)&(df['k'].shift(factor)<0)&(df['k']>df['d']), 1, df.stance)
+#     df['stance'] = df['stance'].ffill()
+#     position = df['stance'].iloc[-1]
+#     return df, position
 
 
 def eng2m_counter(df_raw, slow, fast, symbol):
