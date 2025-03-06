@@ -252,7 +252,7 @@ class Bot:
             last_two = 0
 
         #if '_0_0_' not in self.comment:
-        if self.tiktok < 2:
+        if self.tiktok < 1:
             if (profit_ > 0) and (last_two >= 0):
                 self.tiktok -= 1
             elif (profit_ < 0):# or (last_two < 0):
