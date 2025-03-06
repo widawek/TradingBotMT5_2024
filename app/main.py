@@ -1020,11 +1020,10 @@ class Bot:
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, drift, "\n")
             monte = Montecarlo(self.symbol, interval, strategy, self.bt_metric, bars, slow, fast)
             p_value = monte.final_p_value()
-            print("P value: p_value")
-            del monte
+            printer("p-value", p_value)
             self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift, p_value))
 
-        for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift in self.strategies_raw:
+        for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift, p_value in self.strategies_raw:
             try:
                 tp_sl = round(tp_std/sl_std, 3)
             except ZeroDivisionError:
@@ -1064,8 +1063,8 @@ class Bot:
         sharpe_multiplier = interval_time_sharpe(interval)
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
         results = []
-        for slow in trange(5, 62):
-            for fast in range(2, 21):
+        for slow in trange(5, slow_range):
+            for fast in range(2, fast_range):
                 try:
                     if fast == slow:
                         continue

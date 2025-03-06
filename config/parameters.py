@@ -67,3 +67,5 @@ profit_decrease_barrier: float          = 0.91
 profit_increase_barrier: float          = 1.8
 respect_overnight: bool                 = True
 hardcore_hours: list                    = scraper.give_me_hardcore_hours()
+fast_range: int                         = 21
+slow_range: int                         = 62

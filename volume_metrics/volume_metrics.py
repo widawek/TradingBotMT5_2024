@@ -14,7 +14,7 @@ from scipy.stats import linregress
 import random
 from itertools import combinations, product
 from math import comb
-from config.parameters import symbols
+from config.parameters import symbols, slow_range, fast_range
 mt.initialize()
 # Ignoruj wszystkie ostrzeżenia
 warnings.filterwarnings('ignore')
@@ -123,7 +123,7 @@ def give_me_all_returns(strategies_to_bt, bars, interval):
 
 
 class Backtest:
-    def __init__(self, interval, max_fast: int=23, max_slow: int=62, bars: int=9000):
+    def __init__(self, interval, max_fast: int=fast_range, max_slow: int=slow_range, bars: int=9000):
         self.interval = interval
         self.strategies = self.load_strategies_from_json()
         #self.bt_metric = globals()[self.strategies[0][3]]
