@@ -17,6 +17,7 @@ from strategies_analize.metrics import *
 from app.bot_functions import *
 import json
 import importlib
+from app.montecarlo import Montecarlo
 from tqdm import trange
 sys.path.append("..")
 mt.initialize()

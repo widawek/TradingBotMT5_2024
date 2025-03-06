@@ -419,8 +419,6 @@ def drift_function(results_from_df):
     return drift
 
 
-
-
 def wlr_rr(df_raw):
     df = df_raw.copy()
     df['stance'] = df['stance'].shift(1)
