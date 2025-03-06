@@ -8,6 +8,7 @@ from datetime import timedelta
 from strategies_analize.global_strategies import *
 from strategies_analize.metrics import *
 from config.parameters import symbols
+from app.decorators import class_errors
 mt.initialize()
 warnings.filterwarnings('ignore')
 
@@ -80,7 +81,7 @@ class Backtest_complex:
         self.excel = excel
         self.strategies_to_test = []
 
-
+    @class_errors
     def generate_main_df(self, symbol, interval):
         df_raw = get_data(symbol, interval, 1, 55000)
         self.test_df_raw = df_raw.copy()
@@ -110,7 +111,7 @@ class Backtest_complex:
         print(self.dfs_to_backtest[-1]['time'].dt.date.iloc[-1] == self.dfs_test[-1]['time'].dt.date.iloc[-1]-timedelta(days=1))
         self.full_anal = list(zip(self.dfs_to_backtest, self.dfs_test))[-self.days:]
 
-
+    @class_errors
     def strategy_bt(self, symbol, strategy, df_raw):
         results = []
         for slow in range(5, self.slow, 2):
@@ -134,7 +135,7 @@ class Backtest_complex:
 
         return best_results
 
-
+    @class_errors
     def full_analize(self):
         metrics_results = []
         for interval in self.intervals:
@@ -152,11 +153,13 @@ class Backtest_complex:
                                 df = returns_bt_full_anal(strategy(df_test, slow, fast, symbol)[0])
                                 df['strategy'] = (1+df['return']).cumprod() - 1
                                 results.append((metric,
-                                                round(np.mean([
+                                                round(
+                                                    #np.mean([
                                                     #df['strategy'].min(),
                                                     #df['strategy'].max(),
-                                                    df['strategy'].iloc[-1]]),
-                                                               6))
+                                                    df['strategy'].iloc[-1]
+                                                    #])
+                                                    ,6))
                                                                )
 
                         results_df = pd.DataFrame(results, columns=['metric', 'final_strategy'])
@@ -203,7 +206,7 @@ class Backtest_complex:
 
         self.df_metrics = pd.DataFrame(metrics_results, columns=['symbol', 'strategy', 'metric', 'interval', 'sharpe', 'result', 'density'])
 
-
+    @class_errors
     def output(self):
 
         def group_to_get_metric(df):
@@ -238,7 +241,6 @@ class Backtest_complex:
 
             # Łączenie wyników w jeden DataFrame
             result_ = pd.concat(best_metrics.values()).reset_index(drop=True)
-
             return result_
 
         def symbol_to_metric(symbol, result_):

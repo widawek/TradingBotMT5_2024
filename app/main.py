@@ -520,7 +520,7 @@ class Bot:
         #     print('volume_calc anti trend', e)
 
         trend_bonus = bonus if posType == 0 else -bonus
-        volume_m10 = self.volume_reducer(posType, 'M15')
+        volume_m10 = self.volume_reducer(posType, 'M10')
         volume_m20 = self.volume_reducer(posType, 'M20')
         if volume_m10 == 1 and volume_m20 == 1:
             self.if_position_with_trend = 'y'
@@ -883,30 +883,6 @@ class Bot:
             pass
 
     @class_errors
-    def sort_strategies(self):
-        if dt.now().hour >= change_hour or all([i[6] == -2 for i in self.strategies]):
-            self.strategies = [i for i in self.strategies if i[8] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: x[5], reverse=True)
-        else:
-            sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
-        first_group = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][0]
-        first_ = first_group.split('_')[-2]
-        printer("Daily starter", first_)
-        self.actual_today_best = first_
-        second_ = 'trend' if first_ == 'counter' else 'counter'
-        group_t = [item for item in sorted_data if item[7] == second_] # first
-        group_n = [item for item in sorted_data if item[7] == first_] # second
-        alternating_data = []
-        max_len = max(len(group_t), len(group_n))
-
-        for i in range(max_len):
-            if i < len(group_t):
-                alternating_data.append(group_t[i])
-            if i < len(group_n):
-                alternating_data.append(group_n[i])
-        return alternating_data
-
-    @class_errors
     def too_much_risk(self):
         test = [i - timedelta(minutes=5) < dt.now() < i + timedelta(minutes=45) for i in hardcore_hours]
         if any(test):
@@ -983,6 +959,34 @@ class Bot:
         for i in output:
             print(i)
         return output
+
+    @class_errors
+    def sort_strategies(self):
+
+        # 0- name_, 1- strategy_, 2- interval, 3- fast, 4- slow, 5- round(result, 2), 6- actual_condition,
+        # 7- kind, 8- daily_return, 9- end_result, 10- tp_std, 11- sl_std, 12- drift
+
+        if dt.now().hour >= change_hour or all([i[6] == -2 for i in self.strategies]):
+            self.strategies = [i for i in self.strategies if i[8] > 0]
+            sorted_data = sorted(self.strategies, key=lambda x: x[5], reverse=True)
+        else:
+            sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
+        first_group = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][7]
+        first_ = first_group[0]
+        printer("Daily starter", first_)
+        self.actual_today_best = first_
+        second_ = 'trend' if first_ == 'counter' else 'counter'
+        group_t = [item for item in sorted_data if item[7] == second_] # first
+        group_n = [item for item in sorted_data if item[7] == first_] # second
+        alternating_data = []
+        max_len = max(len(group_t), len(group_n))
+
+        for i in range(max_len):
+            if i < len(group_t):
+                alternating_data.append(group_t[i])
+            if i < len(group_n):
+                alternating_data.append(group_n[i])
+        return alternating_data
 
     @class_errors
     def test_strategies(self, add_number=0):

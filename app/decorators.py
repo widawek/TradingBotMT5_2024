@@ -56,7 +56,10 @@ def class_errors(func):
         callable: The wrapped function.
     """
     def just_log(*args, **kwargs):
-        symbol = args[0].symbol
+        try:
+            symbol = args[0].symbol
+        except Exception:
+            symbol = 'xxxxxx'
         try:
             result = func(*args, **kwargs)
             return result
