@@ -14,7 +14,7 @@ def p_value(permutation_results):
 
 
 class Montecarlo:
-    def __init__(self, symbol, interval, strategy, metric, bars, slow, fast):
+    def __init__(self, symbol, interval, strategy, metric, bars, slow, fast, how_many=1000):
         self.symbol = symbol
         self.interval = interval
         self.strategy = strategy
@@ -22,6 +22,7 @@ class Montecarlo:
         self.slow = slow
         self.fast = fast
         self.bars = bars
+        self.how_many = how_many
         self.original_df = get_data(symbol, interval, 1, bars)
         self.permutated_dataframes = self.generate_permutated_dataframes()
         self.results = []
@@ -46,10 +47,10 @@ class Montecarlo:
         correlations = [True if i>threshold else False for i in correlations]
         return True if all(correlations) else False
 
-    def generate_permutated_dataframes(self, how_many=1000):
+    def generate_permutated_dataframes(self):
         permutated_dataframes = []
-        progress_bar = tqdm(total=how_many)
-        while len(permutated_dataframes) < how_many:
+        progress_bar = tqdm(total=self.how_many)
+        while len(permutated_dataframes) < self.how_many:
             df2 = self.random_permutation_ohlc()
             if self.correlation_condition(df2):
                 permutated_dataframes.append(df2)

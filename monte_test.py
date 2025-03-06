@@ -6,9 +6,9 @@ from strategies_analize.metrics import *
 
 symbol = "EURUSD"
 interval = "M2"
-bars = 5000
+bars = 8000
 strategy = macdd_counter
 metric = mix_rrsimple_metric
 
-monte = Montecarlo(symbol, interval, strategy, metric, bars, 16, 2)
+monte = Montecarlo(symbol, interval, strategy, metric, bars, 16, 2, 1000)
 print(monte.final_p_value())

@@ -965,20 +965,21 @@ class Bot:
     def sort_strategies(self):
 
         # 0- name_, 1- strategy_, 2- interval, 3- fast, 4- slow, 5- round(result, 2), 6- actual_condition,
-        # 7- kind, 8- daily_return, 9- end_result, 10- tp_std, 11- sl_std, 12- drift
+        # 7- kind, 8- daily_return, 9- end_result, 10- tp_std, 11- sl_std, 12- drift, 13- p_value
 
         if dt.now().hour >= change_hour or all([i[6] == -2 for i in self.strategies]):
             self.strategies = [i for i in self.strategies if i[8] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[5], reverse=True)
         else:
-            sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
+            #sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
+            sorted_data = sorted(self.strategies, key=lambda x: (x[13]), reverse=True)
         first_group = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][7]
         first_ = first_group[0]
         printer("Daily starter", first_)
         self.actual_today_best = first_
         second_ = 'trend' if first_ == 'counter' else 'counter'
-        group_t = [item for item in sorted_data if item[7] == second_] # first
-        group_n = [item for item in sorted_data if item[7] == first_] # second
+        group_t = [item for item in sorted_data if item[7] == first_] # first
+        group_n = [item for item in sorted_data if item[7] == second_] # second
         alternating_data = []
         max_len = max(len(group_t), len(group_n))
 
@@ -1017,7 +1018,11 @@ class Bot:
             printer("TP/TP_STD", f'{tp, tp_std}')
             printer("SL/SL_STD", f'{sl, sl_std}')
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, drift, "\n")
-            self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift))
+            monte = Montecarlo(self.symbol, interval, strategy, self.bt_metric, bars, slow, fast)
+            p_value = monte.final_p_value()
+            print("P value: p_value")
+            del monte
+            self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift, p_value))
 
         for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift in self.strategies_raw:
             try:
