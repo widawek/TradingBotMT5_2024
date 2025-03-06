@@ -227,7 +227,6 @@ class SymbolsByProfile:
         self.generate_output()
 
 
-
 def m10_strategies():
     symbolz = SymbolsByProfile(symbols, "M10", 9000)
     symbolz.all_the_work()

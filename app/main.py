@@ -520,19 +520,19 @@ class Bot:
         #     print('volume_calc anti trend', e)
 
         trend_bonus = bonus if posType == 0 else -bonus
-        volume_m10 = self.volume_reducer(posType, 'M10')
+        volume_m15 = self.volume_reducer(posType, 'M15')
         volume_m20 = self.volume_reducer(posType, 'M20')
-        if volume_m10 == 1 and volume_m20 == 1:
+        if volume_m15 == 1 and volume_m20 == 1:
             self.if_position_with_trend = 'y'
-        elif volume_m10 != 1 and volume_m20 != 1:
+        elif volume_m15 != 1 and volume_m20 != 1:
             self.if_position_with_trend = 'n'
-        elif volume_m10 == 1 and volume_m20 != 1:
+        elif volume_m15 == 1 and volume_m20 != 1:
             self.if_position_with_trend = 's'
-        elif volume_m10 != 1 and volume_m20 == 1:
+        elif volume_m15 != 1 and volume_m20 == 1:
             self.if_position_with_trend = 'l'
 
         max_pos_margin2 = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
-        max_pos_margin2 = (max_pos_margin2 + max_pos_margin2*trend_bonus)*volume_m10*volume_m20
+        max_pos_margin2 = (max_pos_margin2 + max_pos_margin2*trend_bonus)*volume_m15*volume_m20
         x, _ = Bot.target_class.checkTarget()
         if x:
             max_pos_margin2 = max_pos_margin2 / 2

@@ -216,7 +216,7 @@ class Backtest_complex:
                 counter=('sharpe', 'size')
             ).reset_index()
 
-            intervals_ = ['M1', 'M2', 'M3', 'M4', 'M5']
+            intervals_ = [f'M{str(i)}' for i in range(1, 6)]
             filter_condition = any(interval in self.intervals for interval in intervals_)
 
             if filter_condition:
@@ -224,23 +224,34 @@ class Backtest_complex:
             else:
                 dfs_high_counter = dfs
 
-            # Znalezienie indeksów dla warunku counter >= 4
+            # Znalezienie indeksów dla warunku counter >= 4, zabezpieczenie przed KeyError
             idx_high_counter = dfs_high_counter.groupby('symbol')['sharpe_mean'].idxmax()
-
-            # Znalezienie indeksów dla wszystkich wartości (największa wartość sharpe_mean)
             idx_fallback = dfs.groupby('symbol')['sharpe_mean'].idxmax()
 
-            # Tworzenie słownika symbol -> najlepsza metryka (najpierw warunek counter >= 4, potem fallback)
+            # Tworzenie słownika symbol -> najlepsza metryka
             best_metrics = {}
 
             for symbol in dfs['symbol'].unique():
-                if symbol in dfs_high_counter['symbol'].values:
-                    best_metrics[symbol] = dfs.loc[idx_high_counter[dfs_high_counter['symbol'] == symbol], ['symbol', 'metric']]
+                # Sprawdzamy, czy symbol jest w idx_high_counter i czy indeksy są poprawne
+                if symbol in dfs_high_counter['symbol'].values and symbol in idx_high_counter.index:
+                    index = idx_high_counter.loc[symbol]
+                    if pd.notna(index) and index in dfs.index:
+                        best_metrics[symbol] = dfs.loc[[index], ['symbol', 'metric']]
+                    else:
+                        best_metrics[symbol] = dfs.loc[[idx_fallback.loc[symbol]], ['symbol', 'metric']]
                 else:
-                    best_metrics[symbol] = dfs.loc[idx_fallback[dfs['symbol'] == symbol], ['symbol', 'metric']]
+                    # Sprawdzamy, czy indeks fallback istnieje i jest poprawny
+                    if symbol in idx_fallback.index:
+                        index = idx_fallback.loc[symbol]
+                        if pd.notna(index) and index in dfs.index:
+                            best_metrics[symbol] = dfs.loc[[index], ['symbol', 'metric']]
 
             # Łączenie wyników w jeden DataFrame
-            result_ = pd.concat(best_metrics.values()).reset_index(drop=True)
+            if best_metrics:
+                result_ = pd.concat(best_metrics.values(), ignore_index=True)
+            else:
+                result_ = pd.DataFrame(columns=['symbol', 'metric'])
+
             return result_
 
         def symbol_to_metric(symbol, result_):
