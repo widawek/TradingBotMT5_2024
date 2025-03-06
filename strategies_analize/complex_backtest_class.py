@@ -261,6 +261,7 @@ class Backtest_complex:
                 return None
 
         df = self.df_metrics.copy()
+        df = df.dropna()
         result_ = group_to_get_metric(df)
 
         df = df[(df['sharpe'] > 0) & (df['density'] >= 0.5)]
