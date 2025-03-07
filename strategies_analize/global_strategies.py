@@ -53,27 +53,58 @@ def macdd_counter(df_raw, slow, fast, symbol):
     return df, position
 
 
-# def avs1s_trend(df_raw, slow, fast, symbol):
-#     df = df_raw.copy()
-#     factor = slow*(fast-1)
-#     df['vol_sum'] = df.volume.rolling(factor).sum()
-#     df['atr'] = df.ta.atr(length=factor) * df['vol_sum']
-#     df['my_atr'] = (df.high-df.low).rolling(factor).sum() * df['vol_sum']
-#     df['atr_up'] = df['atr'] + df['atr'].rolling(round(factor)).std()
-#     df['atr_down'] = df['atr'] - df['atr'].rolling(round(factor)).std()
-#     df['atr_norm'] = ((df['atr'] - df['atr_down'].rolling(factor).min())/ \
-#         (df['atr_up'].rolling(factor).max() - df['atr_down'].rolling(factor).min()))
-#     df['atr_norm'] = df['atr_norm'] - 0.5
-#     df['atr_norm_ma'] = df['atr_norm'].rolling(factor).mean()
-#     k = df.ta.stoch(k=factor).iloc[:,0]
-#     d = df.ta.stoch(k=factor, d=factor).iloc[:,1]
-#     df['k'] = k * df['atr_norm']
-#     df['d'] = d * df['atr_norm']
-#     df['stance'] = np.where((df['k']<0)&(df['k'].shift(factor)>0)&(df['k']<df['d']), -1, np.NaN)
-#     df['stance'] = np.where((df['k']>0)&(df['k'].shift(factor)<0)&(df['k']>df['d']), 1, df.stance)
-#     df['stance'] = df['stance'].ffill()
-#     position = df['stance'].iloc[-1]
-#     return df, position
+def avs1s_trend(df_raw, slow, fast, symbol):
+    slow += 5
+    fast += 5
+    df = df_raw.copy()
+    df['vol_sum'] = df.volume.rolling(slow).sum()
+    df['atr'] = df.ta.atr(length=slow) * df['vol_sum']
+    df['my_atr'] = (df.high-df.low).rolling(slow).sum() * df['vol_sum']
+    df['atr_up'] = df['atr'] + df['atr'].rolling(round(fast)).std()
+    df['atr_down'] = df['atr'] - df['atr'].rolling(round(fast)).std()
+    df['atr_norm'] = ((df['atr'] - df['atr_down'].rolling(fast).min())/ \
+        (df['atr_up'].rolling(fast).max() - df['atr_down'].rolling(fast).min()))
+    df['atr_norm'] = df['atr_norm'] - 0.5
+    df['atr_norm_ma'] = df['atr_norm'].rolling(fast).mean()
+    k = df.ta.stoch(k=fast).iloc[:,0]
+    d = df.ta.stoch(k=fast, d=slow).iloc[:,1]
+    df['k'] = k * df['atr_norm']
+    df['d'] = d * df['atr_norm']
+    df['stance'] = np.where((df['k']<0)&(df['k'].shift(slow)>0)&(df['k']<df['d']), -1, np.NaN)
+    df['stance'] = np.where((df['k']>0)&(df['k'].shift(slow)<0)&(df['k']>df['d']), 1, df.stance)
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def dnert_counter(df_raw, slow, fast, symbol):
+    df = df_raw.copy()
+    df['Trend_High'] = df['high'].rolling(slow).max()
+    df['Trend_Low'] = df['low'].rolling(slow).min()
+    df['Fast_Osc'] = df.ta.trima(length=fast)
+    df['Long_Entry'] = (df['low'] < df['Trend_Low'].shift()) & (df['Fast_Osc'] > df['close'])
+    df['Short_Entry'] = (df['high'] > df['Trend_High'].shift()) & (df['Fast_Osc'] < df['close'])
+    df['stance'] = np.nan
+    df.loc[df['Long_Entry'], 'stance'] = 1
+    df.loc[df['Short_Entry'], 'stance'] = -1
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def atr11_counter(df_raw, atr_period, atr_mult, symbol):
+    df = df_raw.copy()
+    df['ATR'] = df['high'].rolling(atr_period).max() - df['low'].rolling(atr_period).min()
+    df['Upper_Band'] = df['close'].rolling(atr_period).mean() + atr_mult/50 * df['ATR']
+    df['Lower_Band'] = df['close'].rolling(atr_period).mean() - atr_mult/50 * df['ATR']
+    df['Long_Entry'] = (df['high'] > df['Upper_Band'].shift(1))#&(df['volume']>df['volume'].shift(1))
+    df['Short_Entry'] = (df['low'] < df['Lower_Band'].shift(1))#&(df['volume']>df['volume'].shift(1))
+    df['stance'] = np.nan
+    df.loc[df['Long_Entry'], 'stance'] = -1
+    df.loc[df['Short_Entry'], 'stance'] = 1
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
 
 
 def eng2m_counter(df_raw, slow, fast, symbol):
@@ -152,23 +183,23 @@ def sup1n_trend(df_raw, slow, fast, symbol):
     return df, position
 
 
-def altre_trend(df_raw, long, short, symbol):
-    df = df_raw.copy()
-    long *= 2
-    short *= 2
-    df['res_long'] = df.close-df.open
-    df['dir_long'] = np.where(df.res_long>0, 1, -1)
-    df['trend_long'] = df['res_long'].rolling(long).sum()*df['dir_long'].rolling(short).mean()
+# def altre_trend(df_raw, long, short, symbol):
+#     df = df_raw.copy()
+#     long *= 2
+#     short *= 2
+#     df['res_long'] = df.close-df.open
+#     df['dir_long'] = np.where(df.res_long>0, 1, -1)
+#     df['trend_long'] = df['res_long'].rolling(long).sum()*df['dir_long'].rolling(short).mean()
 
-    df['res_short'] = df.open-df.close
-    df['dir_short'] = np.where(df.res_short>0, 1, -1)
-    df['trend_short'] = df['res_short'].rolling(long).sum()*df['dir_short'].rolling(short).mean()
+#     df['res_short'] = df.open-df.close
+#     df['dir_short'] = np.where(df.res_short>0, 1, -1)
+#     df['trend_short'] = df['res_short'].rolling(long).sum()*df['dir_short'].rolling(short).mean()
 
-    df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
-    df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
-    df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position
+#     df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
+#     df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
+#     df['stance'] = df['stance'].ffill()
+#     position = df['stance'].iloc[-1]
+#     return df, position
 
 
 def mo1to_trend(df_raw, long, short, symbol):
