@@ -13,6 +13,25 @@ def p_value(permutation_results):
     return p
 
 
+def z_score(results):
+    original_result = results[0]
+    simulated_results = results[1:]
+    """
+    Oblicza Z-score dla oryginalnej strategii względem symulowanych wyników Monte Carlo.
+    
+    :param original_result: Wynik oryginalnej strategii (liczba)
+    :param simulated_results: Lista wyników z symulacji Monte Carlo (lista liczb)
+    :return: Z-score (float)
+    """
+    mean_simulated = np.mean(simulated_results)
+    std_simulated = np.std(simulated_results, ddof=1)  # odchylenie standardowe próby
+    
+    if std_simulated == 0:
+        return float('nan')  # Uniknięcie dzielenia przez zero
+    
+    return round((original_result - mean_simulated) / std_simulated, 4)
+
+
 class Montecarlo:
     def __init__(self, symbol, interval, strategy, metric, bars, slow, fast, how_many=1000):
         self.symbol = symbol
@@ -60,12 +79,16 @@ class Montecarlo:
 
     def absolute_p_value(self):
         metric_results = [i[0] for i in self.results]
-        permutated_dataframes = [i[1][-1] for i in self.results]
+        strategies = [i[1][-1] for i in self.results]
         metric_p_value = p_value(metric_results)
-        strategy_p_value = p_value(permutated_dataframes)
+        strategy_p_value = p_value(strategies)
+        z_zcore_metric = z_score(metric_results)
+        z_zcore_strategy = z_score(strategies)
+        print("Z score for metric: ", z_zcore_metric)
+        print("Z score for strategy: ", z_zcore_strategy)
         print("P value for metric: ", metric_p_value)
         print("P value for strategy: ", strategy_p_value)
-        return round(np.mean([metric_p_value, strategy_p_value]), 8)
+        return round(np.mean([metric_p_value, strategy_p_value])*np.mean([z_zcore_metric, z_zcore_strategy]), 8)
 
     def final_p_value(self):
         self.results_of_perms()
