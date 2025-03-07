@@ -88,7 +88,10 @@ class Montecarlo:
         print("Z score for strategy: ", z_zcore_strategy)
         print("P value for metric: ", metric_p_value)
         print("P value for strategy: ", strategy_p_value)
-        return round(np.mean([metric_p_value, strategy_p_value])*np.mean([z_zcore_metric, z_zcore_strategy]), 8)
+        z_zcore = np.mean([z_zcore_metric, z_zcore_strategy])
+        if z_zcore <= 0:
+            z_zcore = 0.001
+        return round(np.mean([metric_p_value, strategy_p_value])*(1/z_zcore), 8)
 
     def final_p_value(self):
         self.results_of_perms()
