@@ -89,7 +89,7 @@ class Reverse:
 
 
 class Target:
-    def __init__(self, target=0.04):
+    def __init__(self, target=0.05):
         self.start_balance = mt.account_info().balance - closed_pos()
         self.target = target
         self.result = False
