@@ -83,7 +83,7 @@ class Backtest_complex:
 
     @class_errors
     def generate_main_df(self, symbol, interval):
-        bars_ = 45000 if interval == 'M1' else 39999
+        bars_ = 55000 if interval in ['M1', 'M2', 'M3'] else 39999
         df_raw = get_data(symbol, interval, 1, bars_)
         self.test_df_raw = df_raw.copy()
         df_raw['date'] = df_raw['time'].dt.date
