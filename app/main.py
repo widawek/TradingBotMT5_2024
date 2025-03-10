@@ -1024,7 +1024,7 @@ class Bot:
             printer("Z-score*1/p-value:", p_value)
             printer("End result:", end_result)
             printer("Daily return:", daily_return)
-            printer("Final sort result: ", round(p_value, 3))
+            printer("Final sort result: ", round(p_value*daily_return*end_result, 3))
             self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift, p_value))
 
         for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift, p_value in self.strategies_raw:
