@@ -173,7 +173,7 @@ class SymbolsByProfile:
         self.interval = interval
         self.backtest = Backtest(interval)
         self.backtest.backtest_strategies()
-        self.min_number_of_symbols = len(symbols) - 3
+        self.min_number_of_symbols = len(symbols) - 2
         self.bars = bars
 
     def all_returns_please(self):

@@ -2,6 +2,7 @@ import sys
 sys.path.append("..")
 from app.functions import get_timezone_difference, get_data
 from extensions.investing_scrapper import Scraper
+from datetime import datetime as dt
 
 def divider():
     import MetaTrader5 as mt
@@ -12,7 +13,8 @@ def divider():
     divider = 1 if curr == 'USD' else last_o
     return divider
 
-scraper = Scraper()
+if dt.now().weekday() not in [5, 6]:
+    scraper = Scraper()
 # global params
 
 symbols:                                list = [
@@ -36,7 +38,7 @@ min_factor: int                         = 6
 max_factor: int                         = 23
 range_: int                             = 1
 morning_hour: int                       = 7
-evening_hour: int                       = 22 if not scraper.give_me_economics() else 20
+evening_hour: int                       = 22# if not scraper.give_me_economics() else 20
 probability_edge: float                 = 0.25
 sharpe_limit: float                     = 3.0
 kk_limit: float                         = 1.0
@@ -66,6 +68,6 @@ global_tracker_multiplier: float        = 0.25
 profit_decrease_barrier: float          = 0.91
 profit_increase_barrier: float          = 1.8
 respect_overnight: bool                 = True
-hardcore_hours: list                    = scraper.give_me_hardcore_hours()
+hardcore_hours: list                    = [] if dt.now().weekday() in [5, 6] else scraper.give_me_hardcore_hours()
 fast_range: int                         = 21
 slow_range: int                         = 62
