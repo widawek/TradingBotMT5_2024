@@ -969,10 +969,10 @@ class Bot:
 
         if dt.now().hour >= change_hour or all([i[6] == -2 for i in self.strategies]):
             self.strategies = [i for i in self.strategies if i[8] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[8]*x[13], reverse=True)
+            sorted_data = sorted(self.strategies, key=lambda x: x[9]*x[8]*x[13], reverse=True)
         else:
             #sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
-            sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[13], reverse=True)
+            sorted_data = sorted(self.strategies, key=lambda x: x[9]*x[8]*x[13], reverse=True)
         first_group = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][7]
         first_ = first_group[0]
         printer("Daily starter", first_)
