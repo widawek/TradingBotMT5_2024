@@ -968,10 +968,11 @@ class Bot:
         # 7- kind, 8- daily_return, 9- end_result, 10- tp_std, 11- sl_std, 12- drift, 13- p_value
 
         if dt.now().hour >= change_hour or all([i[6] == -2 for i in self.strategies]):
-            self.strategies = [i for i in self.strategies if i[8] > 0]
+            self.strategies = [i for i in self.strategies if i[8] > 0 and i[9] and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[9]*x[8]*x[13], reverse=True)
         else:
             #sorted_data = sorted(self.strategies, key=lambda x: (x[6], x[5]), reverse=True)
+            self.strategies = [i for i in self.strategies if i[8] > 0 and i[9] and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[9]*x[8]*x[13], reverse=True)
         first_group = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][7]
         first_ = first_group[0]
@@ -1020,7 +1021,10 @@ class Bot:
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, drift, "\n")
             monte = Montecarlo(self.symbol, interval, strategy_, self.bt_metric, int(self.number_of_bars_for_backtest/2), slow, fast)
             p_value = monte.final_p_value()
-            printer("p-value", p_value)
+            printer("Z-score*1/p-value:", p_value)
+            printer("End result:", end_result)
+            printer("Daily return:", daily_return)
+            printer("Final sort result: ", round(p_value, 3))
             self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift, p_value))
 
         for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift, p_value in self.strategies_raw:

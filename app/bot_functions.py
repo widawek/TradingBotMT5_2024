@@ -489,7 +489,7 @@ def wlr_rr(df_raw):
     garch = garch_metric(stats_df['result'])
     package = (mean_tp, mean_sl, tp_plus_std, sl_plus_std)
     package = [round(float(i), 4) for i in package] + [drift]
-    return round(end_result*garch, 5), package
+    return round(end_result*garch*(tp_plus_std/sl_plus_std), 5), package
 
 
 def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=False):
