@@ -1089,8 +1089,8 @@ class Bot:
                     print("trend_backtest", e)
                     continue
         try:
-            f_result = [i for i in f_result if i[2] > 0 and i[3] > 0 and i[6]>0]
-            f_result = sorted(results, key=lambda x: x[2]*x[3]*x[6], reverse=True)[0]
+            f_result = [i for i in results if i[2] > 0 and i[3] > 0 and i[6]>0]
+            f_result = sorted(f_result, key=lambda x: x[2]*x[3]*x[6], reverse=True)[0]
         except IndexError:
             return None
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
