@@ -608,7 +608,7 @@ class Bot:
         # ret = round(ret, 4)
         try:
             sharpe, omega = calc_result(df, 1, False, False)
-            ret = round(sharpe * omega, 4)
+            ret = round(sharpe * omega, 8)
             return cond.iloc[-1], df['cond'].iloc[-1], cond2, ret
         except IndexError:
             return 0, 0, 0, 0
@@ -1008,7 +1008,7 @@ class Bot:
             strategy_ = globals()[name_]
             interval = strategy[2]
             kind = name_.split('_')[-1]
-            print(f'Strategy {i} from {len(strategies)}')
+            print(f'\n\nStrategy {i} from {len(strategies)}')
             i += 1
             results_pack = self.trend_backtest(strategy_, interval)
             if results_pack is None:
