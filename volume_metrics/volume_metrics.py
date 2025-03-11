@@ -195,7 +195,7 @@ class SymbolsByProfile:
         for i in tqdm(self.all_combinations):
             df = self.all_returns.copy()
             df['return'] = np.sum(df[i], axis=1)
-            results.append((i, final_metric_(df))) # change metric for last best metric
+            results.append((i, final_metric_(df, penalty=False))) # change metric for last best metric
 
         self.results_df_raw = pd.DataFrame(results, columns=['combination', 'sharpe_omega']).sort_values(by='sharpe_omega', ascending=False)
         self.results_df = self.results_df_raw[self.results_df_raw['sharpe_omega'] > 0.8*self.results_df_raw['sharpe_omega'].max()]
