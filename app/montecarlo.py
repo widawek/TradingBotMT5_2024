@@ -7,6 +7,8 @@ from app.bot_functions import get_data, calculate_strategy_returns
 
 def p_value(permutation_results):
     S_obs = permutation_results[0]  # Oryginalna statystyka
+    if S_obs <= 0:
+        return 1
     S_perm = permutation_results  # Wszystkie permutacje (łącznie z oryginalnym wynikiem)
     # Liczymy, ile wyników z permutacji jest >= od oryginalnego (dla testu jednostronnego)
     p = np.sum(np.abs(S_perm) >= np.abs(S_obs)) / len(S_perm)
@@ -15,6 +17,8 @@ def p_value(permutation_results):
 
 def z_score(results):
     original_result = results[0]
+    if original_result <= 0:
+        return -3
     simulated_results = results[1:]
     """
     Oblicza Z-score dla oryginalnej strategii względem symulowanych wyników Monte Carlo.
