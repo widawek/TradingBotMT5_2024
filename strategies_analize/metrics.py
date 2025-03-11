@@ -68,10 +68,8 @@ def complex(returns, sharpe_multiplier, years=1):
 
 def complex_metric(dfx, penalty=True):
     df = dfx.dropna().copy()
-    if penalty:
-        return round(complex(df['returns'], 1, years=1)*exponential_penalty(df), 6)
-    else:
-        return round(complex(df['returns'], 1, years=1), 6)
+    penalty_ = exponential_penalty(df) if penalty else 1
+    return round(complex(df['returns'], 1, years=1)*penalty_, 6)
 
 
 def wlr_rr_metric(dfx, penalty=True):
@@ -80,10 +78,8 @@ def wlr_rr_metric(dfx, penalty=True):
     risk = df[df['return']<0]
     risk_reward_ratio = round(reward['return'].mean() / risk['return'].mean(), 5)
     win_loss_ratio = round(len(reward)/len(risk), 5)
-    if penalty:
-        return round(risk_reward_ratio*win_loss_ratio*exponential_penalty(df), 6)
-    else:
-        return round(risk_reward_ratio*win_loss_ratio, 6)
+    penalty_ = exponential_penalty(df) if penalty else 1
+    return round(risk_reward_ratio*win_loss_ratio*penalty_, 6)
 
 
 def mix_rrsimple_metric(dfx, penalty=True):
@@ -93,45 +89,35 @@ def mix_rrsimple_metric(dfx, penalty=True):
     risk_reward_ratio = round(reward['return'].mean() / risk['return'].mean(), 3)
     win_loss_ratio = round(len(reward)/len(risk), 5)
     df['strategy'] = (1+df['return']).cumprod() - 1
-    if penalty:
-        return round(np.mean([df['strategy'].min(), df['strategy'].max(), df['strategy'].iloc[-1]])*risk_reward_ratio*win_loss_ratio*exponential_penalty(df), 6)
-    else:
-        return round(np.mean([df['strategy'].min(), df['strategy'].max(), df['strategy'].iloc[-1]])*risk_reward_ratio*win_loss_ratio, 6)
+    penalty_ = exponential_penalty(df) if penalty else 1
+    return round(np.mean([df['strategy'].min(), df['strategy'].max(), df['strategy'].iloc[-1]])*risk_reward_ratio*win_loss_ratio*penalty_, 6)
 
 
 def only_strategy_metric(dfx, penalty=True):
     df = dfx.dropna().copy()
     df['strategy'] = (1+df['return']).cumprod() - 1
-    if penalty:
-        return round(np.mean([df['strategy'].min(), df['strategy'].max(), df['strategy'].iloc[-1]])*exponential_penalty(df), 6)
-    else:
-        return round(np.mean([df['strategy'].min(), df['strategy'].max(), df['strategy'].iloc[-1]]), 6)
+    penalty_ = exponential_penalty(df) if penalty else 1
+    return round(np.mean([df['strategy'].min(), df['strategy'].max(), df['strategy'].iloc[-1]])*penalty_, 6)
 
 
 def min_final_strategy_metric(dfx, penalty=True):
     df = dfx.dropna().copy()
     df['strategy'] = (1+df['return']).cumprod() - 1
-    if penalty:
-        return round(np.mean([df['strategy'].min(), df['strategy'].iloc[-1]])*exponential_penalty(df), 6)
-    else:
-        return round(np.mean([df['strategy'].min(), df['strategy'].iloc[-1]]), 6)
+    penalty_ = exponential_penalty(df) if penalty else 1
+    return round(np.mean([df['strategy'].min(), df['strategy'].iloc[-1]])*penalty_, 6)
 
 
 def sharpe_metric(dfx, penalty=True):
     df = dfx.dropna().copy()
-    if penalty:
-        return round((df['return'].mean()/df['return'].std())*exponential_penalty(df), 6)
-    else:
-        return round((df['return'].mean()/df['return'].std()), 6)
+    penalty_ = exponential_penalty(df) if penalty else 1
+    return round((df['return'].mean()/df['return'].std())*penalty_, 6)
 
 
 def sharpe_drawdown_metric(dfx, penalty=True):
     df = dfx.dropna().copy()
     strategy = (1+df['return']).cumprod()
-    if penalty:
-        return round((df['return'].mean()/df['return'].std())*(1+max_drawdown(strategy))*exponential_penalty(df), 6)
-    else:
-        return round((df['return'].mean()/df['return'].std())*(1+max_drawdown(strategy)), 6)
+    penalty_ = exponential_penalty(df) if penalty else 1
+    return round((df['return'].mean()/df['return'].std())*(1+max_drawdown(strategy))*penalty_, 6)
 
 
 def sharpe_drawdown_daily(dfx, penalty=True):
@@ -141,7 +127,5 @@ def sharpe_drawdown_daily(dfx, penalty=True):
     sharpe = (daily_returns.mean() / daily_returns.std()) * np.sqrt(252)
     strategy_ = (1 + daily_returns).cumprod() - 1
     drawdown = max_drawdown(strategy_)
-    if penalty:
-        return round(sharpe * (1 + drawdown) * exponential_penalty(df), 6)
-    else:
-        return round(sharpe * (1 + drawdown), 6)
+    penalty_ = exponential_penalty(df) if penalty else 1
+    return round(sharpe * (1 + drawdown) * penalty_, 6)
