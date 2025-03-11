@@ -120,7 +120,7 @@ def sharpe_drawdown_metric(dfx, penalty=True):
     return round((df['return'].mean()/df['return'].std())*(1+max_drawdown(strategy))*penalty_, 6)
 
 
-def sharpe_drawdown_daily(dfx, penalty=True):
+def sharpe_drawdown_daily_metric(dfx, penalty=True):
     df = dfx.dropna().copy()
     df['date'] = df['time'].dt.date
     daily_returns = df.groupby('date')['return'].apply(lambda r: (1 + r).prod() - 1)
