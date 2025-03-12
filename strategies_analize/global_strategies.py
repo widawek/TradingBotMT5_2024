@@ -228,3 +228,25 @@ def engulf_counter(df_raw, long, short, symbol):
     position = df['stance'].iloc[-1]
     return df, position
 
+
+def rsitr_trend(df_raw, slow, fast, symbol):
+    df = df_raw.copy()
+    df['ma'] = df.ta.sma(length=slow)
+    df['rsi'] = df.ta.rsi(length=fast)
+    df['close_std'] = df['close'].rolling(slow).std()
+    df['bollup'] = df['ma'] + (fast/10)*df['close_std']
+    df['bolldown'] = df['ma'] - (fast/10)*df['close_std']
+    df['stance'] = np.where((df['low'].shift(3) < df['bolldown'].shift(3))&
+                            (df['low'].shift(2) > df['bolldown'].shift(2))&
+                            (df['low'].shift(1) > df['bolldown'].shift(1))&
+                            (df['rsi']>df['rsi'].shift(1))
+                            , 1, np.NaN)
+    df['stance'] = np.where((df['high'].shift(3) > df['bollup'].shift(3))&
+                            (df['high'].shift(2) < df['bollup'].shift(2))&
+                            (df['high'].shift(1) < df['bollup'].shift(1))&
+                            (df['rsi']<df['rsi'].shift(1))
+                            , -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
