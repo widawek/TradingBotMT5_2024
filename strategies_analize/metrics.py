@@ -30,7 +30,7 @@ def max_drawdown(strategy):
     """Max Drawdown = największe obsunięcie kapitału"""
     peak = strategy.cummax()
     drawdown = (strategy - peak) / peak
-    return drawdown.min()
+    return drawdown.min()/100
 
 
 def ulcer_index(strategy):
