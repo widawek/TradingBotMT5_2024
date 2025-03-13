@@ -17,7 +17,7 @@ from strategies_analize.metrics import *
 from app.bot_functions import *
 import json
 import importlib
-from app.montecarlo import Montecarlo
+from app.montecarlo import Montecarlo, PermutatedDataFrames
 from tqdm import trange
 sys.path.append("..")
 mt.initialize()
@@ -152,6 +152,7 @@ class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.backtest_time = dt.now()
         self.reverse = Reverse(symbol)
         self.if_position_with_trend = 'n'
         self.fresh_daily_target = False
@@ -294,7 +295,7 @@ class Bot:
                 sl=min([self.profit_needed, self.sl_money])
                 tp = min([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
                 if kind_ == 'counter':
-                    sl = round(sl/1.5, 2)
+                    sl = round(sl/1.1, 2)
 
                 if self.print_condition():
                     printer("Kind:", kind_)
@@ -960,7 +961,9 @@ class Bot:
         output = [i for i in loaded_data if i[0] == self.symbol]
         for i in output:
             print(i)
-        return output
+        intervals = np.unique([i[2] for i in output])
+        intervals.sort()
+        return output, intervals[::-1]
 
     @class_errors
     def sort_strategies(self):
@@ -995,10 +998,14 @@ class Bot:
     def test_strategies(self, add_number=0):
         strategies_number = 4 + add_number
         super_start_time = time.time()
-        strategies = self.load_strategies_from_json()
+        strategies, intervals_ = self.load_strategies_from_json()
         metric_name = strategies[0][3]
         self.bt_metric = globals()[metric_name]
         self.strategies_raw = []
+
+        dfperms = PermutatedDataFrames(self.symbol, intervals_, int(self.number_of_bars_for_backtest/2))
+        permutated_dataframes = dfperms.dataframes_output()
+
         i = 1
         for strategy in strategies:
             self.is_this_the_end()
@@ -1018,7 +1025,7 @@ class Bot:
             printer("TP/TP_STD", f'{tp, tp_std}')
             printer("SL/SL_STD", f'{sl, sl_std}')
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, drift, "\n")
-            monte = Montecarlo(self.symbol, interval, strategy_, self.bt_metric, int(self.number_of_bars_for_backtest/2), slow, fast)
+            monte = Montecarlo(self.symbol, interval, strategy_, self.bt_metric, int(self.number_of_bars_for_backtest/2), slow, fast, permutated_dataframes)
             p_value = monte.final_p_value()
             printer("Z-score*1/p-value:", p_value)
             printer("End result:", end_result)

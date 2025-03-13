@@ -37,7 +37,7 @@ def z_score(results):
 
 
 class Montecarlo:
-    def __init__(self, symbol, interval, strategy, metric, bars, slow, fast, how_many=1000):
+    def __init__(self, symbol, interval, strategy, metric, bars, slow, fast, permutated_dataframes: dict = {}, how_many=1000):
         self.symbol = symbol
         self.interval = interval
         self.strategy = strategy
@@ -46,8 +46,10 @@ class Montecarlo:
         self.fast = fast
         self.bars = bars
         self.how_many = how_many
-        self.original_df = get_data(symbol, interval, 1, bars)
-        self.permutated_dataframes = self.generate_permutated_dataframes()
+        self.raw_permutated_dataframes = permutated_dataframes
+        self.original_df = get_data(symbol, interval, 1, bars) if self.raw_permutated_dataframes == {} else self.raw_permutated_dataframes[self.interval][0]
+        self.permutated_dataframes = self.generate_permutated_dataframes() if self.raw_permutated_dataframes == {} else \
+            self.raw_permutated_dataframes[self.interval][1:]
         self.results = []
 
     def results_of_perms(self):
@@ -136,4 +138,59 @@ class Montecarlo:
         df_new['low'] = new_low
         df_new['close'] = new_close
         return df_new
+    
 
+class PermutatedDataFrames:
+    def __init__(self, symbol: str, intervals: list, bars, how_many=1000):
+        self.symbol = symbol
+        self.intervals = intervals
+        self.bars = bars
+        self.how_many = how_many
+
+    def correlation_condition(self, df_raw, df_permuted, threshold=0.7):
+        correlation_pearson = df_raw['close'].corr(df_permuted['close'])
+        correlations = [correlation_pearson]
+        correlations = [True if i>threshold else False for i in correlations]
+        return True if all(correlations) else False
+
+    def generate_permutated_dataframes(self, df_raw):
+        permutated_dataframes = []
+        progress_bar = tqdm(total=self.how_many)
+        while len(permutated_dataframes) < self.how_many:
+            df2 = self.random_permutation_ohlc(df_raw)
+            if self.correlation_condition(df_raw, df2):
+                permutated_dataframes.append(df2)
+                progress_bar.update(1)  # Ręczna aktualizacja paska
+        progress_bar.close()
+        return permutated_dataframes
+
+    def random_permutation_ohlc(self, df_raw):
+        df = df_raw.copy()
+        df_new = df.copy()
+        close_diff = df['close'].diff().dropna()
+        permuted_diff = np.random.permutation(close_diff.values)
+        new_close = np.zeros_like(df['close'].values)
+        new_close[0] = df['close'].iloc[0]
+        for i in range(1, len(new_close)):
+            new_close[i] = new_close[i-1] + (permuted_diff[i-1] if i < len(permuted_diff) else 0)
+        high_diff = df['high'] - df['close']
+        low_diff = df['close'] - df['low']
+        permuted_high_diff = np.random.permutation(high_diff[1:].values)
+        permuted_low_diff = np.random.permutation(low_diff[1:].values)
+        new_high = new_close + np.insert(permuted_high_diff, 0, high_diff.iloc[0])
+        new_low = new_close - np.insert(permuted_low_diff, 0, low_diff.iloc[0])
+        new_open = (np.roll(new_close, 1) + new_close) / 2
+        new_open[0] = df['open'].iloc[0]
+        df_new['open'] = new_open
+        df_new['high'] = new_high
+        df_new['low'] = new_low
+        df_new['close'] = new_close
+        return df_new
+
+    def dataframes_output(self):
+        dataframes_for_intervals = {}
+        for interval in self.intervals:
+            df_raw = get_data(self.symbol, interval, 1, self.bars)
+            result = [df_raw] + self.generate_permutated_dataframes(df_raw)
+            dataframes_for_intervals[interval] = result
+        return dataframes_for_intervals
