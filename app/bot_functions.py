@@ -432,6 +432,8 @@ def wlr_rr(df_raw):
            positions.append((index, position))
     positions = [(a[0], b[0], int(a[1])) for a, b in zip(positions[1:], positions[2:])]
     stats = []
+    longs = []
+    shorts = []
     for start, end, position in positions:
         df_stats = df.iloc[start:end]
         prices = df_stats[['close', 'high', 'low']].to_numpy()
@@ -443,12 +445,40 @@ def wlr_rr(df_raw):
             result = (close_price - open_price) / open_price
             max_result = (max_price - open_price) / open_price
             min_result = (open_price - min_price) / open_price
+            if result != 0:
+                longs.append(result)
         else:
             result = (open_price - close_price) / open_price
             min_result = (max_price - open_price) / open_price
             max_result = (open_price - min_price) / open_price
+            if result != 0:
+                shorts.append(result)
 
-        stats.append((result, min_result, max_result))
+        if result != 0:
+            stats.append((result, min_result, max_result))
+
+    mean_long = round(np.mean(longs), 8)
+    mean_short = round(np.mean(shorts), 8)
+
+    #cond = (divider then position is not ->, if this position divider == 1)
+    _difference = 2
+    if mean_long > 0 and mean_short < 0:
+        cond = (_difference, 'long')
+    elif mean_long < 0 and mean_short > 0:
+        cond = (_difference, 'short')
+    elif mean_long < 0 and mean_short < 0:
+        cond = (1, 'both')
+    elif mean_long > 0 and mean_short > 0:
+        value = mean_long/mean_short
+        if value > _difference:
+            cond = (_difference, 'long')
+        elif value < 0.5:
+            cond = (_difference, 'short')
+        elif value < 1:
+            cond = (round(1/value, 3), 'short')
+        elif value > 1:
+            cond = (round(value, 3), 'long')
+
     # --- creating dataframe with statistics ---
     stats_df = pd.DataFrame(stats, columns=['result', 'min_result', 'max_result'])
     drift = drift_function(stats_df['result'].tolist())
@@ -488,8 +518,19 @@ def wlr_rr(df_raw):
 
     garch = garch_metric(stats_df['result'])
     package = (mean_tp, mean_sl, tp_plus_std, sl_plus_std)
-    package = [round(float(i), 4) for i in package] + [drift]
+    package = [round(float(i), 4) for i in package] + [drift, cond]
     return round(end_result*garch*(tp_plus_std/sl_plus_std), 5), package
+
+
+def vol_cond_result(cond, posType):
+    divider_ = cond[0]
+    protect_type = cond[1]
+    if (protect_type == 'long' and posType == 0) or \
+        (protect_type == 'short' and posType == 1) or \
+            protect_type == 'both':
+        return 1
+    else:
+        return divider_
 
 
 def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=False):
@@ -518,9 +559,9 @@ def calc_result_metric(df, sharpe_multiplier, metric, check_week_ago=False, chec
         df = df[(df['date_xy'] >= week_ago_date)]
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
-    cross = int(df['cross'].sum()) ** 0.85 + 2
-    days = len(list(np.unique(df['date_xy'])))
-    x = sharpe_multiplier/cross
+    # cross = int(df['cross'].sum()) ** 0.85 + 2
+    # days = len(list(np.unique(df['date_xy'])))
+    # x = sharpe_multiplier/cross
     sharpe = 1
     final_result = metric(df)
     if check_end_result:

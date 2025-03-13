@@ -511,25 +511,6 @@ class Bot:
         except Exception as e:
             print('volume_calc anti trend no strategy', e)
 
-        # try:
-        #     if_trend = str(strategy[0]).split('_')[-2]
-        #     if if_trend == 'trend':
-        #         if (bonus >= 0 and posType == 0) or (bonus <= 0 and posType == 1):
-        #             self.if_position_with_trend = 'y'
-        #             antitrend = 1
-        #         else:
-        #             self.if_position_with_trend = 'n'
-        #             antitrend = 0.8
-        #     else:
-        #         if (bonus <= 0 and posType == 0) or (bonus >= 0 and posType == 1):
-        #             self.if_position_with_trend = 'n'
-        #             antitrend = 1
-        #         else:
-        #             self.if_position_with_trend = 'y'
-        #             antitrend = 0.8
-        # except Exception as e:
-        #     print('volume_calc anti trend', e)
-
         trend_bonus = bonus if posType == 0 else -bonus
         volume_m15 = self.volume_reducer(posType, 'M15')
         volume_m20 = self.volume_reducer(posType, 'M20')
@@ -544,7 +525,9 @@ class Bot:
 
         max_pos_margin2 = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
         max_pos_margin2 = (max_pos_margin2 + max_pos_margin2*trend_bonus)*volume_m15*volume_m20
+        max_pos_margin2 = max_pos_margin2 / vol_cond_result(strategy[14], posType)
         x, _ = Bot.target_class.checkTarget()
+
         if x:
             max_pos_margin2 = max_pos_margin2 / 2
         print('max_pos_margin', round(max_pos_margin2, 3))
@@ -979,13 +962,13 @@ class Bot:
     def sort_strategies(self):
 
         # 0- name_, 1- strategy_, 2- interval, 3- fast, 4- slow, 5- round(result, 2), 6- actual_condition,
-        # 7- kind, 8- daily_return, 9- end_result, 10- tp_std, 11- sl_std, 12- drift, 13- p_value
+        # 7- kind, 8- daily_return, 9- end_result, 10- tp_std, 11- sl_std, 12- drift, 13- p_value, 14- volume_contition
 
         if dt.now().hour >= change_hour or all([i[6] == -2 for i in self.strategies]):
-            self.strategies = [i for i in self.strategies if i[8] > 0 and i[9] and i[13] > 0]
+            self.strategies = [i for i in self.strategies if i[8] > 0 and i[9] > 0 and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[9]*x[8]*x[13], reverse=True)
         else:
-            self.strategies = [i for i in self.strategies if i[8] > 0 and i[9] and i[13] > 0]
+            self.strategies = [i for i in self.strategies if i[8] > 0 and i[9] > 0 and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[9]*x[8]*x[13], reverse=True)
         first_group = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][7]
         first_ = first_group[0]
@@ -1027,7 +1010,7 @@ class Bot:
                 print("This strategy have no results.")
                 continue
             fast, slow, result, actual_condition, daily_return, end_result, risk_data = results_pack
-            tp, sl, tp_std, sl_std, drift = risk_data
+            tp, sl, tp_std, sl_std, drift, volume_contition = risk_data
             printer("TP/TP_STD", f'{tp, tp_std}')
             printer("SL/SL_STD", f'{sl, sl_std}')
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, drift, "\n")
@@ -1037,10 +1020,11 @@ class Bot:
             printer("End result:", end_result)
             printer("Daily return:", daily_return)
             printer("Final sort result: ", round(p_value*daily_return*end_result, 6))
-            self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift, p_value))
+            printer("volume_contition: ", volume_contition)
+            self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift, p_value, volume_contition))
         self.backtest_time = dt.now()
 
-        for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift, p_value in self.strategies_raw:
+        for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift, p_value, volume_contition in self.strategies_raw:
             try:
                 tp_sl = round(tp_std/sl_std, 3)
             except ZeroDivisionError:
