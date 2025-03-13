@@ -525,7 +525,11 @@ class Bot:
 
         max_pos_margin2 = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
         max_pos_margin2 = (max_pos_margin2 + max_pos_margin2*trend_bonus)*volume_m15*volume_m20
-        max_pos_margin2 = max_pos_margin2 / vol_cond_result(strategy[14], posType)
+        try:
+            max_pos_margin2 = max_pos_margin2 / vol_cond_result(strategy[14], posType)
+        except Exception as e:
+            print("volume_condition: ", e)
+            pass
         x, _ = Bot.target_class.checkTarget()
 
         if x:
