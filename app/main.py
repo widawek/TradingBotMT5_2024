@@ -231,7 +231,7 @@ class Bot:
                 self.position_size = increase*self.position_size
             else:
                 pass
-            
+
             # if all([i[0] < 0 for i in x]):
             #     self.position_size = decline*self.position_size
             #     if self.position_size < 0.5*position_size:
@@ -289,20 +289,28 @@ class Bot:
                 self.profit_max = max(self.profits)
                 self.profit_min = min(self.profits)
                 self.self_decline_factor()
+
+                sl=min([self.profit_needed, self.sl_money])
+                if self.strategies[self.strategy_number][7] == 'counter':
+                    sl = round(sl/2, 2)
+                tp = min([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
+
                 if self.print_condition():
                     printer("Change value:", f"{round(self.profit_needed, 2):.2f} ({self.profit_needed_min:.2f}) {self.currency}")
-                    printer("Change value profit:", f"{round(self.tp_money, 2):.2f} {self.currency}")
-                    printer("Change value loss:", f"{round(self.sl_money, 2):.2f} {self.currency}")
+                    printer("TP now:", f"{round(tp, 2):.2f} {self.currency}")
+                    printer("SL now:", f"{round(sl, 2):.2f} {self.currency}")
+                    printer("TP from strategy:", f"{round(self.tp_money, 2):.2f} {self.currency}")
+                    printer("SL from strategy:", f"{round(self.sl_money, 2):.2f} {self.currency}")
                     printer("Max profit:", f"{self.profit_max:.2f} {self.currency}")
                     printer("Decline factor:", f"{self.profit_decline_factor}")
                     printer("Close position if profit is less than", f"{round(self.profit_max * self.profit_decline_factor, 2)} {self.currency}")
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif profit < -self.sl_money/self.too_much_risk():# and profit > 0.91 * self.profit_min:
+                if profit < -sl/self.too_much_risk():# and profit > 0.91 * self.profit_min:
                     self.clean_orders(backtest)
 
                 # Jeżeli strata mniejsza od straty granicznej
-                elif ((self.profit_max > self.tp_money/multi and profit < self.profit_max * self.profit_decline_factor) or
+                elif ((self.profit_max > tp/multi and profit < self.profit_max * self.profit_decline_factor) or
                     (self.fresh_daily_target and profit < self.profit_max * (self.profit_decline_factor-0.06))):
                     self.clean_orders(backtest)
 
@@ -811,13 +819,17 @@ class Bot:
             if sum_ < 0 and prof_list[-1] < 0:
                 self.after_change_hour = True
                 self.test_strategies()
-        if self.fresh_daily_target:
+        elif self.fresh_daily_target:
             self.fresh_daily_target = False
             time_sleep = 60
             print(dt.now())
             print(f"Target was reached. {time_sleep} minutes brake.")
             sleep(time_sleep*60)
             self.test_strategies()
+        elif (self.backtest_time-dt.now()).seconds/3600 > 6:
+            print("Last backtest was 6 hour ago. I need new data.")
+            self.test_strategies()
+
 
     @class_errors
     def pos_creator(self):
@@ -992,7 +1004,6 @@ class Bot:
 
     @class_errors
     def test_strategies(self, add_number=0):
-        self.backtest_time = dt.now().strftime("%H:%M")
         strategies_number = 4 + add_number
         super_start_time = time.time()
         strategies = self.load_strategies_from_json()
@@ -1025,6 +1036,7 @@ class Bot:
             printer("Daily return:", daily_return)
             printer("Final sort result: ", round(p_value*daily_return*end_result, 6))
             self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift, p_value))
+        self.backtest_time = dt.now()
 
         for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift, p_value in self.strategies_raw:
             try:
