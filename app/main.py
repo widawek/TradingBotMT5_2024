@@ -290,12 +290,14 @@ class Bot:
                 self.profit_min = min(self.profits)
                 self.self_decline_factor()
 
+                kind_ = self.strategies[self.strategy_number][7]
                 sl=min([self.profit_needed, self.sl_money])
-                if self.strategies[self.strategy_number][7] == 'counter':
-                    sl = round(sl/2, 2)
                 tp = min([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
+                if kind_ == 'counter':
+                    sl = round(sl/1.5, 2)
 
                 if self.print_condition():
+                    printer("Kind:", kind_)
                     printer("Change value:", f"{round(self.profit_needed, 2):.2f} ({self.profit_needed_min:.2f}) {self.currency}")
                     printer("TP now:", f"{round(tp, 2):.2f} {self.currency}")
                     printer("SL now:", f"{round(sl, 2):.2f} {self.currency}")
@@ -826,7 +828,7 @@ class Bot:
             print(f"Target was reached. {time_sleep} minutes brake.")
             sleep(time_sleep*60)
             self.test_strategies()
-        elif (self.backtest_time-dt.now()).seconds/3600 > 6:
+        elif (self.backtest_time-dt.now()).seconds/3600 >= 6:
             print("Last backtest was 6 hour ago. I need new data.")
             self.test_strategies()
 
