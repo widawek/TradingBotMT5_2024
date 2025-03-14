@@ -36,6 +36,22 @@ def z_score(results):
     return round((original_result - mean_simulated) / std_simulated, 4)
 
 
+def bootstrap_ci(data, alpha=0.05, n_bootstrap=10000):
+    """
+    Oblicza bootstrapowy przedział ufności dla podanych danych.
+    
+    :param data: Lista wyników statystyki (np. CAGR lub Max Drawdown z Monte Carlo).
+    :param alpha: Poziom istotności (np. 0.05 dla 95% przedziału ufności).
+    :param n_bootstrap: Liczba losowań bootstrapowych.
+    :return: Dolna i górna granica przedziału ufności.
+    """
+    bootstrap_samples = np.random.choice(data, (n_bootstrap, len(data)), replace=True)
+    stat_bootstrap = np.mean(bootstrap_samples, axis=1)  # Obliczenie średniej dla każdej próbki
+    lower_bound = np.percentile(stat_bootstrap, (alpha / 2) * 100)
+    upper_bound = np.percentile(stat_bootstrap, (1 - alpha / 2) * 100)
+    return lower_bound, upper_bound
+
+
 class Montecarlo:
     def __init__(self, symbol, interval, strategy, metric, bars, slow, fast, permutated_dataframes: dict = {}, how_many=1000):
         self.symbol = symbol
@@ -90,12 +106,14 @@ class Montecarlo:
         strategy_p_value = p_value(strategies)
         z_zcore_metric = z_score(metric_results)
         z_zcore_strategy = z_score(strategies)
+        bounds = bootstrap_ci(strategies)
         print("Z score for metric: ", z_zcore_metric)
         print("Z score for strategy: ", z_zcore_strategy)
         print("P value for metric: ", metric_p_value)
         print("P value for strategy: ", strategy_p_value)
+        print(f"95% przedział ufności dla wyniku strategii: {bounds[0]*100:.2f}% - {bounds[1]*100:.2f}%")
         p_values_mean_to_score = (0.001/np.mean([metric_p_value, strategy_p_value]))
-        if p_values_mean_to_score < 0 and z_zcore_strategy < 0:
+        if p_values_mean_to_score < 0 or bounds[0] < 0 or strategy_p_value > 0.1 or z_zcore_strategy < 1:
             return -1
         return round(p_values_mean_to_score*z_zcore_strategy, 8)
 
