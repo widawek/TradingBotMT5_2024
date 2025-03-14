@@ -816,7 +816,7 @@ class Bot:
             print(f"Target was reached. {time_sleep} minutes brake.")
             sleep(time_sleep*60)
             self.test_strategies()
-        elif (self.backtest_time-dt.now()).seconds/3600 >= 6:
+        elif (dt.now() - self.backtest_time).seconds/3600 >= 6:
             print("Last backtest was 6 hour ago. I need new data.")
             self.test_strategies()
 
