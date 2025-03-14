@@ -977,8 +977,7 @@ class Bot:
         else:
             self.strategies = [i for i in self.strategies if i[8] > 0 and i[9] > 0 and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[9]*x[8]*x[13], reverse=True)
-        first_group = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][7]
-        first_ = first_group[0]
+        first_ = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][7]
         printer("Daily starter", first_)
         self.actual_today_best = first_
         second_ = 'trend' if first_ == 'counter' else 'counter'
@@ -1010,7 +1009,7 @@ class Bot:
         i = 1
         for strategy in strategies:
             self.is_this_the_end()
-            self.check_trigger(backtest=True)
+            #self.check_trigger(backtest=True)
             name_ = strategy[1]
             strategy_ = globals()[name_]
             interval = strategy[2]
