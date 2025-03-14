@@ -3,6 +3,7 @@ from functools import wraps
 import inspect
 from datetime import datetime as dt
 import sys
+import time
 sys.path.append("..")
 
 
@@ -78,3 +79,12 @@ def class_errors(func):
             raise e
     return just_log
   
+
+def measure_time(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"Czas wykonania {func.__name__}: {end_time - start_time:.6f} sekundy")
+        return result
+    return wrapper

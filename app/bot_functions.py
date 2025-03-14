@@ -478,6 +478,8 @@ def wlr_rr(df_raw):
             cond = (round(1/value, 3), 'short')
         elif value > 1:
             cond = (round(value, 3), 'long')
+        else:  cond = (1, 'both')
+    else: cond  = (1, 'both')
 
     # --- creating dataframe with statistics ---
     stats_df = pd.DataFrame(stats, columns=['result', 'min_result', 'max_result'])

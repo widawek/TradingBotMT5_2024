@@ -129,3 +129,10 @@ def sharpe_drawdown_daily_metric(dfx, penalty=True):
     drawdown = max_drawdown(strategy_)
     penalty_ = exponential_penalty(df) if penalty else 1
     return round(sharpe * (1 + drawdown) * penalty_, 6)
+
+
+def mean_return_metric(dfx, penalty=True):
+    df = dfx.dropna().copy()
+    mean_volatility = abs(df.close/df.close.shift()).dropna().mean()
+    penalty_ = exponential_penalty(df) if penalty else 1
+    return round((df['return'].mean()*100/mean_volatility)*penalty_, 6)

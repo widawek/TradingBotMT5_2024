@@ -9,7 +9,7 @@ from datetime import datetime as dt
 from time import sleep
 from extensions.symbols_rank import symbol_stats, tp_sl_in_currency
 from app.functions import *
-from app.decorators import class_errors
+from app.decorators import class_errors, measure_time
 from config.parameters import *
 from app.database_class import TradingProcessor
 from strategies_analize.global_strategies import *
@@ -994,6 +994,7 @@ class Bot:
                 alternating_data.append(group_n[i])
         return alternating_data
 
+    @measure_time
     @class_errors
     def test_strategies(self, add_number=0):
         strategies_number = 4 + add_number
