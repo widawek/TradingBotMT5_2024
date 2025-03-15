@@ -180,23 +180,35 @@ def sup1n_trend(df_raw, slow, fast, symbol):
     return df, position
 
 
-# def altre_trend(df_raw, long, short, symbol):
-#     df = df_raw.copy()
-#     long *= 2
-#     short *= 2
-#     df['res_long'] = df.close-df.open
-#     df['dir_long'] = np.where(df.res_long>0, 1, -1)
-#     df['trend_long'] = df['res_long'].rolling(long).sum()*df['dir_long'].rolling(short).mean()
-
-#     df['res_short'] = df.open-df.close
-#     df['dir_short'] = np.where(df.res_short>0, 1, -1)
-#     df['trend_short'] = df['res_short'].rolling(long).sum()*df['dir_short'].rolling(short).mean()
-
-#     df['stance'] = np.where((df['trend_short']<0)&(df['trend_long']>0), 1, np.NaN)
-#     df['stance'] = np.where((df['trend_short']>0)&(df['trend_long']<0), -1, df['stance'])
-#     df['stance'] = df['stance'].ffill()
-#     position = df['stance'].iloc[-1]
-#     return df, position
+def zsnew_trend(df_raw, slow, fast, symbol):
+    df = df_raw.copy()
+    x = fast/20
+    df['rolling_mean'] = df['close'].rolling(window=slow).mean()
+    df['rolling_std'] = df['close'].rolling(window=slow).std()
+    df['up'] = df['rolling_mean'] + (0.5+x)*df['rolling_std']
+    df['down'] = df['rolling_mean'] - (0.5+x)*df['rolling_std']
+    df['rolling_zscore'] = (df['close'] - df['rolling_mean']) / df['rolling_std']
+    df['rolling_zscore_mean'] = df['rolling_zscore'].rolling(slow).mean()
+    df['rolling_zscore_std']= df['rolling_zscore'].rolling(slow).std()
+    df['rolling_zscore_mean_up'] = df['rolling_zscore_mean'] + x*df['rolling_zscore_std']
+    df['rolling_zscore_mean_down'] = df['rolling_zscore_mean'] - x*df['rolling_zscore_std']
+    df['stance'] = np.where((df['rolling_zscore']>df['rolling_zscore_mean'])&
+                            (df['close']<df['up'].shift())
+                            , 1, np.nan)
+    df['stance'] = np.where((df['rolling_zscore']<df['rolling_zscore_mean'])&
+                            (df['close']>df['down'].shift())
+                            , -1, df['stance'])
+    df['stance'] = np.where((df['rolling_zscore']>df['rolling_zscore_mean_up'])&
+                            (df['close']<df['up'].shift())&
+                            (df['close']>df['down'].shift())
+                            , -1, df['stance'])
+    df['stance'] = np.where((df['rolling_zscore']<df['rolling_zscore_mean_down'])&
+                            (df['close']>df['down'].shift())&
+                            (df['close']<df['up'].shift())
+                            , 1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
 
 
 def mo1to_trend(df_raw, long, short, symbol):

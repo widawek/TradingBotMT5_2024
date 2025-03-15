@@ -1049,7 +1049,8 @@ class Bot:
                 tp_sl = 0
             if end_result is None:
                 end_result = 0
-            self.write_to_backtest(name_, interval, result, kind, fast, slow, end_result, tp_sl)
+            if p_value > 0:
+                self.write_to_backtest(name_, interval, result, kind, fast, slow, end_result, tp_sl)
 
         self.strategies = [i for i in self.strategies_raw if ((i[5] != np.inf) and (i[5] > 0))]
         try:
