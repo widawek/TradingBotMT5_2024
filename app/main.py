@@ -1034,11 +1034,11 @@ class Bot:
             printer("volume_contition: ", volume_contition)
             self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift, p_value, volume_contition))
 
+        print("\nv NICE STRATEGIES v")
         for strat in self.strategies_raw:
-            print("\nv NICE STRATEGIES v")
             if strat[13] > 0:
                 print(strat)
-            print("^ NICE STRATEGIES ^\n")
+        print("^ NICE STRATEGIES ^\n")
 
         self.backtest_time = dt.now()
 
