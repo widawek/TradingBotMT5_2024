@@ -114,7 +114,7 @@ class Montecarlo:
         print(f"95% przedział ufności dla wyniku strategii: {bounds[0]*100:.2f}% - {bounds[1]*100:.2f}%")
         p_values_mean_to_score = (0.001/np.mean([metric_p_value, strategy_p_value]))
         bounds_mean = (bounds[0]+bounds[1])/2
-        if p_values_mean_to_score < 0 or bounds_mean < 0 or bounds[0] < -0.3 or strategy_p_value > 0.15 or z_zcore_strategy < 1:
+        if p_values_mean_to_score < 0 or bounds_mean < 0 or bounds[0] < -0.005 or strategy_p_value > 0.15 or z_zcore_strategy < 1:
             return -1
         return round(p_values_mean_to_score*z_zcore_strategy, 8)
 
