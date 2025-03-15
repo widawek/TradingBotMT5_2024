@@ -20,12 +20,12 @@ metrics = [only_strategy_metric, sharpe_metric, sharpe_drawdown_metric, sharpe_d
 if input('Fast or slow: ') == 'fast':
     print("FAST")
     print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.10)/60)
-    fast_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, bars=16000, max_fast=fast_range, max_slow=slow_range)
+    fast_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, bars=16000, max_fast=fast_range, max_slow=slow_range, part_results=True)
     fast_test.full_analize()
     fast_test.output()
 else:
     print("SLOW")
     print(len(symbols)*len(strategies)*len(slow_intervals)*(1+len(metrics)*0.10)/60)
-    fast_test = Backtest_complex(symbols, slow_intervals, strategies, metrics, days=15, bars=9000, max_fast=fast_range, max_slow=slow_range)
+    fast_test = Backtest_complex(symbols, slow_intervals, strategies, metrics, days=15, bars=9000, max_fast=fast_range, max_slow=slow_range, part_results=True)
     fast_test.full_analize()
     fast_test.output()

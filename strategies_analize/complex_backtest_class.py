@@ -68,7 +68,7 @@ def returns_bt_full_anal(df_raw):
 
 class Backtest_complex:
     def __init__(self, symbols: list, intervals: list, strategies: list,
-                 metrics: list, days=10, max_fast: int=21, max_slow: int=62, bars: int=16000, excel=True):
+                 metrics: list, days=10, max_fast: int=21, max_slow: int=62, part_results=False, bars: int=16000, excel=True):
         self.symbols = symbols
         self.metrics = metrics
         self.intervals = intervals
@@ -79,6 +79,21 @@ class Backtest_complex:
         self.bars = bars
         self.excel = excel
         self.strategies_to_test = []
+        self.give_me_part_results(part_results)
+
+    @class_errors
+    def give_me_part_results(self, condition):
+        if condition:
+            try:
+                name_ = 'slow_secure' if 'M15' in self.intervals else 'fast_secure'
+                df_raw = pd.read_excel(f'{name_}.xlsx', index_col=None)
+                df_raw = df_raw.drop(columns=['Unnamed: 0'], axis=1)
+                self.part_results = df_raw.values.tolist()
+            except Exception as e:
+                print(e)
+                self.part_results = []
+        else:
+            self.part_results = []
 
     @class_errors
     def generate_main_df(self, symbol, interval):
@@ -137,12 +152,15 @@ class Backtest_complex:
 
     @class_errors
     def full_analize(self):
-        metrics_results = []
+        metrics_results = self.part_results
+        print(metrics_results)
         for interval in self.intervals:
             for symbol in self.symbols:
                 self.generate_main_df(symbol, interval)
                 for strategy in self.strategies:
-
+                    # 'symbol', 'strategy', 'metric', 'interval', 'sharpe', 'result', 'density'
+                    if any([(i[0]==symbol and i[1] == strategy.__name__ and i[3] == interval) for i in metrics_results]):
+                        continue
                     try:
                         results = []
                         print(symbol, strategy.__name__,interval)
@@ -152,15 +170,7 @@ class Backtest_complex:
                             for metric, symbol, fast, slow, _ in best_strategies:
                                 df = returns_bt_full_anal(strategy(df_test, slow, fast, symbol)[0])
                                 df['strategy'] = (1+df['return']).cumprod() - 1
-                                results.append((metric,
-                                                round(
-                                                    #np.mean([
-                                                    #df['strategy'].min(),
-                                                    #df['strategy'].max(),
-                                                    df['strategy'].iloc[-1]
-                                                    #])
-                                                    ,6))
-                                                               )
+                                results.append((metric, round(df['strategy'].iloc[-1] ,6)))
 
                         results_df = pd.DataFrame(results, columns=['metric', 'final_strategy'])
                         grouped_results = results_df.groupby('metric')['final_strategy']
