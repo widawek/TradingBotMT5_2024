@@ -22,24 +22,24 @@ def z_score(results):
     simulated_results = results[1:]
     """
     Oblicza Z-score dla oryginalnej strategii względem symulowanych wyników Monte Carlo.
-    
+
     :param original_result: Wynik oryginalnej strategii (liczba)
     :param simulated_results: Lista wyników z symulacji Monte Carlo (lista liczb)
     :return: Z-score (float)
     """
     mean_simulated = np.mean(simulated_results)
     std_simulated = np.std(simulated_results, ddof=1)  # odchylenie standardowe próby
-    
+
     if std_simulated == 0:
         return float('nan')  # Uniknięcie dzielenia przez zero
-    
+
     return round((original_result - mean_simulated) / std_simulated, 4)
 
 
 def bootstrap_ci(data, alpha=0.05, n_bootstrap=10000):
     """
     Oblicza bootstrapowy przedział ufności dla podanych danych.
-    
+
     :param data: Lista wyników statystyki (np. CAGR lub Max Drawdown z Monte Carlo).
     :param alpha: Poziom istotności (np. 0.05 dla 95% przedziału ufności).
     :param n_bootstrap: Liczba losowań bootstrapowych.
@@ -113,7 +113,8 @@ class Montecarlo:
         print("P value for strategy: ", strategy_p_value)
         print(f"95% przedział ufności dla wyniku strategii: {bounds[0]*100:.2f}% - {bounds[1]*100:.2f}%")
         p_values_mean_to_score = (0.001/np.mean([metric_p_value, strategy_p_value]))
-        if p_values_mean_to_score < 0 or bounds[0] < 0 or strategy_p_value > 0.1 or z_zcore_strategy < 1:
+        bounds_mean = (bounds[0]+bounds[1])/2
+        if p_values_mean_to_score < 0 or bounds_mean < 0 or bounds[0] < -0.3 or strategy_p_value > 0.15 or z_zcore_strategy < 1:
             return -1
         return round(p_values_mean_to_score*z_zcore_strategy, 8)
 
@@ -156,7 +157,7 @@ class Montecarlo:
         df_new['low'] = new_low
         df_new['close'] = new_close
         return df_new
-    
+
 
 class PermutatedDataFrames:
     def __init__(self, symbol: str, intervals: list, bars, how_many=1000):
