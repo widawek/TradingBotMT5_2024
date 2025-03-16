@@ -191,6 +191,7 @@ class Bot:
         self.barOpen = mt.copy_rates_from_pos(symbol, timeframe_("M1"), 0, 1)[0][0]
         self.interval = "M1"
         self.drift = "Neutral"
+        self.virgin_test = True
         self.test_strategies()
 
     @class_errors
@@ -971,12 +972,12 @@ class Bot:
         # 0- name_, 1- strategy_, 2- interval, 3- fast, 4- slow, 5- round(result, 2), 6- actual_condition,
         # 7- kind, 8- daily_return, 9- end_result, 10- tp_std, 11- sl_std, 12- drift, 13- p_value, 14- volume_contition
 
-        if dt.now().hour >= change_hour or all([i[6] == -2 for i in self.strategies]):
-            self.strategies = [i for i in self.strategies if i[8] > 0 and i[9] > 0 and i[13] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: x[9]*x[8]*x[13], reverse=True)
+        if dt.now().hour >= change_hour or all([i[6] == -2 for i in self.strategies]) or (not self.virgin_test):
+            self.strategies = [i for i in self.strategies if i[8] > 0 and i[5] > 0 and i[13] > 0]
+            sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[8]*x[13]*(x[10]/x[11]), reverse=True)
         else:
-            self.strategies = [i for i in self.strategies if i[8] > 0 and i[9] > 0 and i[13] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: x[9]*x[8]*x[13], reverse=True)
+            self.strategies = [i for i in self.strategies if i[5] > 0 and i[13] > 0]
+            sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True)
         first_ = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][7]
         printer("Daily starter", first_)
         self.actual_today_best = first_
@@ -991,6 +992,8 @@ class Bot:
                 alternating_data.append(group_t[i])
             if i < len(group_n):
                 alternating_data.append(group_n[i])
+
+        self.virgin_test = False
         return alternating_data
 
     @measure_time
