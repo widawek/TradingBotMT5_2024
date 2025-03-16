@@ -1083,7 +1083,7 @@ class Bot:
         sharpe_multiplier = interval_time_sharpe(interval)
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
         results = []
-        for slow in trange(5, slow_range):
+        for slow in trange(5, slow_range, 2):
             for fast in range(2, fast_range):
                 try:
                     if fast == slow:
@@ -1102,7 +1102,7 @@ class Bot:
                     results.append((fast, slow, result, result2,
                                     actual_condition, daily_return, end_result, risk_data))
                 except Exception as e:
-                    print("trend_backtest", e)
+                    print("\ntrend_backtest", e)
                     continue
         try:
             f_result = [i for i in results if i[2] > 0 and i[3] > 0 and i[6]>0]

@@ -683,7 +683,7 @@ def play_with_trend(symbol, short, long, dev, divider):
 
 
 def play_with_trend_bt(symbol):
-    return 10, 20, 2, 1
+    #return 10, 20, 2, 1
     longs = range(1150, 1601, 25)#range(1100, 2001, 25)
     shorts = range(350, 621, 20)
     devs = range(10, 23, 2)

@@ -68,7 +68,8 @@ def returns_bt_full_anal(df_raw):
 
 class Backtest_complex:
     def __init__(self, symbols: list, intervals: list, strategies: list,
-                 metrics: list, days=10, max_fast: int=21, max_slow: int=62, part_results=False, bars: int=16000, excel=True):
+                 metrics: list, days=10, max_fast: int=21, max_slow: int=62,
+                 part_results=False, bars: int=16000, excel=True):
         self.symbols = symbols
         self.metrics = metrics
         self.intervals = intervals

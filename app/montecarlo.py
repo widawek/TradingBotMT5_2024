@@ -80,7 +80,7 @@ class Montecarlo:
         result = self.bt_metric(df1.copy())
         return [result, df1['strategy'].iloc[1000-self.bars:].tolist()]
 
-    def correlation_condition(self, df_permuted, threshold=0.7):
+    def correlation_condition(self, df_permuted, threshold=0.3):
         correlation_pearson = self.original_df['close'].corr(df_permuted['close'])
         # correlation_pearson_h = df_original['high'].corr(df_permuted['high'])
         # correlation_pearson_l = df_original['low'].corr(df_permuted['low'])
@@ -166,7 +166,7 @@ class PermutatedDataFrames:
         self.bars = bars
         self.how_many = how_many
 
-    def correlation_condition(self, df_raw, df_permuted, threshold=0.7):
+    def correlation_condition(self, df_raw, df_permuted, threshold=0.3):
         correlation_pearson = df_raw['close'].corr(df_permuted['close'])
         correlations = [correlation_pearson]
         correlations = [True if i>threshold else False for i in correlations]
