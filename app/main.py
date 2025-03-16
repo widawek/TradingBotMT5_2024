@@ -974,11 +974,11 @@ class Bot:
 
         if dt.now().hour >= change_hour or all([i[6] == -2 for i in self.strategies]) or (not self.virgin_test):
             self.strategies = [i for i in self.strategies if i[8] > 0 and i[5] > 0 and i[13] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[8]*x[13]*(x[10]/x[11]), reverse=True)
+            sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
         else:
             self.strategies = [i for i in self.strategies if i[5] > 0 and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True)
-        first_ = sorted(self.strategies, key=lambda x: x[8], reverse=True)[0][7]
+        first_ = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True)[0][7]
         printer("Daily starter", first_)
         self.actual_today_best = first_
         second_ = 'trend' if first_ == 'counter' else 'counter'
@@ -1031,11 +1031,12 @@ class Bot:
             monte = Montecarlo(self.symbol, interval, strategy_, self.bt_metric, int(self.number_of_bars_for_backtest/2), slow, fast, permutated_dataframes)
             p_value = monte.final_p_value()
             printer("Z-score*1/p-value:", p_value)
-            printer("End result:", end_result)
+            printer("Result:", result)
             printer("Daily return:", daily_return)
-            printer("Final sort result: ", round(p_value*daily_return*end_result, 6))
+            printer("Final sort result virgin: ", round(p_value*result, 6))
+            printer("Final sort result daily: ", round(p_value*daily_return*result, 6))
             printer("volume_contition: ", volume_contition)
-            self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 2), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift, p_value, volume_contition))
+            self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 8), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift, p_value, volume_contition))
 
         print("\nv NICE STRATEGIES v")
         for strat in self.strategies_raw:
