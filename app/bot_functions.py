@@ -33,7 +33,7 @@ def max_drawdown(strategy):
     """Max Drawdown = największe obsunięcie kapitału"""
     peak = strategy.cummax()
     drawdown = (strategy - peak) / peak
-    return drawdown.min()
+    return drawdown.min()/100
 
 
 def ulcer_index(strategy):
@@ -554,7 +554,7 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=Fa
         return sharpe, final_result
 
 
-def calc_result_metric(df, metric, check_week_ago=False, check_end_result=False):
+def calc_result_metric(df, metric, check_week_ago=False, check_end_result=True):
     if check_week_ago:
         today = dt.now().date()
         week_ago_date = today - timedelta(days=7)
@@ -683,7 +683,7 @@ def play_with_trend_bt(symbol):
     longs = range(1150, 1601, 25)#range(1100, 2001, 25)
     shorts = range(350, 621, 20)
     devs = range(10, 23, 2)
-    df_raw = get_data(symbol, 'M5', 1, 75000)
+    df_raw = get_data(symbol, 'M5', 1, 25000)
     df_raw['weekday'] = df_raw.time.dt.weekday
 
     today = dt.now().weekday()

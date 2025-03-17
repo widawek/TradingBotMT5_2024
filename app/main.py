@@ -805,19 +805,21 @@ class Bot:
                 }
             order_result = mt.order_send(request)
 
-        if (not self.after_change_hour) and (dt.now().hour >= change_hour):
-            sum_, prof_list = self.reverse.closed_pos(self.symbol)
-            if sum_ < 0 and prof_list[-1] < 0:
-                self.after_change_hour = True
-                self.test_strategies()
-        elif self.fresh_daily_target:
-            self.fresh_daily_target = False
-            time_sleep = 60
-            print(dt.now())
-            print(f"Target was reached. {time_sleep} minutes brake.")
-            sleep(time_sleep*60)
-            self.test_strategies()
-        elif (dt.now() - self.backtest_time).seconds/3600 >= 6:
+        time_from_last_backtest_hours = round((dt.now() - self.backtest_time).seconds/3600, 3)
+        printer('time_from_last_backtest_hours', time_from_last_backtest_hours)
+        # if (not self.after_change_hour) and (dt.now().hour >= change_hour):
+        #     sum_, prof_list = self.reverse.closed_pos(self.symbol)
+        #     if sum_ < 0 and prof_list[-1] < 0:
+        #         self.after_change_hour = True
+        #         self.test_strategies()
+        # if self.fresh_daily_target:
+        #     self.fresh_daily_target = False
+        #     time_sleep = 60
+        #     print(dt.now())
+        #     print(f"Target was reached. {time_sleep} minutes brake.")
+        #     sleep(time_sleep*60)
+        #     self.test_strategies()
+        if time_from_last_backtest_hours >= 6:
             print("Last backtest was 6 hour ago. I need new data.")
             self.test_strategies()
 
@@ -1084,7 +1086,7 @@ class Bot:
     @class_errors
     def trend_backtest(self, strategy, interval):
         print(strategy.__name__)
-        sharpe_multiplier = interval_time_sharpe(interval)
+        #sharpe_multiplier = interval_time_sharpe(interval)
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
         results = []
         for slow in trange(5, slow_range, 2):
@@ -1101,13 +1103,13 @@ class Bot:
                     # result = self.bt_metric(df1)
                     df1['date_xy'] = df1['time'].dt.date
                     result, end_result, risk_data = calc_result_metric(df1, self.bt_metric, False, True)
-                    actual_condition, _, daily_return = self.calc_pos_condition(df1)
+                    _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
                     results.append((fast, slow, result, actual_condition, daily_return, end_result, risk_data))
                 except Exception as e:
                     print("\ntrend_backtest", e)
                     continue
         try:
-            f_result = [i for i in results if i[2] > 0 and i[6]>0]
+            f_result = [i for i in results if i[2] > 0]
             f_result = sorted(f_result, key=lambda x: x[2], reverse=True)[0]
         except IndexError:
             return None
