@@ -554,23 +554,19 @@ def calc_result(df, sharpe_multiplier, check_week_ago=False, check_end_result=Fa
         return sharpe, final_result
 
 
-def calc_result_metric(df, sharpe_multiplier, metric, check_week_ago=False, check_end_result=False):
+def calc_result_metric(df, metric, check_week_ago=False, check_end_result=False):
     if check_week_ago:
         today = dt.now().date()
         week_ago_date = today - timedelta(days=7)
         df = df[(df['date_xy'] >= week_ago_date)]
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
-    # cross = int(df['cross'].sum()) ** 0.85 + 2
-    # days = len(list(np.unique(df['date_xy'])))
-    # x = sharpe_multiplier/cross
-    sharpe = 1
     final_result = metric(df)
     if check_end_result:
         end_result, risk_data = wlr_rr(df)
-        return sharpe, final_result, end_result, risk_data
+        return final_result, end_result, risk_data
     else:
-        return sharpe, final_result
+        return final_result
 
 
 def delete_last_day_and_clean_returns(df, morning_hour, evening_hour, respect_overnight=True):

@@ -1006,7 +1006,7 @@ class Bot:
         self.bt_metric = globals()[metric_name]
         self.strategies_raw = []
 
-        dfperms = PermutatedDataFrames(self.symbol, intervals_, int(self.number_of_bars_for_backtest/2))
+        dfperms = PermutatedDataFrames(self.symbol, intervals_, int(self.number_of_bars_for_backtest))
         permutated_dataframes = dfperms.dataframes_output()
 
         i = 1
@@ -1098,23 +1098,21 @@ class Bot:
                     df1, density = calculate_strategy_returns(df1, leverage)
                     if (len(df1) < self.number_of_bars_for_backtest/2) or (density < 1/500) or (density > 0.2):
                         continue
-                    result = self.bt_metric(df1)
+                    # result = self.bt_metric(df1)
                     df1['date_xy'] = df1['time'].dt.date
-                    _, result2, end_result, risk_data = calc_result_metric(df1, sharpe_multiplier, self.bt_metric, True, True)
-
-                    _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
-                    results.append((fast, slow, result, result2,
-                                    actual_condition, daily_return, end_result, risk_data))
+                    result, end_result, risk_data = calc_result_metric(df1, self.bt_metric, False, True)
+                    actual_condition, _, daily_return = self.calc_pos_condition(df1)
+                    results.append((fast, slow, result, actual_condition, daily_return, end_result, risk_data))
                 except Exception as e:
                     print("\ntrend_backtest", e)
                     continue
         try:
-            f_result = [i for i in results if i[2] > 0 and i[3] > 0 and i[6]>0]
-            f_result = sorted(f_result, key=lambda x: x[2]*x[3]*x[6], reverse=True)[0]
+            f_result = [i for i in results if i[2] > 0 and i[6]>0]
+            f_result = sorted(f_result, key=lambda x: x[2], reverse=True)[0]
         except IndexError:
             return None
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
-        return f_result[0], f_result[1], round(f_result[2]*f_result[3]*100, 4), f_result[4], f_result[5], f_result[6], f_result[7]
+        return f_result[0], f_result[1], round(f_result[2]*100, 8), f_result[3], f_result[4], f_result[5], f_result[6]
 
 
 if __name__ == '__main__':
