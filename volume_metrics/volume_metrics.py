@@ -106,7 +106,7 @@ def give_me_all_returns(strategies_to_bt, bars, interval):
     print("STRATEGIES TO BT:", strategies_to_bt)
     i = 0
     for strategy, interval, symbol, strategy_name, fast, slow, _ in tqdm(strategies_to_bt):
-        print(strategy)
+        #print(strategy)
         df_raw = get_data(symbol, interval, 1, bars)
         dfx = strategy(df_raw.copy(), slow, fast, symbol)[0]
         dfx = returns_(dfx, symbol)
