@@ -155,7 +155,7 @@ class Backtest:
 
     def strategy_bt(self, strategy, bt_metric, df_raw, symbol):
         results = []
-        for slow in range(5, self.slow):
+        for slow in range(5, self.slow, 2):
             for fast in range(2, self.fast):
                 try:
                     df = returns_bt(strategy(df_raw.copy(), slow, fast, symbol)[0])

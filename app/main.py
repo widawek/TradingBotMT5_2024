@@ -972,7 +972,7 @@ class Bot:
         # 0- name_, 1- strategy_, 2- interval, 3- fast, 4- slow, 5- round(result, 2), 6- actual_condition,
         # 7- kind, 8- daily_return, 9- end_result, 10- tp_std, 11- sl_std, 12- drift, 13- p_value, 14- volume_contition
 
-        if dt.now().hour >= change_hour or all([i[6] == -2 for i in self.strategies]) or (not self.virgin_test):
+        if dt.now().hour >= change_hour or (not self.virgin_test):# all([i[6] == -2 for i in self.strategies]) :
             self.strategies = [i for i in self.strategies if i[8] > 0 and i[5] > 0 and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
         else:
