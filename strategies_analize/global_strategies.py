@@ -168,16 +168,16 @@ def ema1b_trend(df_raw, slow, fast, symbol):
     return df, position
 
 
-def sup1n_trend(df_raw, slow, fast, symbol):
-    df = df_raw.copy()
-    # import in function for report script
-    from app.bot_functions import find_support_resistance_numpy
-    df = find_support_resistance_numpy(df, slow, fast)
-    df['stance'] = np.where(df['close'] < df['support'], -1, np.NaN)
-    df['stance'] = np.where(df['close'] > df['resistance'], 1, df['stance'])
-    df['stance'] = df['stance'].ffill()
-    position = df['stance'].iloc[-1]
-    return df, position
+# def sup1n_trend(df_raw, slow, fast, symbol):
+#     df = df_raw.copy()
+#     # import in function for report script
+#     from app.bot_functions import find_support_resistance_numpy
+#     df = find_support_resistance_numpy(df, slow, fast)
+#     df['stance'] = np.where(df['close'] < df['support'], -1, np.NaN)
+#     df['stance'] = np.where(df['close'] > df['resistance'], 1, df['stance'])
+#     df['stance'] = df['stance'].ffill()
+#     position = df['stance'].iloc[-1]
+#     return df, position
 
 
 def zsnew_trend(df_raw, slow, fast, symbol):

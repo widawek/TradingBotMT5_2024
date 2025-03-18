@@ -136,3 +136,12 @@ def mean_return_metric(dfx, penalty=True):
     mean_volatility = abs(df.close/df.close.shift()).dropna().mean()
     penalty_ = exponential_penalty(df) if penalty else 1
     return round((df['return'].mean()*100/mean_volatility)*penalty_, 6)
+
+
+metric_numb_dict = {
+    'only_strategy_metric':         '1',
+    'sharpe_metric':                '2',
+    'sharpe_drawdown_metric':       '3',
+    'sharpe_drawdown_daily_metric': '4',
+    'mean_return_metric':           '5'
+    }
