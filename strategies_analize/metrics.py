@@ -94,26 +94,22 @@ def mix_rrsimple_metric(dfx, penalty=True):
 
 
 def only_strategy_metric(dfx, penalty=True):
+    # number '1'
     df = dfx.dropna().copy()
     df['strategy'] = (1+df['return']).cumprod() - 1
     penalty_ = exponential_penalty(df) if penalty else 1
     return round(np.mean([df['strategy'].min(), df['strategy'].max(), df['strategy'].iloc[-1]])*penalty_, 6)
 
 
-def min_final_strategy_metric(dfx, penalty=True):
-    df = dfx.dropna().copy()
-    df['strategy'] = (1+df['return']).cumprod() - 1
-    penalty_ = exponential_penalty(df) if penalty else 1
-    return round(np.mean([df['strategy'].min(), df['strategy'].iloc[-1]])*penalty_, 6)
-
-
 def sharpe_metric(dfx, penalty=True):
+    # number '2'
     df = dfx.dropna().copy()
     penalty_ = exponential_penalty(df) if penalty else 1
     return round((df['return'].mean()/df['return'].std())*penalty_, 6)
 
 
 def sharpe_drawdown_metric(dfx, penalty=True):
+    # number '3'
     df = dfx.dropna().copy()
     strategy = (1+df['return']).cumprod()
     penalty_ = exponential_penalty(df) if penalty else 1
@@ -121,6 +117,7 @@ def sharpe_drawdown_metric(dfx, penalty=True):
 
 
 def sharpe_drawdown_daily_metric(dfx, penalty=True):
+    # number '4'
     df = dfx.dropna().copy()
     df['date'] = df['time'].dt.date
     daily_returns = df.groupby('date')['return'].apply(lambda r: (1 + r).prod() - 1)
@@ -132,10 +129,21 @@ def sharpe_drawdown_daily_metric(dfx, penalty=True):
 
 
 def mean_return_metric(dfx, penalty=True):
+    # number '5'
     df = dfx.dropna().copy()
     mean_volatility = abs(df.close/df.close.shift()).dropna().mean()
     penalty_ = exponential_penalty(df) if penalty else 1
     return round((df['return'].mean()*100/mean_volatility)*penalty_, 6)
+
+
+def profit_factor_metric(dfx):
+    # number '6'
+    df = dfx.copy()
+    df = df.dropna()
+    sum_profits = sum(i for i in df['return'] if i > 0)
+    sum_losses = abs(sum(i for i in df['return'] if i < 0))
+    profit_factor = (sum_profits/sum_losses)-1
+    return round(profit_factor*exponential_penalty(df), 6)
 
 
 metric_numb_dict = {
@@ -143,5 +151,6 @@ metric_numb_dict = {
     'sharpe_metric':                '2',
     'sharpe_drawdown_metric':       '3',
     'sharpe_drawdown_daily_metric': '4',
-    'mean_return_metric':           '5'
+    'mean_return_metric':           '5',
+    'profit_factor_metric':         '6'
     }

@@ -149,7 +149,7 @@ class GlobalProfitTracker:
 
 
 class Bot:
-    montecarlo_for_all = True
+    montecarlo_for_all = False
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
@@ -789,21 +789,24 @@ class Bot:
             sys.exit(1)
 
     @class_errors
-    def close_request(self):
+    def close_request(self, in_=False):
         positions_ = mt.positions_get(symbol=self.symbol)
-        for i in positions_:
-            request = {
-                "action": mt.TRADE_ACTION_DEAL,
-                "symbol": i.symbol,
-                "volume": float(i.volume),
-                "type": 1 if (i.type == 0) else 0,
-                "position": i.ticket,
-                "magic": i.magic,
-                'deviation': 20,
-                "type_time": mt.ORDER_TIME_GTC,
-                "type_filling": mt.ORDER_FILLING_IOC
-                }
-            order_result = mt.order_send(request)
+        if positions_:
+            for i in positions_:
+                request = {
+                    "action": mt.TRADE_ACTION_DEAL,
+                    "symbol": i.symbol,
+                    "volume": float(i.volume),
+                    "type": 1 if (i.type == 0) else 0,
+                    "position": i.ticket,
+                    "magic": i.magic,
+                    'deviation': 20,
+                    "type_time": mt.ORDER_TIME_GTC,
+                    "type_filling": mt.ORDER_FILLING_IOC
+                    }
+                order_result = mt.order_send(request)
+        else:
+            print("Any position was opened.")
 
         time_from_last_backtest_hours = round((dt.now() - self.backtest_time).seconds/3600, 3)
         printer('time_from_last_backtest_hours', time_from_last_backtest_hours)
@@ -819,7 +822,7 @@ class Bot:
         #     print(f"Target was reached. {time_sleep} minutes brake.")
         #     sleep(time_sleep*60)
         #     self.test_strategies()
-        if time_from_last_backtest_hours >= 6:
+        if time_from_last_backtest_hours >= 6 and not in_:
             print("Last backtest was 6 hour ago. I need new data.")
             self.test_strategies()
 
@@ -1002,6 +1005,7 @@ class Bot:
     @measure_time
     @class_errors
     def test_strategies(self, add_number=0):
+        self.close_request(True)
         strategies_number = 4 + add_number
         super_start_time = time.time()
         strategies, intervals_ = self.load_strategies_from_json()
@@ -1015,7 +1019,7 @@ class Bot:
         i = 1
         for strategy in strategies:
             self.is_this_the_end()
-            self.check_trigger(backtest=True)
+            #self.check_trigger(backtest=True)
             name_ = strategy[1]
             strategy_ = globals()[name_]
             interval = strategy[2]

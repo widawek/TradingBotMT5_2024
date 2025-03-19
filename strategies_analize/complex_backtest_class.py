@@ -173,8 +173,9 @@ class Backtest_complex:
                             best_strategies = self.strategy_bt(symbol, strategy, df_raw)
                             for metric, symbol, fast, slow, _ in best_strategies:
                                 df = returns_bt_full_anal(strategy(df_test, slow, fast, symbol)[0], interval)
-                                if len(df) < 600:
-                                    continue
+                                if interval not in ['M10', 'M12', 'M15', 'M20', 'M30']:
+                                    if len(df) < 600:
+                                        continue
                                 df['strategy'] = (1+df['return']).cumprod() - 1
                                 results.append((metric, round(df['strategy'].iloc[-1] ,6)))
 
