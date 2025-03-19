@@ -149,7 +149,7 @@ class GlobalProfitTracker:
 
 
 class Bot:
-    montecarlo_for_all = False
+    montecarlo_for_all = True
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
@@ -1015,7 +1015,7 @@ class Bot:
         i = 1
         for strategy in strategies:
             self.is_this_the_end()
-            #self.check_trigger(backtest=True)
+            self.check_trigger(backtest=True)
             name_ = strategy[1]
             strategy_ = globals()[name_]
             interval = strategy[2]
@@ -1097,7 +1097,7 @@ class Bot:
             permutated_dataframes_mini = dfperms_mini.dataframes_output()
 
         for slow in trange(5, slow_range, 2):
-            for fast in range(2, fast_range):
+            for fast in range(2, fast_range, 2):
                 try:
                     if fast == slow:
                         continue

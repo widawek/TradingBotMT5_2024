@@ -53,7 +53,7 @@ def bootstrap_ci(data, alpha=0.05, n_bootstrap=10000):
 
 
 class Montecarlo:
-    def __init__(self, symbol, interval, strategy, metric, bars, slow, fast, permutated_dataframes: dict = {}, how_many=1000, print_tqdm=True):
+    def __init__(self, symbol, interval, strategy, metric, bars, slow, fast, permutated_dataframes: dict = {}, how_many=500, print_tqdm=True):
         self.print_tqdm = print_tqdm
         self.symbol = symbol
         self.interval = interval
@@ -124,6 +124,7 @@ class Montecarlo:
         if p_values_mean_to_score < 0 or bounds_mean < 0 or bounds[0] < -(daily_volatility/2) or strategy_p_value > 0.15 or z_zcore_strategy < 1 or nan_test:
             
             if self.print_tqdm:
+                print("NOT OK")
                 print("Z score for metric: ", z_zcore_metric)
                 print("Z score for strategy: ", z_zcore_strategy)
                 print("P value for metric: ", metric_p_value)
@@ -132,6 +133,7 @@ class Montecarlo:
             return -1
         
         if self.print_tqdm:
+            print("OK")
             print("Z score for metric: ", z_zcore_metric)
             print("Z score for strategy: ", z_zcore_strategy)
             print("P value for metric: ", metric_p_value)
@@ -181,7 +183,7 @@ class Montecarlo:
 
 
 class PermutatedDataFrames:
-    def __init__(self, symbol: str, intervals: list, bars, how_many=1000):
+    def __init__(self, symbol: str, intervals: list, bars, how_many=500):
         self.symbol = symbol
         self.intervals = intervals
         self.bars = bars
