@@ -149,6 +149,7 @@ class GlobalProfitTracker:
 
 
 class Bot:
+    montecarlo_for_all = False
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
@@ -1003,6 +1004,7 @@ class Bot:
         strategies_number = 4 + add_number
         super_start_time = time.time()
         strategies, intervals_ = self.load_strategies_from_json()
+        strategies.sort(key=lambda x: x[2])
         metric_name = strategies[0][3]
         self.bt_metric = globals()[metric_name]
         self.strategies_raw = []
@@ -1087,7 +1089,12 @@ class Bot:
         print(strategy.__name__)
         #sharpe_multiplier = interval_time_sharpe(interval)
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
+
         results = []
+        if Bot.montecarlo_for_all:
+            dfperms_mini = PermutatedDataFrames(self.symbol, [interval], int(self.number_of_bars_for_backtest), how_many=100)
+            permutated_dataframes_mini = dfperms_mini.dataframes_output()
+
         for slow in trange(5, slow_range, 2):
             for fast in range(2, fast_range):
                 try:
@@ -1102,8 +1109,22 @@ class Bot:
                     # result = self.bt_metric(df1)
                     df1['date_xy'] = df1['time'].dt.date
                     result, end_result, risk_data = calc_result_metric(df1, self.bt_metric, False, True)
-                    _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
-                    results.append((fast, slow, result, actual_condition, daily_return, end_result, risk_data))
+
+                    if result > 0:
+                        _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
+
+                        if Bot.montecarlo_for_all:
+                            monte_mini = Montecarlo(self.symbol, interval, strategy, self.bt_metric, int(self.number_of_bars_for_backtest/2), slow, fast, permutated_dataframes_mini, how_many=100, print_tqdm=False)
+                            p_value = monte_mini.final_p_value(self.avg_vol)
+                            if p_value > 0:
+                                print(f"\nAdd result {fast} {slow} {result} {p_value}")
+                                results.append((fast, slow, round(result*p_value, 10), actual_condition, daily_return, end_result, risk_data))
+                            else:
+                                continue
+                        else:
+                            results.append((fast, slow, round(result, 10), actual_condition, daily_return, end_result, risk_data))
+                    else:
+                        continue
                 except Exception as e:
                     print("\ntrend_backtest", e)
                     continue

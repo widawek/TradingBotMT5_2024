@@ -491,12 +491,6 @@ def wlr_rr(df_raw):
     aberration_max = max_res.mean() + max_res.std()
     stats_df['result'] = np.where(stats_df['result'] > aberration_max, aberration_max, stats_df['result'])
 
-
-    # if monte_carlo_with_shuffle(stats_df['result']):
-    #     pass
-    # else:
-    #     return -10, [0, 0, 0, 0]
-
     winners = stats_df[stats_df['result'] > 0]
     series_tp = outlier_replacement(winners, 'max_result', percentile=0.02)
     series_sl = outlier_replacement(winners, 'min_result', percentile=0.02)
@@ -506,12 +500,9 @@ def wlr_rr(df_raw):
     sl_plus_std = mean_sl + 0.1*series_sl.std()
 
     risk_reward_ratio = round(tp_plus_std / sl_plus_std, 3)
-    # if risk_reward_ratio < 1.3:
-    #     return 0, [0,0,0,0]
+
     try:
         win_loss_ratio = round(len(stats_df[stats_df['result'] > 0])/len(stats_df[stats_df['result'] < 0]), 3)
-        # if win_loss_ratio < 0.9:
-        #     return 0, [0,0,0,0]
     except ZeroDivisionError:
         win_loss_ratio = 1
     end_result = round(risk_reward_ratio * win_loss_ratio, 2)
@@ -562,6 +553,8 @@ def calc_result_metric(df, metric, check_week_ago=False, check_end_result=True):
     df = df.dropna()
     df.reset_index(drop=True, inplace=True)
     final_result = metric(df)
+    if final_result < 0:
+        return 0, 0, [0 for _ in range(5)]+[(1, 'both')]
     if check_end_result:
         end_result, risk_data = wlr_rr(df)
         return final_result, end_result, risk_data

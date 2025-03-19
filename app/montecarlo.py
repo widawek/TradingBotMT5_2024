@@ -53,7 +53,8 @@ def bootstrap_ci(data, alpha=0.05, n_bootstrap=10000):
 
 
 class Montecarlo:
-    def __init__(self, symbol, interval, strategy, metric, bars, slow, fast, permutated_dataframes: dict = {}, how_many=1000):
+    def __init__(self, symbol, interval, strategy, metric, bars, slow, fast, permutated_dataframes: dict = {}, how_many=1000, print_tqdm=True):
+        self.print_tqdm = print_tqdm
         self.symbol = symbol
         self.interval = interval
         self.strategy = strategy
@@ -70,8 +71,12 @@ class Montecarlo:
 
     def results_of_perms(self):
         self.results = [self.only_df_strategy(self.original_df)]
-        for perm_df in tqdm(self.permutated_dataframes):
-            self.results.append(self.only_df_strategy(perm_df))
+        if self.print_tqdm:
+            for perm_df in tqdm(self.permutated_dataframes):
+                self.results.append(self.only_df_strategy(perm_df))
+        else:
+            for perm_df in self.permutated_dataframes:
+                self.results.append(self.only_df_strategy(perm_df))
 
     def only_df_strategy(self, df):
         df1, _ = self.strategy(df, self.slow, self.fast, self.symbol)
@@ -90,13 +95,16 @@ class Montecarlo:
 
     def generate_permutated_dataframes(self):
         permutated_dataframes = []
-        progress_bar = tqdm(total=self.how_many)
+        if self.print_tqdm:
+            progress_bar = tqdm(total=self.how_many)
         while len(permutated_dataframes) < self.how_many:
             df2 = self.random_permutation_ohlc()
             if self.correlation_condition(df2):
                 permutated_dataframes.append(df2)
-                progress_bar.update(1)  # Ręczna aktualizacja paska
-        progress_bar.close()
+                if self.print_tqdm:
+                    progress_bar.update(1)  # Ręczna aktualizacja paska
+        if self.print_tqdm:
+            progress_bar.close()
         return permutated_dataframes
 
     def absolute_p_value(self, daily_volatility):
@@ -107,17 +115,28 @@ class Montecarlo:
         z_zcore_metric = z_score(metric_results)
         z_zcore_strategy = z_score(strategies)
         bounds = bootstrap_ci(strategies)
-        print("Z score for metric: ", z_zcore_metric)
-        print("Z score for strategy: ", z_zcore_strategy)
-        print("P value for metric: ", metric_p_value)
-        print("P value for strategy: ", strategy_p_value)
-        print(f"95% przedział ufności dla wyniku strategii: {bounds[0]*100:.2f}% - {bounds[1]*100:.2f}%")
+        
         p_values_mean_to_score = (0.001/np.mean([metric_p_value, strategy_p_value]))
         bounds_mean = ((bounds[0]+bounds[1])/2)-(daily_volatility/4.1)
+        nan_test = any(np.isnan(i) for i in [metric_p_value, strategy_p_value, z_zcore_metric, z_zcore_strategy])
         if bounds[0] > 0 and bounds[1] > 0:
             bounds_mean = 1
-        if p_values_mean_to_score < 0 or bounds_mean < 0 or bounds[0] < -(daily_volatility/2) or strategy_p_value > 0.15 or z_zcore_strategy < 1:
+        if p_values_mean_to_score < 0 or bounds_mean < 0 or bounds[0] < -(daily_volatility/2) or strategy_p_value > 0.15 or z_zcore_strategy < 1 or nan_test:
+            
+            if self.print_tqdm:
+                print("Z score for metric: ", z_zcore_metric)
+                print("Z score for strategy: ", z_zcore_strategy)
+                print("P value for metric: ", metric_p_value)
+                print("P value for strategy: ", strategy_p_value)
+                print(f"95% przedział ufności dla wyniku strategii: {bounds[0]*100:.2f}% - {bounds[1]*100:.2f}%")
             return -1
+        
+        if self.print_tqdm:
+            print("Z score for metric: ", z_zcore_metric)
+            print("Z score for strategy: ", z_zcore_strategy)
+            print("P value for metric: ", metric_p_value)
+            print("P value for strategy: ", strategy_p_value)
+            print(f"95% przedział ufności dla wyniku strategii: {bounds[0]*100:.2f}% - {bounds[1]*100:.2f}%")
         return round(p_values_mean_to_score*z_zcore_strategy, 8)
 
     def final_p_value(self, daily_volatility):
