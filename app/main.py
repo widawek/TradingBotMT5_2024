@@ -149,7 +149,7 @@ class GlobalProfitTracker:
 
 
 class Bot:
-    montecarlo_for_all = False
+    montecarlo_for_all = True
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
@@ -962,6 +962,7 @@ class Bot:
         with open("fast.json", "r", encoding="utf-8") as f:
             loaded_data = json.load(f)
         output = [i for i in loaded_data if i[0] == self.symbol]
+        output.sort(key=lambda x: x[2])
         for i in output:
             print(i)
         intervals = np.unique([i[2] for i in output])
@@ -1004,7 +1005,6 @@ class Bot:
         strategies_number = 4 + add_number
         super_start_time = time.time()
         strategies, intervals_ = self.load_strategies_from_json()
-        strategies.sort(key=lambda x: x[2])
         metric_name = strategies[0][3]
         self.bt_metric = globals()[metric_name]
         self.strategies_raw = []
@@ -1091,6 +1091,7 @@ class Bot:
         df_raw = get_data(self.symbol, interval, 1, self.number_of_bars_for_backtest)
 
         results = []
+        results_raw = []
         if Bot.montecarlo_for_all:
             dfperms_mini = PermutatedDataFrames(self.symbol, [interval], int(self.number_of_bars_for_backtest), how_many=100)
             permutated_dataframes_mini = dfperms_mini.dataframes_output()
@@ -1111,13 +1112,28 @@ class Bot:
                     result, end_result, risk_data = calc_result_metric(df1, self.bt_metric, False, True)
 
                     if result > 0:
-                        _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
 
+                        results_raw.sort()
+                        if len(results_raw) > 1:
+                            if len(results_raw) > 21:
+                                if result > min(results_raw[-20:]):
+                                    results_raw.append(result)
+                                else:
+                                    continue
+                            else:
+                                if result > min(results_raw):
+                                    results_raw.append(result)
+                                else:
+                                    continue
+                        else:
+                            results_raw.append(result)
+
+                        _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
                         if Bot.montecarlo_for_all:
                             monte_mini = Montecarlo(self.symbol, interval, strategy, self.bt_metric, int(self.number_of_bars_for_backtest/2), slow, fast, permutated_dataframes_mini, how_many=100, print_tqdm=False)
                             p_value = monte_mini.final_p_value(self.avg_vol)
                             if p_value > 0:
-                                print(f"\nAdd result {fast} {slow} {result} {p_value}")
+                                #print(f"\nAdd result {fast} {slow} {result} {p_value}")
                                 results.append((fast, slow, round(result*p_value, 10), actual_condition, daily_return, end_result, risk_data))
                             else:
                                 continue
