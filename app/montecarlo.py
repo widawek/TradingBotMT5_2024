@@ -99,7 +99,7 @@ class Montecarlo:
         progress_bar.close()
         return permutated_dataframes
 
-    def absolute_p_value(self):
+    def absolute_p_value(self, daily_volatility):
         metric_results = [i[0] for i in self.results]
         strategies = [i[1][-1] for i in self.results]
         metric_p_value = p_value(metric_results)
@@ -113,14 +113,16 @@ class Montecarlo:
         print("P value for strategy: ", strategy_p_value)
         print(f"95% przedział ufności dla wyniku strategii: {bounds[0]*100:.2f}% - {bounds[1]*100:.2f}%")
         p_values_mean_to_score = (0.001/np.mean([metric_p_value, strategy_p_value]))
-        bounds_mean = (bounds[0]+bounds[1])/2
-        if p_values_mean_to_score < 0 or bounds_mean < 0 or bounds[0] < -0.005 or strategy_p_value > 0.15 or z_zcore_strategy < 1:
+        bounds_mean = ((bounds[0]+bounds[1])/2)-(daily_volatility/4.1)
+        if bounds[0] > 0 and bounds[1] > 0:
+            bounds_mean = 1
+        if p_values_mean_to_score < 0 or bounds_mean < 0 or bounds[0] < -(daily_volatility/2) or strategy_p_value > 0.15 or z_zcore_strategy < 1:
             return -1
         return round(p_values_mean_to_score*z_zcore_strategy, 8)
 
-    def final_p_value(self):
+    def final_p_value(self, daily_volatility):
         self.results_of_perms()
-        return self.absolute_p_value()
+        return self.absolute_p_value(daily_volatility)
 
     def random_permutation_ohlc(self):
         """

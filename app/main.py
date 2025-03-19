@@ -183,7 +183,7 @@ class Bot:
         self.trend = 'neutral'
         self.trigger_model_divider = avg_daily_vol_for_divider(symbol, trigger_model_divider_factor)
         self.trend_or_not = trend_or_not(symbol)
-        self.df_d1 = get_data(symbol, "D1", 1, 30)
+        self.df_d1 = get_data(symbol, "D1", 1, 40)
         self.avg_daily_vol()
         self.round_number = round_number_(symbol)
         self.volume_calc(position_size, 0, True)
@@ -487,9 +487,7 @@ class Bot:
 
     @class_errors
     def avg_daily_vol(self):
-        df = self.df_d1
-        df['avg_daily'] = (df.high - df.low) / df.open
-        self.avg_vol = df['avg_daily'].mean()
+        self.avg_vol = ((self.df_d1.high - self.df_d1.low) / self.df_d1.open).mean()
 
     @class_errors
     def volume_calc(self, max_pos_margin: float, posType: int, min_volume: bool) -> None:
@@ -1032,7 +1030,7 @@ class Bot:
             printer("SL/SL_STD", f'{sl, sl_std}')
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, drift, "\n")
             monte = Montecarlo(self.symbol, interval, strategy_, self.bt_metric, int(self.number_of_bars_for_backtest/2), slow, fast, permutated_dataframes)
-            p_value = monte.final_p_value()
+            p_value = monte.final_p_value(self.avg_vol)
             printer("Z-score*1/p-value:", p_value)
             printer("Result:", result)
             printer("Daily return:", daily_return)
