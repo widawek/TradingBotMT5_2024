@@ -149,7 +149,7 @@ class GlobalProfitTracker:
 
 
 class Bot:
-    montecarlo_for_all = True
+    montecarlo_for_all = False
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
@@ -1112,21 +1112,29 @@ class Bot:
                     result, end_result, risk_data = calc_result_metric(df1, self.bt_metric, False, True)
 
                     if result > 0:
-
                         results_raw.sort()
-                        if len(results_raw) > 1:
-                            if len(results_raw) > 21:
-                                if result > min(results_raw[-20:]):
+                        if Bot.montecarlo_for_all:
+                            if len(results_raw) > 1:
+                                if len(results_raw) > 16:
+                                    if result > min(results_raw[-15:]):
+                                        results_raw.append(result)
+                                    else:
+                                        continue
+                                else:
+                                    if result > min(results_raw):
+                                        results_raw.append(result)
+                                    else:
+                                        continue
+                            else:
+                                results_raw.append(result)
+                        else:
+                            if len(results_raw) > 1:
+                                if result > max(results_raw):
                                     results_raw.append(result)
                                 else:
                                     continue
                             else:
-                                if result > min(results_raw):
-                                    results_raw.append(result)
-                                else:
-                                    continue
-                        else:
-                            results_raw.append(result)
+                                results_raw.append(result)
 
                         _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
                         if Bot.montecarlo_for_all:
