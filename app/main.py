@@ -494,11 +494,19 @@ class Bot:
     def volume_calc(self, max_pos_margin: float, posType: int, min_volume: bool) -> None:
 
         def atr():
-            length = 14
-            df = get_data(self.symbol, 'M5', 1, 100)
-            df['atr'] = df.ta.atr(length=length)
-            df['atr_osc'] = (df['atr']-df['atr'].rolling(length).min())/(df['atr'].rolling(length).max()-df['atr'].rolling(length).min()) + 0.5
-            return df['atr_osc'].iloc[-1]
+            df = get_data(self.symbol, 'M5', 1, 40*12*24)
+            daily = df.iloc[-100:].copy()
+            volatility_5 = ((df['high']-df['low'])/df['open']).mean()
+            volatility_d = ((daily['high']-daily['low'])/daily['open']).mean()
+            return round((1/(volatility_d/volatility_5)), 4)
+
+        # def atr():
+        #     length = 14
+        #     df = get_data(self.symbol, 'M5', 1, 100)
+        #     df['atr'] = df.ta.atr(length=length)
+        #     df['atr_osc'] = (df['atr']-df['atr'].rolling(length).min())/(df['atr'].rolling(length).max()-df['atr'].rolling(length).min()) + 0.5
+        #     return df['atr_osc'].iloc[-1]
+
         try:
             another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
         except AttributeError:
@@ -988,8 +996,8 @@ class Bot:
         printer("Daily starter", first_)
         self.actual_today_best = first_
         second_ = 'trend' if first_ == 'counter' else 'counter'
-        group_t = [item for item in sorted_data if item[7] == first_] # first
-        group_n = [item for item in sorted_data if item[7] == second_] # second
+        group_t = [item for item in sorted_data if item[7] == second_] # first
+        group_n = [item for item in sorted_data if item[7] == first_] # second
         alternating_data = []
         max_len = max(len(group_t), len(group_n))
 
