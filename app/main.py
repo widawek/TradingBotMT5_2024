@@ -149,7 +149,7 @@ class GlobalProfitTracker:
 
 
 class Bot:
-    montecarlo_for_all = False
+    montecarlo_for_all = True
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):

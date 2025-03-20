@@ -114,14 +114,15 @@ class Montecarlo:
         strategy_p_value = p_value(strategies)
         z_zcore_metric = z_score(metric_results)
         z_zcore_strategy = z_score(strategies)
-        bounds = bootstrap_ci(strategies)
+        bounds = bootstrap_ci(strategies, 0.5)
         
         p_values_mean_to_score = (0.001/np.mean([metric_p_value, strategy_p_value]))
         bounds_mean = ((bounds[0]+bounds[1])/2)-(daily_volatility/4.1)
         nan_test = any(np.isnan(i) for i in [metric_p_value, strategy_p_value, z_zcore_metric, z_zcore_strategy])
         if bounds[0] > 0 and bounds[1] > 0:
             bounds_mean = 1
-        if p_values_mean_to_score < 0 or bounds_mean < 0 or bounds[0] < -(daily_volatility/2) or strategy_p_value > 0.15 or z_zcore_strategy < 1 or nan_test:
+            # bounds_mean < 0 or bounds[0] < -(daily_volatility/2)
+        if p_values_mean_to_score < 0 or bounds[1] < 0 or strategy_p_value > 0.15 or z_zcore_strategy < 1 or nan_test:
             
             if self.print_tqdm:
                 print("NOT OK")
