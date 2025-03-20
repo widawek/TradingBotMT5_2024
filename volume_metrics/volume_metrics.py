@@ -29,7 +29,7 @@ def calc_result_modified(dfx):
 
 def returns_bt(df):
     leverage=6
-    z = [len(str(x).split(".")[1])+1 for x in list(df["close"][:101])]
+    z = [len(str(x).split(".")[1])+1 for x in list(df["close"][-101:])]
     divider = 10**round((sum(z)/len(z))-1)
     spread_mean = df.spread/divider
     spread_mean = spread_mean.mean()
@@ -89,7 +89,7 @@ def columns_combination(all_cols, min_numb_of_symbols, max_results=50000):
 
 def returns_(df, symbol):
     leverage=6
-    z = [len(str(x).split(".")[1])+1 for x in list(df["close"][:101])]
+    z = [len(str(x).split(".")[1])+1 for x in list(df["close"][-101:])]
     divider = 10**round((sum(z)/len(z))-1)
     spread_mean = df.spread/divider
     spread_mean = spread_mean.mean()

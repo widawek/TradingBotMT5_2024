@@ -252,7 +252,7 @@ def close_request_(symbol: str, tickets_list, only_profitable: bool=False):
 
 def calculate_strategy_returns(df, leverage):
     """The dataframe has to have a 'stance' column."""
-    z = [len(str(x).split(".")[1])+1 for x in list(df["close"][:101])]
+    z = [len(str(x).split(".")[1])+1 for x in list(df["close"][-101:])]
     divider = 10**round((sum(z)/len(z))-1)
     spread_mean = df.spread/divider
     spread_mean = spread_mean.mean()
@@ -263,16 +263,6 @@ def calculate_strategy_returns(df, leverage):
     density = df['cross'].sum()/len(df)
     #df['strategy'] = (1+df['return']).cumprod() - 1
     return df, density
-
-
-# def calmar_ratio(returns, periods_per_year=252):
-#     avg_return = np.mean(returns)
-#     annualized_return = (1 + avg_return) ** periods_per_year - 1
-#     cumulative_returns = np.cumsum(returns)
-#     running_max = np.maximum.accumulate(cumulative_returns)
-#     drawdowns = running_max - cumulative_returns
-#     max_drawdown = np.max(drawdowns)
-#     return annualized_return / max_drawdown if max_drawdown > 0 else float('inf')
 
 
 def garch_metric(excess_returns):

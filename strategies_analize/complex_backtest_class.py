@@ -35,7 +35,7 @@ def get_data(symbol: str, tf: str, start: int, counter: int) -> pd.DataFrame:
 
 def returns_bt(df):
     leverage=6
-    z = [len(str(x).split(".")[1])+1 for x in list(df["close"][:101])]
+    z = [len(str(x).split(".")[1])+1 for x in list(df["close"][-101:])]
     divider = 10**round((sum(z)/len(z))-1)
     spread_mean = df.spread/divider
     spread_mean = spread_mean.mean()
@@ -50,7 +50,7 @@ def returns_bt(df):
 def returns_bt_full_anal(df_raw, interval):
     df = df_raw.copy()
     leverage=6
-    z = [len(str(x).split(".")[1])+1 for x in list(df["close"][:101])]
+    z = [len(str(x).split(".")[1])+1 for x in list(df["close"][-101:])]
     divider = 10**round((sum(z)/len(z))-1)
     spread_mean = df.spread/divider
     spread_mean = spread_mean.mean()

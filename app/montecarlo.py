@@ -134,36 +134,33 @@ class Montecarlo:
         z_zcore_strategy = z_score(strategies)
         bounds = bootstrap_ci(strategies, 0.1)
         bounds_met = bootstrap_ci(metric_results, 0.1)
-        p_values_mean_to_score = (0.001/np.mean([metric_p_value, strategy_p_value]))
-        bounds_mean = ((bounds[0]+bounds[1])/2)-(daily_volatility/4.1)
+        #p_values_mean_to_score = (0.001/np.mean([metric_p_value, strategy_p_value]))
+        #bounds_mean = ((bounds[0]+bounds[1])/2)-(daily_volatility/4.1)
         nan_test = any(np.isnan(i) for i in [metric_p_value, strategy_p_value, z_zcore_metric, z_zcore_strategy])
-        lower_bound_value = lower_bound(strategies)
+        lower_bound_value = lower_bound(metric_results)
 
-        if bounds[0] > 0 and bounds[1] > 0:
-            bounds_mean = 1
-        if p_values_mean_to_score < 0 or bounds_mean < 0 or lower_bound_value < 0 or bounds[0] < -(daily_volatility) or strategy_p_value > 0.15 or z_zcore_strategy < 1 or nan_test:
+        # if bounds[0] > 0 and bounds[1] > 0:
+        #     bounds_mean = 1
 
-            if self.print_tqdm:
-                print("NOT OK")
-                print("Lower bound value: ", round(lower_bound_value, 6))
-                print("Z score for metric: ", z_zcore_metric)
-                print("Z score for strategy: ", z_zcore_strategy)
-                print("P value for metric: ", metric_p_value)
-                print("P value for strategy: ", strategy_p_value)
-                print(f"90% przedział ufności dla wyniku strategii: {bounds_met[0]*100:.2f}% - {bounds_met[1]*100:.2f}%")
-                print(f"90% przedział ufności dla wyniku strategii: {bounds[0]*100:.2f}% - {bounds[1]*100:.2f}%")
-            return -1
-
-        if self.print_tqdm:
-            print("OK")
+        def print_it(result_i):
+            print(result_i)
             print("Lower bound value: ", round(lower_bound_value, 6))
             print("Z score for metric: ", z_zcore_metric)
             print("Z score for strategy: ", z_zcore_strategy)
             print("P value for metric: ", metric_p_value)
             print("P value for strategy: ", strategy_p_value)
-            print(f"90% przedział ufności dla wyniku metryki: {bounds_met[0]*100:.2f}% - {bounds_met[1]*100:.2f}%")
+            print(f"90% przedział ufności dla wyniku strategii: {bounds_met[0]*100:.2f}% - {bounds_met[1]*100:.2f}%")
             print(f"90% przedział ufności dla wyniku strategii: {bounds[0]*100:.2f}% - {bounds[1]*100:.2f}%")
-        return round(p_values_mean_to_score*z_zcore_strategy, 8)
+
+        #if p_values_mean_to_score < 0 or bounds_mean < 0 or lower_bound_value < 0 or bounds[0] < -(daily_volatility) or strategy_p_value > 0.5 or z_zcore_strategy < 1 or nan_test:
+        if metric_p_value > 0.05 or lower_bound_value < 0 or nan_test:
+            if self.print_tqdm:
+                print_it('NOT OK')
+            return -1
+
+        if self.print_tqdm:
+            print_it('OK')
+        return round(0.01/metric_p_value, 8)
 
     def final_p_value(self, daily_volatility):
         self.results_of_perms()
