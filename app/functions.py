@@ -428,6 +428,14 @@ def closed_pos():
         return suma_zyskow
 
 
+def rsi_condition(symbol, position):
+    df = get_data(symbol, 'M15', 1, 3)
+    rsi = df.ta.rsi(length=2)
+    if (rsi.iloc[-1] >= 90 and position == 1) or (rsi.iloc[-1] <= 10 and position == 0):
+        return True
+    return False
+
+
 if __name__ == '__main__':
     print(interval_time_sharpe('M1'))
     

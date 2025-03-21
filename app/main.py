@@ -500,13 +500,6 @@ class Bot:
             volatility_d = ((daily['high']-daily['low'])/daily['open']).mean()
             return round((1/(volatility_d/volatility_5)), 4)
 
-        # def atr():
-        #     length = 14
-        #     df = get_data(self.symbol, 'M5', 1, 100)
-        #     df['atr'] = df.ta.atr(length=length)
-        #     df['atr_osc'] = (df['atr']-df['atr'].rolling(length).min())/(df['atr'].rolling(length).max()-df['atr'].rolling(length).min()) + 0.5
-        #     return df['atr_osc'].iloc[-1]
-
         try:
             another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
         except AttributeError:
@@ -672,8 +665,8 @@ class Bot:
                     price = round((tick.ask + tick.bid) / 2, self.round_number)
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
                     match position:
-                        case 0: self.good_price_to_open_pos = True if price <= self.strategy_pos_open_price else False
-                        case 1: self.good_price_to_open_pos = True if price >= self.strategy_pos_open_price else False
+                        case 0: self.good_price_to_open_pos = True if (price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 1: self.good_price_to_open_pos = True if (price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 1) else False
                         #case 2: self.good_price_to_open_pos = True if abs(diff) < self.mdv else False
                     if self.good_price_to_open_pos:
                         break
