@@ -1125,8 +1125,8 @@ class Bot:
                         results_raw.sort()
                         if Bot.montecarlo_for_all:
                             if len(results_raw) > 1:
-                                if len(results_raw) > 16:
-                                    if result > min(results_raw[-15:]):
+                                if len(results_raw) > 11:
+                                    if result > min(results_raw[-10:]):
                                         results_raw.append(result)
                                     else:
                                         continue
