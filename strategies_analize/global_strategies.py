@@ -287,3 +287,19 @@ def madif_trend(df_raw, slow, fast, symbol):
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
+
+
+def corrc_trend(df_raw, slow, fast, symbol):
+    fast *= 2
+    slow *= 3
+    df = df_raw.copy()
+    df['corr3'] = 100*norm.cdf(df.high.rolling(fast).corr(df.low)/((fast)-1)**0.5)-50
+    df['corr3_min'] = df.corr3.rolling(slow).min()
+    df['corr3_min'] = df['corr3_min'].rolling(fast).mean()
+    df['sma'] = df.close.rolling(fast).mean()
+    corr_cond = df['corr3_min'] > df['corr3_min'].shift()
+    df['stance'] = np.where(corr_cond & (df['sma']>df['sma'].shift(fast)), 1, np.nan)
+    df['stance'] = np.where(corr_cond & (df['sma']<df['sma'].shift(fast)), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
