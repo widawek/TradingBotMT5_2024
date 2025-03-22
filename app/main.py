@@ -654,6 +654,7 @@ class Bot:
                     return self.actual_position_democracy()
 
             positions_ = mt.positions_get(symbol=self.symbol)
+            kind = strategy[0].split('_')[1]
             if len(positions_) == 0:
                 minute_ = 0
                 while True:
@@ -664,10 +665,14 @@ class Bot:
                     tick = mt.symbol_info_tick(self.symbol)
                     price = round((tick.ask + tick.bid) / 2, self.round_number)
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
-                    match position:
-                        case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
-                        case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
-                        #case 2: self.good_price_to_open_pos = True if abs(diff) < self.mdv else False
+                    if kind == 'counter':
+                        match position:
+                            case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                            case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                    else:
+                        match position:
+                            case 0: self.good_price_to_open_pos = True if (price <= self.strategy_pos_open_price) or rsi_condition(self.symbol, 0) else False
+                            case 1: self.good_price_to_open_pos = True if (price >= self.strategy_pos_open_price) or rsi_condition(self.symbol, 1) else False
                     if self.good_price_to_open_pos:
                         break
 
