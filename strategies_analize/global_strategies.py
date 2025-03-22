@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import pandas_ta as ta
 import sys
+from scipy.stats import norm
 sys.path.append("..")
 
 
@@ -259,3 +260,30 @@ def rsitr_trend(df_raw, slow, fast, symbol):
     position = df['stance'].iloc[-1]
     return df, position
 
+
+def madif_trend(df_raw, slow, fast, symbol):
+
+    def cmma_series(df_raw, fast, slow):
+        df = df_raw.copy()
+        df['close_log'] = np.log(df['close'])
+        df['high_log'] = np.log(df['high'])
+        df['low_log'] = np.log(df['low'])
+        df['mean_log'] = df['close_log'].rolling(fast).mean().shift()
+        df['atr'] = df.ta.atr(length=slow)
+        fast_sqr = (fast+1)**0.5
+        df['indicator'] = 100*norm.cdf(((df['close_log']+df['high_log']+df['low_log'])/3-df['mean_log'])/(df['atr']*fast_sqr))-50
+        df['indicator'] = 0.5*df['indicator'].shift(2) + 0.35*df['indicator'].shift() + 0.15*df['indicator']
+        return df['indicator']
+
+    df = df_raw.copy()
+    df['adj'] = (df['high'] + df['close'] + df['low'])/3
+    df['corr1'] = 100*norm.cdf(df.close.rolling(slow).corr(df.high)/((slow)-1)**0.5)-50
+    df['corr2'] = 100*norm.cdf(df.close.rolling(slow).corr(df.low)/((slow)-1)**0.5)-50
+    df['corr'] = df['corr1'] - df['corr2']
+    df['cma'] = df['corr'].rolling(int(fast*2)).mean()
+    df['indicator1'] = cmma_series(df, fast, slow)
+    df['stance'] = np.where((df['corr'] > df['cma'])&(df['indicator1']<0), 1, np.nan)
+    df['stance'] = np.where((df['corr'] < df['cma'])&(df['indicator1']>0), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position

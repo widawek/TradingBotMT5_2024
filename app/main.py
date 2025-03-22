@@ -665,8 +665,8 @@ class Bot:
                     price = round((tick.ask + tick.bid) / 2, self.round_number)
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
                     match position:
-                        case 0: self.good_price_to_open_pos = True if (price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
-                        case 1: self.good_price_to_open_pos = True if (price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 1) else False
+                        case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
                         #case 2: self.good_price_to_open_pos = True if abs(diff) < self.mdv else False
                     if self.good_price_to_open_pos:
                         break
