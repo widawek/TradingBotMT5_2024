@@ -1103,7 +1103,7 @@ class Bot:
         results = []
         results_raw = []
         if Bot.montecarlo_for_all:
-            dfperms_mini = PermutatedDataFrames(self.symbol, [interval], int(self.number_of_bars_for_backtest), how_many=100)
+            dfperms_mini = PermutatedDataFrames(self.symbol, [interval], int(self.number_of_bars_for_backtest), how_many=200)
             permutated_dataframes_mini = dfperms_mini.dataframes_output()
 
         for slow in trange(5, slow_range, 2):
