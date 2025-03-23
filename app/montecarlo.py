@@ -103,13 +103,13 @@ class Montecarlo:
         result = self.bt_metric(df1.copy())
         return [result, df1['strategy'].iloc[1000-self.bars:].tolist()]
 
-    def correlation_condition(self, df_permuted, threshold=0.3):
-        correlation_pearson = self.original_df['close'].corr(df_permuted['close'])
-        # correlation_pearson_h = df_original['high'].corr(df_permuted['high'])
-        # correlation_pearson_l = df_original['low'].corr(df_permuted['low'])
-        correlations = [correlation_pearson]#, correlation_pearson_h, correlation_pearson_l]
-        correlations = [True if i>threshold else False for i in correlations]
-        return True if all(correlations) else False
+    # def correlation_condition(self, df_permuted, threshold=0.3):
+    #     correlation_pearson = self.original_df['close'].corr(df_permuted['close'])
+    #     # correlation_pearson_h = df_original['high'].corr(df_permuted['high'])
+    #     # correlation_pearson_l = df_original['low'].corr(df_permuted['low'])
+    #     correlations = [correlation_pearson]#, correlation_pearson_h, correlation_pearson_l]
+    #     correlations = [True if i>threshold else False for i in correlations]
+    #     return True if all(correlations) else False
 
     def generate_permutated_dataframes(self):
         permutated_dataframes = []
@@ -117,10 +117,10 @@ class Montecarlo:
             progress_bar = tqdm(total=self.how_many)
         while len(permutated_dataframes) < self.how_many:
             df2 = self.random_permutation_ohlc()
-            if self.correlation_condition(df2):
-                permutated_dataframes.append(df2)
-                if self.print_tqdm:
-                    progress_bar.update(1)  # Ręczna aktualizacja paska
+            #if self.correlation_condition(df2):
+            permutated_dataframes.append(df2)
+            if self.print_tqdm:
+                progress_bar.update(1)  # Ręczna aktualizacja paska
         if self.print_tqdm:
             progress_bar.close()
         return permutated_dataframes
@@ -210,20 +210,20 @@ class PermutatedDataFrames:
         self.bars = bars
         self.how_many = how_many
 
-    def correlation_condition(self, df_raw, df_permuted, threshold=0.3):
-        correlation_pearson = df_raw['close'].corr(df_permuted['close'])
-        correlations = [correlation_pearson]
-        correlations = [True if i>threshold else False for i in correlations]
-        return True if all(correlations) else False
+    # def correlation_condition(self, df_raw, df_permuted, threshold=0.3):
+    #     correlation_pearson = df_raw['close'].corr(df_permuted['close'])
+    #     correlations = [correlation_pearson]
+    #     correlations = [True if i>threshold else False for i in correlations]
+    #     return True if all(correlations) else False
 
     def generate_permutated_dataframes(self, df_raw):
         permutated_dataframes = []
         progress_bar = tqdm(total=self.how_many)
         while len(permutated_dataframes) < self.how_many:
             df2 = self.random_permutation_ohlc(df_raw)
-            if self.correlation_condition(df_raw, df2):
-                permutated_dataframes.append(df2)
-                progress_bar.update(1)  # Ręczna aktualizacja paska
+            #if self.correlation_condition(df_raw, df2):
+            permutated_dataframes.append(df2)
+            progress_bar.update(1)  # Ręczna aktualizacja paska
         progress_bar.close()
         return permutated_dataframes
 
