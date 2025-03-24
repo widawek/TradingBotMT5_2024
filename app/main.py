@@ -33,7 +33,7 @@ processor = TradingProcessor()
 class Reverse:
     def __init__(self, symbol):
         self.symbol = symbol
-        self.condition = False
+        self.condition = False if dt.now().weekday() != 0 else True
         self.one_percent_balance = -10 * round(mt.account_info().balance/100, 2)
 
     def closed_pos(self, symbol: str = 'all'):
@@ -628,13 +628,13 @@ class Bot:
             slow = strategy[4]
 
             dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + 3440)) # how_many_bars
-            dfx, position = strategy[1](dfx, slow, fast, self.symbol)
-            if position not in [-1, 1]:
+            dfx, stance = strategy[1](dfx, slow, fast, self.symbol)
+            if stance not in [-1, 1]:
                 dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + number_of_bars*20)) # how_many_bars
-                dfx, position = strategy[1](dfx, slow, fast, self.symbol)
+                dfx, stance = strategy[1](dfx, slow, fast, self.symbol)
 
                 printer(f'Position from {strategy[0]}:', f'fast={fast} slow={slow}', base_just=60)
-                printer(f'Position from {strategy[0]}:', position)
+                printer(f'Position from {strategy[0]}:', stance)
 
             self.force, self.actual_force, self.win_ratio_cond, daily_return = self.calc_pos_condition(dfx)
             self.actual_force = True if self.actual_force == 1 else False
@@ -642,6 +642,15 @@ class Bot:
             # printer("Strategy actual position", self.actual_force)
 
             position = int(0) if position == 1 else int(1)
+
+            if self.reverse.reverse_or_not():
+                mode__ = "REVERSE"
+                print("REVERSE MODE")
+                position = int(0) if position == 1 else int(1)
+            else:
+                mode__ = "NORMAL"
+                print("NORMAL MODE")
+
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
             self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
             cross = dfx[dfx['cross'] == 1]
@@ -698,13 +707,7 @@ class Bot:
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
 
-        if self.reverse.reverse_or_not():
-            mode__ = "REVERSE"
-            print("REVERSE MODE")
-            position = int(0) if position == 1 else int(1)
-        else:
-            mode__ = "NORMAL"
-            print("NORMAL MODE")
+
 
         printer("Daily return", daily_return)
         printer("POZYCJA", "LONG" if position == 0 else "SHORT" if position != 0 else "None" + f"w trybie {mode__}")

@@ -170,6 +170,7 @@ class Backtest_complex:
                         results = []
                         print(symbol, strategy.__name__,interval)
                         for df_raw, df_test in tqdm(self.full_anal):
+                            weekday = df_test['time'].dt.weekday.iloc[-1]
                             best_strategies = self.strategy_bt(symbol, strategy, df_raw)
                             for metric, symbol, fast, slow, _ in best_strategies:
                                 df = returns_bt_full_anal(strategy(df_test, slow, fast, symbol)[0], interval)
@@ -177,27 +178,39 @@ class Backtest_complex:
                                 #     if len(df) < 600:
                                 #         continue
                                 df['strategy'] = (1+df['return']).cumprod() - 1
-                                results.append((metric, round(df['strategy'].iloc[-1] ,6)))
+                                results.append((metric, round(df['strategy'].iloc[-1] ,6), weekday))
 
-                        results_df = pd.DataFrame(results, columns=['metric', 'final_strategy'])
-                        grouped_results = results_df.groupby('metric')['final_strategy']
+                        results_df = pd.DataFrame(results, columns=['metric', 'final_strategy', 'weekday'])
+                        grouped_results = results_df.groupby('metric')
 
                         # Przetwarzanie wyników dla każdej metryki osobno
                         for metric_name, metric_results in grouped_results:
-                            final_sharpe = round(metric_results.mean() / metric_results.std(), 5)
-                            density = round(len(metric_results[metric_results > 0]) / len(metric_results), 2)
-                            final_result = round(metric_results.sum() * 100, 2)
-                            fr = (1+metric_results).cumprod() - 1
+                            metric_values = metric_results['final_strategy']
+                            
+                            final_sharpe = round(metric_values.mean() / metric_values.std(), 5)
+                            density = round(len(metric_values[metric_values > 0]) / len(metric_values), 2)
+                            
+                            fr = (1 + metric_values).cumprod() - 1
                             final_result = round(fr.iloc[-1] * 100, 2)
+
+                            # Grupowanie wyników po weekday i obliczenie średnich wartości
+                            weekday_avg = metric_results.groupby('weekday')['final_strategy'].mean()
+
+                            # Uzupełnienie brakujących dni tygodnia zerami
+                            weekday_avg = weekday_avg.reindex(range(5), fill_value=0)
+
+                            # Przypisanie wyników do poszczególnych dni tygodnia
+                            mon, tue, wed, thu, fri = weekday_avg.tolist()
 
                             metrics_results.append((
                                 symbol,
                                 strategy.__name__,
-                                metric_name,  # Nazwa metryki poprawnie pobrana
+                                metric_name,
                                 interval,
                                 final_sharpe,
                                 final_result,
-                                density
+                                density,
+                                mon, tue, wed, thu, fri
                             ))
 
                     except Exception as e:
@@ -205,7 +218,8 @@ class Backtest_complex:
                         continue
                     try:
                         if self.excel:
-                            self.df_metrics = pd.DataFrame(metrics_results, columns=['symbol', 'strategy', 'metric', 'interval', 'sharpe', 'result', 'density'])
+                            self.df_metrics = pd.DataFrame(metrics_results, columns=['symbol', 'strategy', 'metric', 'interval', 'sharpe',
+                                                                                     'result', 'density', 'mon', 'tue', 'wed', 'thu', 'fri'])
                             self.df_metrics = self.df_metrics.sort_values(by='result', ascending=False)
                             if 'M20' in self.intervals:
                                 try:
@@ -221,7 +235,8 @@ class Backtest_complex:
                         print('excel', e)
                     continue
 
-        self.df_metrics = pd.DataFrame(metrics_results, columns=['symbol', 'strategy', 'metric', 'interval', 'sharpe', 'result', 'density'])
+        self.df_metrics = pd.DataFrame(metrics_results, columns=['symbol', 'strategy', 'metric', 'interval',
+                                                                 'sharpe', 'result', 'density', 'mon', 'tue', 'wed', 'thu', 'fri'])
 
     @class_errors
     def output(self):
