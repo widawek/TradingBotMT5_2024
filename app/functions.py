@@ -18,7 +18,7 @@ mt.initialize()
 def pandas_options() -> None:
     """
     Configures pandas display options for better readability.
-    
+
     This function sets the following options:
     - display.max_columns: Displays all columns without truncation.
     - display.max_rows: Displays all rows without truncation.
@@ -33,8 +33,8 @@ def pandas_options() -> None:
 def interval_time(interval_string: str) -> int:
     """
     Converts a time interval string into its equivalent duration in minutes.
-    
-    The input string should start with a single-character unit indicator 
+
+    The input string should start with a single-character unit indicator
     ('M', 'H', 'D', 'W'), followed by a numeric value. For example:
     - 'M10' represents 10 minutes.
     - 'H2' represents 2 hours.
@@ -54,7 +54,7 @@ def interval_time(interval_string: str) -> int:
     t = int(interval_string[1:])
     x = {"M": 1, "H": 60, "D": 1440, "W": 10800}
     return int(t * x[h])
-    
+
 
 @validate_input_types
 def timeframe_(tf: str):
@@ -79,7 +79,7 @@ def timeframe_(tf: str):
 @validate_input_types
 def get_data_for_model(symbol: str, tf: str, start: int, counter: int) -> pd.DataFrame:
     """
-    Fetches historical market data for a given symbol and timeframe, 
+    Fetches historical market data for a given symbol and timeframe,
     formats it into a DataFrame, and prepares it for model usage.
 
     Args:
@@ -442,4 +442,4 @@ def rsi_condition(symbol, position):
 
 if __name__ == '__main__':
     print(interval_time_sharpe('M1'))
-    
+

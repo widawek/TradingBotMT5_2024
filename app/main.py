@@ -319,6 +319,9 @@ class Bot:
                     (self.fresh_daily_target and profit < self.profit_max * (self.profit_decline_factor-0.06))):
                     self.clean_orders(backtest)
 
+                else:
+                    self.change_tp_sl()
+
                 if self.print_condition():
                     printer("TIKTOK:", self.tiktok)
 
@@ -641,7 +644,7 @@ class Bot:
 
             position = int(0) if stance == 1 else int(1)
 
-            if strategy[15] == -1: # self.backtest_time.hour < 12 and 
+            if strategy[15] == -1 and self.backtest_time.hour < 12:
                 print("Position position is reverse.")
                 position = int(0) if position == 1 else int(1)
 
@@ -1180,6 +1183,45 @@ class Bot:
             return None
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
         return f_result[0], f_result[1], round(f_result[2]*100, 8), f_result[3], f_result[4], f_result[5], f_result[6]
+
+
+    @class_errors
+    def change_tp_sl(self):
+        try:
+            info = mt.symbol_info(self.symbol)
+            positions = mt.positions_get(symbol=self.symbol)
+            pos_ = [i for i in positions if i.magic == self.magic][0]
+            type_to_rsi = 0 if pos_.type == 1 else 0
+            if rsi_condition(self.symbol, type_to_rsi):
+                if pos_.sl == 0.0 and pos_.tp == 0.0:
+                    if pos_.type == 0:
+                        if pos_.profit > 0:
+                            new_tp = round(((1+self.avg_vol/10)*info.ask)/2, info.digits)
+                            new_sl = round((pos_.price_open + info.ask*2)/3, info.digits)
+                        else:
+                            new_tp = 0.0
+                            new_sl = 0.0
+
+                    elif pos_.type == 1:
+                        if pos_.profit > 0:
+                            new_tp = round(((1-self.avg_vol/10)*info.ask)/2, info.digits)
+                            new_sl = round((pos_.price_open + info.ask*2)/3, info.digits)
+                        else:
+                            new_tp = 0.0
+                            new_sl = 0.0
+
+                    request = {
+                    "action": mt.TRADE_ACTION_SLTP,
+                    "symbol": self.symbol,
+                    "position": pos_.ticket,
+                    "magic": self.magic,
+                    "tp": new_tp,
+                    "sl": new_sl,
+                    #"comment": comment
+                    }
+                    order_result = mt.order_send(request)
+        except Exception as e:
+            print("change_tp_sl", e)
 
 
 if __name__ == '__main__':
