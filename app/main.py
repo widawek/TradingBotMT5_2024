@@ -633,15 +633,17 @@ class Bot:
                 dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + number_of_bars*20)) # how_many_bars
                 dfx, stance = strategy[1](dfx, slow, fast, self.symbol)
 
-                printer(f'Position from {strategy[0]}:', f'fast={fast} slow={slow}', base_just=60)
-                printer(f'Position from {strategy[0]}:', stance)
+            printer(f'Position from {strategy[0]}:', f'fast={fast} slow={slow}', base_just=60)
+            printer(f'Position from {strategy[0]}:', stance)
 
             self.force, self.actual_force, self.win_ratio_cond, daily_return = self.calc_pos_condition(dfx)
             self.actual_force = True if self.actual_force == 1 else False
-            # printer("Strategy force", self.force)
-            # printer("Strategy actual position", self.actual_force)
 
-            position = int(0) if position == 1 else int(1)
+            position = int(0) if stance == 1 else int(1)
+
+            if strategy[15] == -1: # self.backtest_time.hour < 12 and 
+                print("Position position is reverse.")
+                position = int(0) if position == 1 else int(1)
 
             if self.reverse.reverse_or_not():
                 mode__ = "REVERSE"
@@ -954,9 +956,12 @@ class Bot:
             strategy = data[1]
             fast = data[2]
             slow = data[3]
-            df_raw = get_data(self.symbol, data[-1], 1, 5000)
+            df_raw = get_data(self.symbol, data[4], 1, 5000)
             df = strategy(df_raw.copy(), slow, fast, self.symbol)[0]
             position = int(0) if df['stance'].iloc[-1] == 1 else int(1) if df['stance'].iloc[-1] == -1 else None
+            if data[5] == -1 and position is not None:
+                print(f"Reverse mask pos {data[4]}")
+                position = int(0) if position == 1 else int(1)
             self.trend = "Long" if position == 0 else "SHORT"
             if position is None:
                 print(f'volume_reducer {name_} not ok')
@@ -985,7 +990,8 @@ class Bot:
     def sort_strategies(self):
 
         # 0- name_, 1- strategy_, 2- interval, 3- fast, 4- slow, 5- round(result, 2), 6- actual_condition,
-        # 7- kind, 8- daily_return, 9- end_result, 10- tp_std, 11- sl_std, 12- drift, 13- p_value, 14- volume_contition
+        # 7- kind, 8- daily_return, 9- end_result, 10- tp_std, 11- sl_std, 12- drift, 13- p_value, 14- volume_contition,
+        # 15- today_direction
 
         if dt.now().hour >= change_hour or (not self.virgin_test):# all([i[6] == -2 for i in self.strategies]) :
             self.strategies = [i for i in self.strategies if i[8] > 0 and i[5] > 0 and i[13] > 0]
@@ -1033,6 +1039,7 @@ class Bot:
             strategy_ = globals()[name_]
             interval = strategy[2]
             kind = name_.split('_')[-1]
+            today_direction = strategy[4+dt.now().weekday()]
             print(f'\n\nStrategy {i} from {len(strategies)}')
             i += 1
             results_pack = self.trend_backtest(strategy_, interval)
@@ -1052,7 +1059,8 @@ class Bot:
             printer("Final sort result virgin: ", round(p_value*result, 6))
             printer("Final sort result daily: ", round(p_value*daily_return*result, 6))
             printer("volume_contition: ", volume_contition)
-            self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 8), actual_condition, kind, daily_return, end_result, tp_std, sl_std, drift, p_value, volume_contition))
+            self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 8), actual_condition,
+                                        kind, daily_return, end_result, tp_std, sl_std, drift, p_value, volume_contition, today_direction))
 
         print("\nv NICE STRATEGIES v")
         for strat in self.strategies_raw:
@@ -1062,7 +1070,7 @@ class Bot:
 
         self.backtest_time = dt.now()
 
-        for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift, p_value, volume_contition in self.strategies_raw:
+        for name_, _, interval, fast, slow, result, _, kind, _, end_result, tp_std, sl_std, drift, p_value, volume_contition, today_direction in self.strategies_raw:
             try:
                 tp_sl = round(tp_std/sl_std, 3)
             except ZeroDivisionError:

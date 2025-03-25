@@ -141,7 +141,7 @@ class Backtest:
         return output
 
     def backtest_strategies(self):
-        for symbol, strategy_, _, bt_metric_ in tqdm(self.strategies):
+        for symbol, strategy_, _, bt_metric_, mon, tue, wed, thu, fri in tqdm(self.strategies):
             df_raw = get_data(symbol, self.interval, 1, self.bars)
             strategy = globals()[strategy_]
             bt_metric = globals()[bt_metric_]
@@ -188,7 +188,7 @@ class SymbolsByProfile:
 
         with open('slow.json', "r") as file:
             data = json.load(file)
-        df = pd.DataFrame(data, columns=['symbol', 'strategy', 'interval', 'metric'])
+        df = pd.DataFrame(data, columns=['symbol', 'strategy', 'interval', 'metric', 'mon', 'tue', 'wed', 'thu', 'fri'])
         group = df.groupby(['metric']).agg(counter=('metric', 'size'))
         final_metric_ = globals()[group.reset_index().sort_values(by='counter')['metric'].iloc[-1]]
 
@@ -223,7 +223,18 @@ class SymbolsByProfile:
         fasts = [int(i.split('_')[-2]) for i in self.my_choice]
         slows = [int(i.split('_')[-1]) for i in self.my_choice]
         intervals = [self.interval for _ in range(len(symbols))]
-        self.output = list(zip(symbols, strategy_names_, fasts, slows, intervals))
+        directions = [1 for _ in range(len(symbols))]
+        self.output = list(zip(symbols, strategy_names_, fasts, slows, intervals, directions))
+
+        with open('slow.json', "r") as file:
+            data = json.load(file)
+
+        def give_me_direction(symbol, strategy_name, interval, data):
+            for n in data:
+                if str(n[0])==str(symbol) and str(n[1])==str(strategy_name) and str(n[2])==str(interval):
+                    return n[4+dt.now().weekday()]
+
+        self.output = [[*i[:5], give_me_direction(i[0], i[1], i[4], data)] for i in self.output]
         print(self.output)
         with open(f"{self.interval}.json", "w") as file:
             json.dump(self.output, file, indent=4)  # `indent=4` dla lepszej czytelności

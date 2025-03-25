@@ -186,10 +186,10 @@ class Backtest_complex:
                         # Przetwarzanie wyników dla każdej metryki osobno
                         for metric_name, metric_results in grouped_results:
                             metric_values = metric_results['final_strategy']
-                            
+
                             final_sharpe = round(metric_values.mean() / metric_values.std(), 5)
                             density = round(len(metric_values[metric_values > 0]) / len(metric_values), 2)
-                            
+
                             fr = (1 + metric_values).cumprod() - 1
                             final_result = round(fr.iloc[-1] * 100, 2)
 
@@ -242,7 +242,16 @@ class Backtest_complex:
     def output(self):
 
         def group_to_get_metric(df):
-            dfs = df[(df['sharpe'] > 0) & (df['density'] >= 0.5)]
+            dfs = df.copy().dropna()
+            dfs['meansum'] = dfs[['mon', 'tue', 'wed', 'thu', 'fri']].sum(axis=1)
+            dfs = dfs[(dfs['sharpe'] > 0) & (dfs['density'] > 0.5) & (dfs['meansum'] > 0)]
+            #dfs = dfs.rename(columns={'mon': '0', 'tue': '1', 'wed': '2', 'thu': '3', 'fri': '4'})
+            dfs['mon'] = np.where(dfs['mon'] <= 0, -1, 1)
+            dfs['tue'] = np.where(dfs['tue'] <= 0, -1, 1)
+            dfs['wed'] = np.where(dfs['wed'] <= 0, -1, 1)
+            dfs['thu'] = np.where(dfs['thu'] <= 0, -1, 1)
+            dfs['fri'] = np.where(dfs['fri'] <= 0, -1, 1)
+
             dfs = dfs.groupby(['symbol', 'metric']).agg(
                 sharpe_mean=('sharpe', 'mean'),
                 counter=('sharpe', 'size')
@@ -276,13 +285,13 @@ class Backtest_complex:
                     if symbol in idx_fallback.index:
                         index = idx_fallback.loc[symbol]
                         if pd.notna(index) and index in dfs.index:
-                            best_metrics[symbol] = dfs.loc[[index], ['symbol', 'metric']]
+                            best_metrics[symbol] = dfs.loc[[index], ['symbol', 'metric', 'mon', 'tue', 'wed', 'thu', 'fri']]
 
             # Łączenie wyników w jeden DataFrame
             if best_metrics:
                 result_ = pd.concat(best_metrics.values(), ignore_index=True)
             else:
-                result_ = pd.DataFrame(columns=['symbol', 'metric'])
+                result_ = pd.DataFrame(columns=['symbol', 'metric', 'mon', 'tue', 'wed', 'thu', 'fri'])
 
             return result_
 
@@ -292,18 +301,23 @@ class Backtest_complex:
             except Exception:
                 return None
 
-        df = self.df_metrics.copy()
-        df = df.dropna()
+        df = self.df_metrics.copy().dropna()
         result_ = group_to_get_metric(df)
 
-        df = df[(df['sharpe'] > 0) & (df['density'] >= 0.5)]
+        df['meansum'] = df[['mon', 'tue', 'wed', 'thu', 'fri']].sum(axis=1)
+        df = df[(df['sharpe'] > 0) & (df['density'] > 0.5) & (df['meansum'] > 0)]
+        df['mon'] = np.where(df['mon'] <= 0, -1, 1)
+        df['tue'] = np.where(df['tue'] <= 0, -1, 1)
+        df['wed'] = np.where(df['wed'] <= 0, -1, 1)
+        df['thu'] = np.where(df['thu'] <= 0, -1, 1)
+        df['fri'] = np.where(df['fri'] <= 0, -1, 1)
         df['best_metric'] = df['symbol'].apply(lambda x: symbol_to_metric(x, result_))
         df = df[df['metric'] == df['best_metric']]
         df = df.sort_values(by=['symbol', 'sharpe'])
-        df = df[['strategy', 'symbol', 'interval', 'metric']]
+        df = df[['strategy', 'symbol', 'interval', 'metric', 'mon', 'tue', 'wed', 'thu', 'fri']]
         df.reset_index(drop=True, inplace=True)
 
-        to_json = [(row.symbol, row.strategy, row.interval, row.metric) for row in df.itertuples()]
+        to_json = [(row.symbol, row.strategy, row.interval, row.metric, row.mon, row.tue, row.wed, row.thu, row.fri) for row in df.itertuples()]
 
         # Zapis do pliku JSON
         name_ = 'fast' if 'M1' in self.intervals else 'slow' if 'M20' in self.intervals else 'dontknow'
