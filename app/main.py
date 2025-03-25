@@ -33,7 +33,7 @@ processor = TradingProcessor()
 class Reverse:
     def __init__(self, symbol):
         self.symbol = symbol
-        self.condition = False if dt.now().weekday() != 0 else True
+        self.condition = False# if dt.now().weekday() != 0 else True
         self.one_percent_balance = -10 * round(mt.account_info().balance/100, 2)
 
     def closed_pos(self, symbol: str = 'all'):
