@@ -642,7 +642,7 @@ class Bot:
             self.force, self.actual_force, self.win_ratio_cond, daily_return = self.calc_pos_condition(dfx)
             self.actual_force = True if self.actual_force == 1 else False
 
-            if strategy[15] == -1 and self.backtest_time.hour < 12:
+            if strategy[15] == -1:# and self.backtest_time.hour < 12:
                 print("Position is reverse by backtest weekday results.")
                 stance = int(stance*strategy[15])
 
