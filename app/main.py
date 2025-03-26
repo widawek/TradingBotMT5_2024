@@ -960,7 +960,7 @@ class Bot:
             df_raw = get_data(self.symbol, data[4], 1, 5000)
             df = strategy(df_raw.copy(), slow, fast, self.symbol)[0]
             position = int(0) if df['stance'].iloc[-1] == 1 else int(1) if df['stance'].iloc[-1] == -1 else None
-            if data[5] == -1 and position is not None:
+            if data[5] == -1 and position in [0, 1]:
                 print(f"Reverse mask pos {data[4]}")
                 position = int(0) if position == 1 else int(1)
             self.trend = "Long" if position == 0 else "SHORT"
