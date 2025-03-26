@@ -319,8 +319,8 @@ class Bot:
                     (self.fresh_daily_target and profit < self.profit_max * (self.profit_decline_factor-0.06))):
                     self.clean_orders(backtest)
 
-                elif profit > tp/10:
-                    self.change_tp_sl()
+                else:
+                    self.change_tp_sl(tp)
 
                 if self.print_condition():
                     printer("TIKTOK:", self.tiktok)
@@ -679,14 +679,14 @@ class Bot:
                     tick = mt.symbol_info_tick(self.symbol)
                     price = round((tick.ask + tick.bid) / 2, self.round_number)
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
-                    if kind == 'counter':
-                        match position:
-                            case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
-                            case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
-                    else:
-                        match position:
-                            case 0: self.good_price_to_open_pos = True if (price <= self.strategy_pos_open_price) or rsi_condition(self.symbol, 0) else False
-                            case 1: self.good_price_to_open_pos = True if (price >= self.strategy_pos_open_price) or rsi_condition(self.symbol, 1) else False
+                    # if kind == 'counter':
+                    match position:
+                        case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                    # else:
+                    #     match position:
+                    #         case 0: self.good_price_to_open_pos = True if (price <= self.strategy_pos_open_price) or rsi_condition(self.symbol, 0) else False
+                    #         case 1: self.good_price_to_open_pos = True if (price >= self.strategy_pos_open_price) or rsi_condition(self.symbol, 1) else False
                     if self.good_price_to_open_pos:
                         break
 
@@ -1184,29 +1184,30 @@ class Bot:
 
 
     @class_errors
-    def change_tp_sl(self):
+    def change_tp_sl(self, tp_profit):
         try:
             info = mt.symbol_info(self.symbol)
             positions = mt.positions_get(symbol=self.symbol)
             pos_ = [i for i in positions if i.magic == self.magic][0]
             type_to_rsi = 0 if pos_.type == 1 else 1
-            if rsi_condition(self.symbol, type_to_rsi):
-                if pos_.sl == 0.0 and pos_.tp == 0.0:
+            new_tp = 0.0
+            new_sl = 0.0
+            if pos_.sl == 0.0 and pos_.tp == 0.0:
+                if rsi_condition(self.symbol, type_to_rsi):
                     if pos_.type == 0:
-                        if pos_.profit > 0:
+                        if pos_.profit > tp_profit/10:
                             new_tp = round(((1+self.avg_vol/10)*info.ask), info.digits)
                             new_sl = round((pos_.price_open + info.ask*2)/3, info.digits)
-                        else:
-                            new_tp = 0.0
-                            new_sl = 0.0
-
+                        elif pos_.profit < 0:
+                            new_tp = round(((1+self.avg_vol/10)*info.price_open), info.digits)
+                            new_sl = round((1-self.avg_vol/25)*info.ask, info.digits)
                     elif pos_.type == 1:
-                        if pos_.profit > 0:
-                            new_tp = round(((1-self.avg_vol/10)*info.ask), info.digits)
-                            new_sl = round((pos_.price_open + info.ask*2)/3, info.digits)
-                        else:
-                            new_tp = 0.0
-                            new_sl = 0.0
+                        if pos_.profit > tp_profit/10:
+                            new_tp = round(((1-self.avg_vol/10)*info.bid), info.digits)
+                            new_sl = round((pos_.price_open + info.bid*2)/3, info.digits)
+                        elif pos_.profit < 0:
+                            new_tp = round(((1-self.avg_vol/10)*info.price_open), info.digits)
+                            new_sl = round((1+self.avg_vol/25)*info.bid, info.digits)
 
                     request = {
                     "action": mt.TRADE_ACTION_SLTP,

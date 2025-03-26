@@ -432,8 +432,8 @@ def rsi_condition(symbol, position):
     df = get_data(symbol, 'M15', 1, 40)
     df['rsi'] = df.ta.rsi(length=2)
     rsi = df['rsi'].iloc[-1]
-    mean_rsi = ta.sma(df['rsi'], length=30)
-    mean_rsi = 50 #mean_rsi.iloc[-1]
+    mean_rsi = ta.sma(df['rsi'], length=20)
+    mean_rsi = mean_rsi.iloc[-1]
     if (rsi >= 90 and position == 1 and mean_rsi >= 50) or \
         (rsi <= 10 and position == 0 and mean_rsi <= 50):
         return True
