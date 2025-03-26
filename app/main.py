@@ -319,7 +319,7 @@ class Bot:
                     (self.fresh_daily_target and profit < self.profit_max * (self.profit_decline_factor-0.06))):
                     self.clean_orders(backtest)
 
-                else:
+                elif profit > tp/10:
                     self.change_tp_sl()
 
                 if self.print_condition():
@@ -642,11 +642,11 @@ class Bot:
             self.force, self.actual_force, self.win_ratio_cond, daily_return = self.calc_pos_condition(dfx)
             self.actual_force = True if self.actual_force == 1 else False
 
-            position = int(0) if stance == 1 else int(1)
-
             if strategy[15] == -1 and self.backtest_time.hour < 12:
-                print("Position position is reverse.")
-                position = int(0) if position == 1 else int(1)
+                print("Position is reverse by backtest weekday results.")
+                stance = int(stance*strategy[15])
+
+            position = int(0) if stance == 1 else int(1)
 
             if self.reverse.reverse_or_not():
                 mode__ = "REVERSE"
@@ -661,11 +661,11 @@ class Bot:
             cross = dfx[dfx['cross'] == 1]
             self.strategy_pos_open_price = cross['close'].iloc[-1]
             printer("Last open position time by MetaTrader", f"{cross['time'].iloc[-1]}", base_just=60)
-            if dt.now().hour > 12:
-                if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
-                    self.strategy_number += 1
-                    print("Next strategy because the position is from last working day.")
-                    return self.actual_position_democracy()
+            # if dt.now().hour > 12:
+            #     if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
+            #         self.strategy_number += 1
+            #         print("Next strategy because the position is from last working day.")
+            #         return self.actual_position_democracy()
 
             positions_ = mt.positions_get(symbol=self.symbol)
             kind = strategy[0].split('_')[1]
@@ -711,8 +711,6 @@ class Bot:
                 print(e)
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
-
-
 
         printer("Daily return", daily_return)
         printer("POZYCJA", "LONG" if position == 0 else "SHORT" if position != 0 else "None" + f"w trybie {mode__}")
@@ -1191,12 +1189,12 @@ class Bot:
             info = mt.symbol_info(self.symbol)
             positions = mt.positions_get(symbol=self.symbol)
             pos_ = [i for i in positions if i.magic == self.magic][0]
-            type_to_rsi = 0 if pos_.type == 1 else 0
+            type_to_rsi = 0 if pos_.type == 1 else 1
             if rsi_condition(self.symbol, type_to_rsi):
                 if pos_.sl == 0.0 and pos_.tp == 0.0:
                     if pos_.type == 0:
                         if pos_.profit > 0:
-                            new_tp = round(((1+self.avg_vol/10)*info.ask)/2, info.digits)
+                            new_tp = round(((1+self.avg_vol/10)*info.ask), info.digits)
                             new_sl = round((pos_.price_open + info.ask*2)/3, info.digits)
                         else:
                             new_tp = 0.0
@@ -1204,7 +1202,7 @@ class Bot:
 
                     elif pos_.type == 1:
                         if pos_.profit > 0:
-                            new_tp = round(((1-self.avg_vol/10)*info.ask)/2, info.digits)
+                            new_tp = round(((1-self.avg_vol/10)*info.ask), info.digits)
                             new_sl = round((pos_.price_open + info.ask*2)/3, info.digits)
                         else:
                             new_tp = 0.0
