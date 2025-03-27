@@ -417,7 +417,6 @@ class Bot:
             # track global profit
             if self.use_tracker:
                 self.positionTracker.checkout()
-
             time.sleep(time_sleep)
 
     @class_errors
@@ -729,11 +728,14 @@ class Bot:
 
         self.volume_calc(self.position_size, posType, True)
 
-        name_ = self.strategies[self.strategy_number][0][:5]
-        fast = self.strategies[self.strategy_number][3]
-        slow = self.strategies[self.strategy_number][4]
+        strategy = self.strategies[self.strategy_number]
+        name_ = strategy[0][:5]
+        fast = strategy[3]
+        slow = strategy[4]
+        reverseornot = 'n' if strategy[15] != -1 else 'r'
+
         metric_numb = str(metric_numb_dict[self.bt_metric.__name__])
-        self.comment = f'{name_}{self.interval[-1:]}_{fast}_{slow}_{self.actual_today_best[:1]}{metric_numb}{self.if_position_with_trend}'
+        self.comment = f'{name_}{self.interval[-1:]}_{fast}_{slow}_{reverseornot}{metric_numb}{self.if_position_with_trend}'
 
         if self.reverse.condition:
             self.comment = '8'+self.comment[1:]

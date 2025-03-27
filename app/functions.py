@@ -429,13 +429,10 @@ def closed_pos():
 
 
 def rsi_condition(symbol, position):
-    df = get_data(symbol, 'M15', 1, 40)
+    df = get_data(symbol, 'M15', 1, 10)
     df['rsi'] = df.ta.rsi(length=2)
     rsi = df['rsi'].iloc[-1]
-    mean_rsi = ta.sma(df['rsi'], length=20)
-    mean_rsi = mean_rsi.iloc[-1]
-    if (rsi >= 90 and position == 1 and mean_rsi >= 50) or \
-        (rsi <= 10 and position == 0 and mean_rsi <= 50):
+    if (rsi >= 90 and position == 1) or (rsi <= 10 and position == 0):
         return True
     return False
 
