@@ -136,14 +136,15 @@ def mean_return_metric(dfx, penalty=True):
     return round((df['return'].mean()*100/mean_volatility)*penalty_, 6)
 
 
-def profit_factor_metric(dfx):
+def profit_factor_metric(dfx, penalty=True):
     # number '6'
     df = dfx.copy()
     df = df.dropna()
     sum_profits = sum(i for i in df['return'] if i > 0)
     sum_losses = abs(sum(i for i in df['return'] if i < 0))
     profit_factor = (sum_profits/sum_losses)-1
-    return round(profit_factor*exponential_penalty(df), 6)
+    penalty_ = exponential_penalty(df) if penalty else 1
+    return round(profit_factor * penalty_, 6)
 
 
 metric_numb_dict = {
