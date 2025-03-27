@@ -670,8 +670,9 @@ class Bot:
             kind = strategy[0].split('_')[1]
             if len(positions_) == 0:
                 minute_ = 0
+                minutes = 0
                 while True:
-                    if self.fresh_signal:
+                    if self.fresh_signal and minutes > interval_time(self.interval):
                         break
                     self.is_this_the_end()
                     # check if price is nice to open
@@ -696,6 +697,7 @@ class Bot:
                     if minute_ != new_minute:
                         printer('Symbol / Position / difference', f'{self.symbol} / {pos} / {diff:.2f} %', base_just=65)
                         minute_ = new_minute
+                        minutes += 1
 
                     if self.use_tracker:
                         self.positionTracker.checkout()
