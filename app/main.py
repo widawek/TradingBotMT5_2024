@@ -1163,7 +1163,7 @@ class Bot:
 
                         _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
                         if Bot.montecarlo_for_all:
-                            monte_mini = Montecarlo(self.symbol, interval, strategy, self.bt_metric, int(self.number_of_bars_for_backtest/2), slow, fast, permutated_dataframes_mini, how_many=100, print_tqdm=False)
+                            monte_mini = Montecarlo(self.symbol, interval, strategy, self.bt_metric, int(self.number_of_bars_for_backtest), slow, fast, permutated_dataframes_mini, how_many=120, print_tqdm=False)
                             p_value = monte_mini.final_p_value(self.avg_vol)
                             if p_value > 0:
                                 #print(f"\nAdd result {fast} {slow} {result} {p_value}")
