@@ -7,6 +7,7 @@
 class_errors.txt
 symbols.py
 **/models/
+**/charts/
 old_code.txt
 help.py
 clean_pending_orders.py

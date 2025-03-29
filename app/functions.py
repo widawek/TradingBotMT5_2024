@@ -286,9 +286,12 @@ def get_returns(df: pd.DataFrame, symbol:str) -> Tuple[pd.DataFrame, float, floa
 
 
 def timer(hour_):
+    i = 0
     while dt.now().hour < hour_:
-        print(f"Waiting until it is {hour_} o'clock.")
+        if i % 15 == 0:
+            print(f"Waiting until it is {hour_} o'clock.")
         sleep(60)
+        i += 1
     print(dt.now())
 
 

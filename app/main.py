@@ -16,7 +16,6 @@ from strategies_analize.global_strategies import *
 from strategies_analize.metrics import *
 from app.bot_functions import *
 import json
-import importlib
 from app.montecarlo import Montecarlo, PermutatedDataFrames
 from tqdm import trange
 sys.path.append("..")
