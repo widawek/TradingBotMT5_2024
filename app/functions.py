@@ -13,6 +13,8 @@ import psutil
 from typing import Union, Tuple
 sys.path.append("..")
 from app.decorators import validate_input_types
+import socket
+import time
 mt.initialize()
 
 
@@ -456,6 +458,38 @@ def zamknij_inne_okna(keep_pids: set):
                 proc.kill()
             except psutil.NoSuchProcess:
                 pass  # Proces już zamknięty
+
+def check_internet_connection():
+    def check_network_connection():
+        """Sprawdza, czy komputer jest podłączony do sieci lokalnej (WiFi/Ethernet)."""
+        interfaces = psutil.net_if_stats()
+        for interface, stats in interfaces.items():
+            if stats.isup:  # Sprawdza, czy interfejs sieciowy jest aktywny
+                return True
+        return False
+
+    def check_internet(host="8.8.8.8", port=53, timeout=3):
+        """Sprawdza, czy komputer ma dostęp do internetu."""
+        try:
+            socket.setdefaulttimeout(timeout)
+            socket.create_connection((host, port))
+            return True
+        except OSError:
+            return False
+
+    while True:
+        network_ok = check_network_connection()
+        internet_ok = check_internet()
+
+        if network_ok and internet_ok:
+            print("✅ Połączenie z internetem OK.")
+            break
+        elif network_ok:
+            print("⚠ Połączenie z siecią jest, ale brak dostępu do internetu.")
+        else:
+            print("❌ Brak połączenia z siecią.")
+
+        time.sleep(60)  # Sprawdza co minutę
 
 
 if __name__ == '__main__':
