@@ -620,7 +620,7 @@ class Bot:
                 strategy = self.strategies[self.strategy_number]
             except IndexError as e:
                 print("actual_position_democracy", e)
-                self.number_of_bars_for_backtest = int(self.number_of_bars_for_backtest/2)
+                #self.number_of_bars_for_backtest = int(self.number_of_bars_for_backtest/2)
                 self.test_strategies()
                 strategy = self.strategies[self.strategy_number]
             print("Strategia", strategy[0])
@@ -1055,7 +1055,7 @@ class Bot:
             printer("TP/TP_STD", f'{tp, tp_std}')
             printer("SL/SL_STD", f'{sl, sl_std}')
             print(name_, interval, fast, slow, round(result, 4), actual_condition, daily_return, end_result, drift, "\n")
-            monte = Montecarlo(self.symbol, interval, strategy_, self.bt_metric, int(self.number_of_bars_for_backtest/2), slow, fast, permutated_dataframes)
+            monte = Montecarlo(self.symbol, interval, strategy_, self.bt_metric, int(self.number_of_bars_for_backtest), slow, fast, permutated_dataframes)
             p_value = monte.final_p_value(self.avg_vol)
             printer("Z-score*1/p-value:", p_value)
             printer("Result:", result)
