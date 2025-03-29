@@ -9,6 +9,7 @@ import os
 from collections import Counter
 from time import sleep
 import sys
+import psutil
 from typing import Union, Tuple
 sys.path.append("..")
 from app.decorators import validate_input_types
@@ -435,6 +436,23 @@ def rsi_condition(symbol, position):
     if (rsi >= 90 and position == 1) or (rsi <= 10 and position == 0):
         return True
     return False
+
+
+def zamknij_inne_okna(keep_pids: set):
+    """
+    Zamyka wszystkie procesy cmd.exe, powershell.exe i python.exe,
+    z wyjątkiem tych w `keep_pids`.
+    """
+    for proc in psutil.process_iter(attrs=['pid', 'name']):
+        if proc.info['name'] in {"powershell.exe", "cmd.exe", "python.exe"}:
+            if proc.info['pid'] in keep_pids:
+                print(f"Pomijam {proc.info['name']} (PID: {proc.info['pid']})")
+                continue  # Nie zamykamy własnego terminala ani skryptu
+            try:
+                print(f"Zamykam {proc.info['name']} (PID: {proc.info['pid']})")
+                proc.kill()
+            except psutil.NoSuchProcess:
+                pass  # Proces już zamknięty
 
 
 if __name__ == '__main__':
