@@ -640,19 +640,22 @@ class Bot:
             self.force, self.actual_force, self.win_ratio_cond, daily_return = self.calc_pos_condition(dfx)
             self.actual_force = True if self.actual_force == 1 else False
 
-            if strategy[15] == -1:# and self.backtest_time.hour < 12:
-                print("Position is reverse by backtest weekday results.")
-                stance = int(stance*strategy[15])
+            # if strategy[15] == -1:# and self.backtest_time.hour < 12:
+            #     print("Position is reverse by backtest weekday results.")
+            #     stance = int(stance*strategy[15])
 
-            position = int(0) if stance == 1 else int(1)
+            # position = int(0) if stance == 1 else int(1)
 
-            if self.reverse.reverse_or_not():
-                mode__ = "REVERSE"
-                print("REVERSE MODE")
-                position = int(0) if position == 1 else int(1)
-            else:
-                mode__ = "NORMAL"
-                print("NORMAL MODE")
+            # if self.reverse.reverse_or_not():
+            #     mode__ = "REVERSE"
+            #     print("REVERSE MODE")
+            #     position = int(0) if position == 1 else int(1)
+            # else:
+            #     mode__ = "NORMAL"
+            #     print("NORMAL MODE")
+
+            # everything reverse test
+            position = int(0) if stance == -1 else int(1)
 
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
             self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
