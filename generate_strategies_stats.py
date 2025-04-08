@@ -14,8 +14,8 @@ metrics = [only_strategy_metric, sharpe_drawdown_metric, profit_factor_metric]
 # metrics: list, days=10, max_fast: int=21, max_slow: int=62, bars: int=16000, excel=True
 
 def generate_fast():
-    print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.09)/60)
-    fast_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, days=9, bars=16000, max_fast=fast_range, max_slow=slow_range, part_results=True)
+    print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.09)*(17/16)/60)
+    fast_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, days=9, bars=17000, max_fast=fast_range, max_slow=slow_range, part_results=True)
     fast_test.full_analize()
     fast_test.output()
 
@@ -29,8 +29,9 @@ def generate_slow():
 if __name__ == '__main__':
     if input('Fast or slow: ') == 'fast':
         print("FAST")
-        print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.09)/60)
-        fast_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, days=9, bars=16000, max_fast=fast_range, max_slow=slow_range, part_results=True)
+        print(len(symbols)*len(strategies)*len(fast_intervals)*(1+len(metrics)*0.09*(17/16))/60)
+        input()
+        fast_test = Backtest_complex(symbols, fast_intervals, strategies, metrics, days=9, bars=17000, max_fast=fast_range, max_slow=slow_range, part_results=True)
         fast_test.full_analize()
         fast_test.output()
     else:

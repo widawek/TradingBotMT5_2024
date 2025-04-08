@@ -162,7 +162,7 @@ class Bot:
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
-        self.number_of_bars_for_backtest = 16000
+        self.number_of_bars_for_backtest = 32000
         printer(dt.now(), symbol)
         self.symbol = symbol
         #self.active_session()
@@ -266,12 +266,12 @@ class Bot:
             if (profit_ > 0) and (last_two >= 0):
                 self.tiktok -= 1
             else:
-                self.strategy_number += 1
+                self.new_strategy()
                 self.tiktok = 0
                 self.position_size = position_size
-        if not backtest:
-            if self.strategy_number > len(self.strategies)-1:
-                self.test_strategies()
+        # if not backtest:
+        #     if self.strategy_number > len(self.strategies)-1:
+        #         self.test_strategies()
         self.tiktok = 0 if self.tiktok < 0 else self.tiktok
 
     @class_errors
@@ -601,6 +601,8 @@ class Bot:
         cond = df['cond'].rolling(window_).sum()
         df['date_xy'] = df['time'].dt.date
         df = df[df['date_xy'] == dt.now().date()]
+        last_index = df[df['cross'] == 1].last_valid_index()
+        df = df.loc[:last_index]
         if not respect_overnight:
             df['return'] = np.where((df['time'].dt.hour < morning_hour-1) | (df['time'].dt.hour > evening_hour+1), np.NaN, df['return'])
             df = df.dropna()
@@ -629,7 +631,7 @@ class Bot:
             fast = strategy[3]
             slow = strategy[4]
 
-            dfx, stance = strategy[1](get_data(self.symbol, self.interval, 1, int(fast * slow + 100)), slow, fast, self.symbol)
+            dfx, stance = strategy[1](get_data(self.symbol, self.interval, 1, int(fast * slow + 500)), slow, fast, self.symbol)
             if stance not in [-1, 1]:
                 dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + number_of_bars*20)) # how_many_bars
                 dfx, stance = strategy[1](dfx, slow, fast, self.symbol)
@@ -683,14 +685,11 @@ class Bot:
                     tick = mt.symbol_info_tick(self.symbol)
                     price = round((tick.ask + tick.bid) / 2, self.round_number)
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
-                    # if kind == 'counter':
+
                     match position:
                         case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0, self.interval) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
                         case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1, self.interval) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
-                    # else:
-                    #     match position:
-                    #         case 0: self.good_price_to_open_pos = True if (price <= self.strategy_pos_open_price) or rsi_condition(self.symbol, 0) else False
-                    #         case 1: self.good_price_to_open_pos = True if (price >= self.strategy_pos_open_price) or rsi_condition(self.symbol, 1) else False
+
                     if self.good_price_to_open_pos:
                         break
 
@@ -830,27 +829,11 @@ class Bot:
 
         time_from_last_backtest_hours = round((dt.now() - self.backtest_time).seconds/3600, 3)
         printer('time_from_last_backtest_hours', time_from_last_backtest_hours)
-        # if (not self.after_change_hour) and (dt.now().hour >= change_hour):
-        #     sum_, prof_list = self.reverse.closed_pos(self.symbol)
-        #     if sum_ < 0 and prof_list[-1] < 0:
-        #         self.after_change_hour = True
-        #         self.test_strategies()
-        # if self.fresh_daily_target:
-        #     self.fresh_daily_target = False
-        #     time_sleep = 60
-        #     print(dt.now())
-        #     print(f"Target was reached. {time_sleep} minutes brake.")
-        #     sleep(time_sleep*60)
-        #     self.test_strategies()
+
         if time_from_last_backtest_hours >= 6 and not in_:
             print("Last backtest was 6 hour ago. I need new data.")
             self.test_strategies()
 
-
-    @class_errors
-    def pos_creator(self):
-        self.strategy_number += 1
-        return self.actual_position_democracy()
 
     @class_errors
     def write_to_database(self, profit, spread):
@@ -1001,6 +984,13 @@ class Bot:
         # 7- kind, 8- daily_return, 9- end_result, 10- tp_std, 11- sl_std, 12- drift, 13- p_value, 14- volume_contition,
         # 15- today_direction
 
+        for i in range(len(self.strategies)):
+            strategyy = self.strategies[i][1]
+            intervall = self.strategies[i][2]
+            fastt = self.strategies[i][3]
+            sloww = self.strategies[i][4]
+            self.strategies[i][8] = self.calc_pos_condition(strategyy(get_data(self.symbol, intervall, 1, 5000), sloww, fastt, self.symbol)[0])[-1]
+
         if dt.now().hour >= change_hour or (not self.virgin_test):# all([i[6] == -2 for i in self.strategies]) :
             self.strategies = [i for i in self.strategies if i[8] > 0 and i[5] > 0 and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
@@ -1067,8 +1057,8 @@ class Bot:
             printer("Final sort result virgin: ", round(p_value*result, 6))
             printer("Final sort result daily: ", round(p_value*daily_return*result, 6))
             printer("volume_contition: ", volume_contition)
-            self.strategies_raw.append((name_, strategy_, interval, fast, slow, round(result, 8), actual_condition,
-                                        kind, daily_return, end_result, tp_std, sl_std, drift, p_value, volume_contition, today_direction))
+            self.strategies_raw.append([name_, strategy_, interval, fast, slow, round(result, 8), actual_condition,
+                                        kind, daily_return, end_result, tp_std, sl_std, drift, p_value, volume_contition, today_direction])
 
         print("\nv NICE STRATEGIES v")
         for strat in self.strategies_raw:
@@ -1229,6 +1219,17 @@ class Bot:
         except Exception as e:
             print("change_tp_sl", e)
 
+
+    def new_strategy(self):
+
+        del self.strategies[0]
+
+        if len(self.strategies) == 0:
+            self.test_strategies()
+        elif len(self.strategies) == 1:
+            pass
+        else:
+            self.sort_strategies()
 
 if __name__ == '__main__':
     print('Yo, wtf?')
