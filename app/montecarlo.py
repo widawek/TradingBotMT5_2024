@@ -97,8 +97,7 @@ class Montecarlo:
                 self.results.append(self.only_df_strategy(perm_df))
 
     def only_df_strategy(self, df):
-        df1, _ = self.strategy(df, self.slow, self.fast, self.symbol)
-        df1, _ = calculate_strategy_returns(df1, 6)
+        df1, _ = calculate_strategy_returns(self.strategy(df, self.slow, self.fast, self.symbol)[0], 6)
         df1['strategy'] = (1+df1['return']).cumprod() - 1
         result = self.bt_metric(df1.copy())
         return [result, df1['strategy'].iloc[1000-self.bars:].tolist()]

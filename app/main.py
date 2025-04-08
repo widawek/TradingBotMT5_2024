@@ -404,6 +404,7 @@ class Bot:
         time_sleep = 2
         self.pos_type = self.actual_position_democracy()
         self.positions_()
+        self.request_get()
         # vvv key component vvv
         while True:
             self.is_this_the_end()
@@ -628,8 +629,7 @@ class Bot:
             fast = strategy[3]
             slow = strategy[4]
 
-            dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + 3440)) # how_many_bars
-            dfx, stance = strategy[1](dfx, slow, fast, self.symbol)
+            dfx, stance = strategy[1](get_data(self.symbol, self.interval, 1, int(fast * slow + 100)), slow, fast, self.symbol)
             if stance not in [-1, 1]:
                 dfx = get_data(self.symbol, self.interval, 1, int(fast * slow + number_of_bars*20)) # how_many_bars
                 dfx, stance = strategy[1](dfx, slow, fast, self.symbol)
@@ -644,7 +644,7 @@ class Bot:
             #     print("Position is reverse by backtest weekday results.")
             #     stance = int(stance*strategy[15])
 
-            # position = int(0) if stance == 1 else int(1)
+            position = int(0) if stance == 1 else int(1)
 
             # if self.reverse.reverse_or_not():
             #     mode__ = "REVERSE"
@@ -654,8 +654,10 @@ class Bot:
             #     mode__ = "NORMAL"
             #     print("NORMAL MODE")
 
-            # everything reverse test
-            position = int(0) if stance == -1 else int(1)
+            mode__ = "NORMAL"
+
+            # # everything reverse test
+            # position = int(0) if stance == -1 else int(1)
 
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
             self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
@@ -669,7 +671,7 @@ class Bot:
             #         return self.actual_position_democracy()
 
             positions_ = mt.positions_get(symbol=self.symbol)
-            kind = strategy[0].split('_')[1]
+            #kind = strategy[0].split('_')[1]
             if len(positions_) == 0:
                 minute_ = 0
                 minutes = 0
@@ -683,8 +685,8 @@ class Bot:
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
                     # if kind == 'counter':
                     match position:
-                        case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
-                        case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0, self.interval) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1, self.interval) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
                     # else:
                     #     match position:
                     #         case 0: self.good_price_to_open_pos = True if (price <= self.strategy_pos_open_price) or rsi_condition(self.symbol, 0) else False
@@ -693,7 +695,7 @@ class Bot:
                         break
 
                     if self.check_new_bar():
-                        return self.actual_position_democracy(number_of_bars=number_of_bars*20)
+                        return self.actual_position_democracy(number_of_bars=number_of_bars*10)
                     pos = 'LONG' if position==0 else "SHORT"
                     new_minute = dt.now().minute
                     if minute_ != new_minute:
@@ -944,8 +946,7 @@ class Bot:
         my_data = mini_data()
         if my_data == []:
             return None
-        function_name = my_data[1]
-        my_data[1] = globals()[function_name]
+        my_data[1] = globals()[my_data[1]]
         print(my_data)
         return my_data
 
@@ -1004,14 +1005,14 @@ class Bot:
             self.strategies = [i for i in self.strategies if i[8] > 0 and i[5] > 0 and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
         else:
-            self.strategies = [i for i in self.strategies if i[5] > 0 and i[13] > 0]
+            self.strategies = [i for i in self.strategies if i[8] > 0 and i[5] > 0 and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True)
         first_ = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True)[0][7]
         printer("Daily starter", first_)
         self.actual_today_best = first_
         second_ = 'trend' if first_ == 'counter' else 'counter'
-        group_t = [item for item in sorted_data if item[7] == second_] # first
-        group_n = [item for item in sorted_data if item[7] == first_] # second
+        group_t = [item for item in sorted_data if item[7] == first_] # first
+        group_n = [item for item in sorted_data if item[7] == second_] # second
         alternating_data = []
         max_len = max(len(group_t), len(group_n))
 
@@ -1046,7 +1047,7 @@ class Bot:
             strategy_ = globals()[name_]
             interval = strategy[2]
             kind = name_.split('_')[-1]
-            today_direction = strategy[4+dt.now().weekday()]
+            today_direction = 1 # strategy[4+dt.now().weekday()]
             print(f'\n\nStrategy {i} from {len(strategies)}')
             i += 1
             results_pack = self.trend_backtest(strategy_, interval)
@@ -1199,7 +1200,7 @@ class Bot:
             new_tp = 0.0
             new_sl = 0.0
             if pos_.sl == 0.0 and pos_.tp == 0.0:
-                if rsi_condition(self.symbol, type_to_rsi):
+                if rsi_condition(self.symbol, type_to_rsi, self.interval):
                     if pos_.type == 0:
                         if pos_.profit > tp_profit/10:
                             new_tp = round(((1+self.avg_vol/5)*info.ask), info.digits)
