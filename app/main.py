@@ -1222,7 +1222,7 @@ class Bot:
         elif len(self.strategies) == 1:
             pass
         else:
-            self.sort_strategies()
+            self.strategies = self.sort_strategies()
 
 if __name__ == '__main__':
     print('Yo, wtf?')
