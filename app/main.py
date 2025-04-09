@@ -203,12 +203,29 @@ class Bot:
         return int((dt.now() - dt_from_timestamp - timedelta(hours=tz_diff)).seconds/60)
 
     @class_errors
+    def drift_giver(self):
+        x = self.close_profits[-2:]
+        last_profit = self.close_profits[-1][0]
+
+        # "Neutral" "Strong loss" "Weak loss" "Strong win" "Weak win"
+        match self.drift:
+            case "Neutral": decline, increase = 0.9, 1.11
+            case "Strong loss": decline, increase = 1.43, 0.7
+            case "Weak loss": decline, increase = 0.8, 1.25
+            case "Strong win": decline, increase = 0.7, 1.43
+            case "Weak win": decline, increase = 1.25, 0.8
+
+        if last_profit < 0 and x[0][1][:6] == x[1][1][:6]:
+            self.position_size = decline*self.position_size
+        elif last_profit > 0 and x[0][1][:6] == x[1][1][:6]:
+            self.position_size = increase*self.position_size
+        else:
+            pass
+
+    @class_errors
     def if_tiktok(self, backtest=False):
         try:
-            try:
-                self.drift = self.strategies[self.strategy_number][12]
-            except Exception:
-                self.drift = self.strategies[self.strategy_number-1][12]
+            self.drift = self.strategies[self.strategy_number][12]
         except Exception:
             self.drift = self.drift
 
@@ -216,32 +233,7 @@ class Bot:
         profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].magic == self.magic])
         self.close_profits.append((profit_, self.comment[:-1]))
         if len(self.close_profits) >= 2:
-            x = self.close_profits[-2:]
-            last_profit = self.close_profits[-1][0]
-
-            # "Neutral" "Strong loss" "Weak loss" "Strong win" "Weak win"
-            match self.drift:
-                case "Neutral": decline, increase = 0.9, 1.11
-                case "Strong loss": decline, increase = 1.43, 0.7
-                case "Weak loss": decline, increase = 0.8, 1.25
-                case "Strong win": decline, increase = 0.7, 1.43
-                case "Weak win": decline, increase = 1.25, 0.8
-
-            if last_profit < 0 and x[0][1][:6] == x[1][1][:6]:
-                self.position_size = decline*self.position_size
-            elif last_profit > 0 and x[0][1][:6] == x[1][1][:6]:
-                self.position_size = increase*self.position_size
-            else:
-                pass
-
-            # if all([i[0] < 0 for i in x]):
-            #     self.position_size = decline*self.position_size
-            #     if self.position_size < 0.5*position_size:
-            #         self.position_size = 0.5*position_size
-            # elif all([i[0] > 0 for i in x]):
-            #     self.position_size = increase*self.position_size
-            #     if self.position_size > 2*position_size:
-            #         self.position_size = 2*position_size
+            self.drift_giver()
             try:
                 last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment[:-1]]
                 if len(last_to_by_comment) >= 2:
