@@ -162,7 +162,7 @@ class Bot:
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
-        self.number_of_bars_for_backtest = 32000
+        self.number_of_bars_for_backtest = 40000
         printer(dt.now(), symbol)
         self.symbol = symbol
         #self.active_session()
@@ -830,8 +830,9 @@ class Bot:
         time_from_last_backtest_hours = round((dt.now() - self.backtest_time).seconds/3600, 3)
         printer('time_from_last_backtest_hours', time_from_last_backtest_hours)
 
-        if time_from_last_backtest_hours >= 6 and not in_:
-            print("Last backtest was 6 hour ago. I need new data.")
+        hours_ = 8
+        if time_from_last_backtest_hours >= hours_ and not in_:
+            print(f"Last backtest was {hours_} hour ago. I need new data.")
             self.test_strategies()
 
 
@@ -1019,7 +1020,7 @@ class Bot:
     @class_errors
     def test_strategies(self, add_number=0):
         self.close_request(True)
-        strategies_number = 4 + add_number
+        strategies_number = 11 + add_number
         super_start_time = time.time()
         strategies, intervals_ = self.load_strategies_from_json()
         metric_name = strategies[0][3]
