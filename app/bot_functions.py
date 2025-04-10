@@ -10,6 +10,7 @@ from math import ceil
 import sys
 import json
 sys.path.append("..")
+import copy
 from app.functions import get_data
 from scipy.stats import linregress
 #from app.mg_functions import omega_ratio
@@ -774,5 +775,42 @@ def get_last_closed_position_direction(symbol):
 def volume_metrics_data():
     with open(os.path.join('volume_metrics', 'm10.json'), "r") as file:
         data = json.load(file)
-
     print(data)  # Otrzymasz listę list
+
+
+def rsi_condition(symbol, position, interval):
+    intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
+    df = get_data(symbol, intervals[intervals.index(interval)+6], 1, 10)
+    df['rsi'] = df.ta.rsi(length=2)
+    rsi = df['rsi'].iloc[-1]
+    #if (rsi >= 90 and position == 1) or (rsi <= 10 and position == 0): # contra - best_price mode
+    if (rsi >= 50 and position == 0) or (rsi <= 50 and position == 1):  # trend - buy with trend
+        return True
+    return False
+
+
+def find_density_results(data, epsilon=10):
+    """
+    Dodaje do każdego punktu w `data` wartość zagęszczenia punktów w jego pobliżu,
+    obliczoną na podstawie odległości euklidesowej w przestrzeni (fast, slow).
+    
+    :param data: lista list [fast, slow, result, actual_condition, daily_return, end_result, risk_data]
+    :param epsilon: promień określający "bliskość" punktów
+    :return: lista list [fast, slow, result * density, actual_condition, daily_return, end_result, risk_data]
+    """
+    results = copy.deepcopy(data)
+
+    # Wyciągamy tylko współrzędne fast, slow do obliczeń
+    positions = np.array([[row[0], row[1]] for row in data], dtype=float)
+
+    densities = []
+    for i, point in enumerate(positions):
+        distances = np.linalg.norm(positions - point, axis=1)
+        density = np.sum(distances < epsilon) - 1  # nie liczymy siebie
+        densities.append(density)
+
+    # Mnożenie result przez density
+    for row, density in zip(results, densities):
+        row[2] *= density
+
+    return results

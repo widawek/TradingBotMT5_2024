@@ -1154,18 +1154,19 @@ class Bot:
                             p_value = monte_mini.final_p_value(self.avg_vol)
                             if p_value > 0:
                                 #print(f"\nAdd result {fast} {slow} {result} {p_value}")
-                                results.append((fast, slow, round(result*p_value, 10), actual_condition, daily_return, end_result, risk_data))
+                                results.append([fast, slow, round(result*p_value, 10), actual_condition, daily_return, end_result, risk_data])
                             else:
                                 continue
                         else:
-                            results.append((fast, slow, round(result, 10), actual_condition, daily_return, end_result, risk_data))
+                            results.append([fast, slow, round(result, 10), actual_condition, daily_return, end_result, risk_data])
                     else:
                         continue
                 except Exception as e:
                     print("\ntrend_backtest", e)
                     continue
         try:
-            f_result = [i for i in results if i[2] > 0]
+            f_result = find_density_results(results)
+            f_result = [i for i in f_result if i[2] > 0]
             f_result = sorted(f_result, key=lambda x: x[2], reverse=True)[0]
         except IndexError:
             return None

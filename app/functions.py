@@ -434,17 +434,6 @@ def closed_pos():
         return suma_zyskow
 
 
-def rsi_condition(symbol, position, interval):
-    intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-    df = get_data(symbol, intervals[intervals.index(interval)+6], 1, 10)
-    df['rsi'] = df.ta.rsi(length=2)
-    rsi = df['rsi'].iloc[-1]
-    if (rsi >= 90 and position == 1) or (rsi <= 10 and position == 0):
-    #if (rsi >= 90 and position == 0) or (rsi <= 10 and position == 1):
-        return True
-    return False
-
-
 def zamknij_inne_okna(keep_pids: set):
     """
     Zamyka wszystkie procesy cmd.exe, powershell.exe i python.exe,
