@@ -192,6 +192,7 @@ class Bot:
         self.interval = "M1"
         self.drift = "Neutral"
         self.virgin_test = True
+        self.request_sltp = True
         self.test_strategies()
 
     @class_errors
@@ -713,7 +714,30 @@ class Bot:
         return position
 
     @class_errors
+    def last_pos_sltp(self):
+        try:
+            dzisiaj = dt.now().date()
+            poczatek_dnia = dt.combine(dzisiaj, dt.min.time())
+            koniec_dnia = dt.combine(dzisiaj, dt.max.time())
+            zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia, group=self.symbol)
+            intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
+            rsi_interval = int(intervals[intervals.index(self.interval)+6][1:])
+            comment = zamkniete_transakcje[-2].comment
+            condition = ('tp' in comment) or ('sl' in comment)
+            return condition, rsi_interval
+        except Exception as e:
+            print("last_pos_sltp", e)
+            return False, 30
+
+    @class_errors
     def request(self, action, posType, price=None):
+        cond, time_ = self.last_pos_sltp(self.interval, self.symbol)
+        if cond and self.request_sltp:
+            self.request_sltp = False
+            print(f"Sleep {time_} minutes after sl or tp")
+            time.sleep(time_*60)
+            return self.request_get()
+
         if action == actions['deal']:
             print("YES")
             price = mt.symbol_info(self.symbol).bid
@@ -758,6 +782,7 @@ class Bot:
             print(f"No enough money to open position. Waiting {round(seconds/60, 2)} minutes")
             sleep(300)
             self.request_get()
+        self.request_sltp = True
 
     @class_errors
     def delete_model(self):
@@ -1105,7 +1130,7 @@ class Bot:
         results = []
         results_raw = []
         if Bot.montecarlo_for_all:
-            dfperms_mini = PermutatedDataFrames(self.symbol, [interval], int(self.number_of_bars_for_backtest), how_many=120)
+            dfperms_mini = PermutatedDataFrames(self.symbol, [interval], int(self.number_of_bars_for_backtest), how_many=100)
             permutated_dataframes_mini = dfperms_mini.dataframes_output()
 
         for slow in trange(5, slow_range, 2):
@@ -1127,8 +1152,8 @@ class Bot:
                         results_raw.sort()
                         if Bot.montecarlo_for_all:
                             if len(results_raw) > 1:
-                                if len(results_raw) > 11:
-                                    if result > min(results_raw[-10:]):
+                                if len(results_raw) > 8:
+                                    if result > min(results_raw[-7:]):
                                         results_raw.append(result)
                                     else:
                                         continue
@@ -1150,7 +1175,7 @@ class Bot:
 
                         _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
                         if Bot.montecarlo_for_all:
-                            monte_mini = Montecarlo(self.symbol, interval, strategy, self.bt_metric, int(self.number_of_bars_for_backtest), slow, fast, permutated_dataframes_mini, how_many=120, print_tqdm=False)
+                            monte_mini = Montecarlo(self.symbol, interval, strategy, self.bt_metric, int(self.number_of_bars_for_backtest), slow, fast, permutated_dataframes_mini, how_many=100, print_tqdm=False)
                             p_value = monte_mini.final_p_value(self.avg_vol)
                             if p_value > 0:
                                 #print(f"\nAdd result {fast} {slow} {result} {p_value}")
