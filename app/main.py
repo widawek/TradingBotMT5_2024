@@ -558,7 +558,7 @@ class Bot:
         if volume > symbol_info["volume_max"]:
             volume = float(symbol_info["volume_max"])
         self.volume = volume
-        if min_volume and (volume < symbol_info["volume_min"]):
+        if min_volume or (volume < symbol_info["volume_min"]):
             self.volume = symbol_info["volume_min"]
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, kill_multiplier)
         self.kill_position_profit = round(self.kill_position_profit, 2)# * (1+self.multi_voltage('M5', 33)), 2)
@@ -747,7 +747,7 @@ class Bot:
             else:
                 posType = pendings["short_stop"]
 
-        self.volume_calc(self.position_size, posType, True)
+        self.volume_calc(self.position_size, posType, False)
 
         strategy = self.strategies[self.strategy_number]
         name_ = strategy[0][:5]
