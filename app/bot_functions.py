@@ -784,7 +784,7 @@ def rsi_condition(symbol, position, interval):
     df['rsi'] = df.ta.rsi(length=2)
     rsi = df['rsi'].iloc[-1]
     #if (rsi >= 90 and position == 1) or (rsi <= 10 and position == 0): # contra - best_price mode
-    if (rsi >= 50 and position == 0) or (rsi <= 50 and position == 1):  # trend - buy with trend
+    if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
         return True
     return False
 
