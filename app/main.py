@@ -731,7 +731,7 @@ class Bot:
 
     @class_errors
     def request(self, action, posType, price=None):
-        cond, time_ = self.last_pos_sltp(self.interval, self.symbol)
+        cond, time_ = self.last_pos_sltp()
         if cond and self.request_sltp:
             self.request_sltp = False
             print(f"Sleep {time_} minutes after sl or tp")
