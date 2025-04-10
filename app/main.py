@@ -1184,20 +1184,20 @@ class Bot:
             new_tp = 0.0
             new_sl = 0.0
             if pos_.sl == 0.0 and pos_.tp == 0.0:
-                if rsi_condition(self.symbol, type_to_rsi, self.interval):
+                if rsi_condition_for_tpsl(self.symbol, type_to_rsi, self.interval):
                     if pos_.type == 0:
                         if pos_.profit > tp_profit/10:
                             new_tp = round(((1+self.avg_vol/5)*info.ask), info.digits)
                             new_sl = round((pos_.price_open + info.ask*2)/3, info.digits)
                         elif pos_.profit < 0:
-                            new_tp = round(((1+self.avg_vol/10)*info.price_open), info.digits)
+                            new_tp = round(((1+self.avg_vol/10)*pos_.price_open), info.digits)
                             new_sl = round((1-self.avg_vol/25)*info.ask, info.digits)
                     elif pos_.type == 1:
                         if pos_.profit > tp_profit/10:
                             new_tp = round(((1-self.avg_vol/5)*info.bid), info.digits)
                             new_sl = round((pos_.price_open + info.bid*2)/3, info.digits)
                         elif pos_.profit < 0:
-                            new_tp = round(((1-self.avg_vol/10)*info.price_open), info.digits)
+                            new_tp = round(((1-self.avg_vol/10)*pos_.price_open), info.digits)
                             new_sl = round((1+self.avg_vol/25)*info.bid, info.digits)
 
                     request = {
