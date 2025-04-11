@@ -1189,10 +1189,14 @@ class Bot:
                 except Exception as e:
                     print("\ntrend_backtest", e)
                     continue
+
+        if len(results) < 4:
+            return None
+
         try:
-            f_result = find_density_results(results)
-            f_result = [i for i in f_result if i[2] > 0]
-            f_result = sorted(f_result, key=lambda x: x[2], reverse=True)[0]
+            results = find_density_results(results)
+            results = [i for i in results if i[2] > 0]
+            f_result = sorted(results, key=lambda x: x[2], reverse=True)[0]
         except IndexError:
             return None
         print(f"Best ma factors fast={f_result[0]} slow={f_result[1]}")
