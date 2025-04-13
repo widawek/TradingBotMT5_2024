@@ -18,6 +18,7 @@ from app.bot_functions import *
 import json
 from app.montecarlo import Montecarlo, PermutatedDataFrames
 from tqdm import trange
+from app.minor_classes import Reverse, Target, GlobalProfitTracker
 sys.path.append("..")
 mt.initialize()
 
@@ -27,124 +28,7 @@ catalog = os.path.dirname(__file__)
 parent_catalog = os.path.dirname(catalog)
 catalog = f'{parent_catalog}\\models'
 processor = TradingProcessor()
-
-
-class Reverse:
-    def __init__(self, symbol):
-        self.symbol = symbol
-        self.condition = False# if dt.now().weekday() != 0 else True
-        self.one_percent_balance = -10 * round(mt.account_info().balance/100, 2)
-
-    def closed_pos(self, symbol: str = 'all'):
-        dzisiaj = dt.now().date()
-        poczatek_dnia = dt.combine(dzisiaj, dt.min.time())
-        koniec_dnia = dt.combine(dzisiaj, dt.max.time())
-        zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia)
-        if zamkniete_transakcje is None or len(zamkniete_transakcje) == 0:
-            return 0
-        # Filtrujemy transakcje po podanym symbolu
-        if symbol != 'all':
-            zamkniete_transakcje = [deal for deal in zamkniete_transakcje if deal.symbol == symbol]
-        if not zamkniete_transakcje:
-            return 0
-        profit_list = [deal.profit for deal in zamkniete_transakcje if deal.profit != 0]
-        suma_zyskow = sum(profit_list)
-        printer(f"\nSuma zysków z zamkniętych pozycji dla {symbol} dzisiaj:",  f"{suma_zyskow:.2f} PLN")
-        return suma_zyskow, profit_list
-
-    def reverse_or_not(self):
-        try:
-            if self.condition:
-                return self.condition
-            factor = 3
-            std_ = 3
-            cp = self.closed_pos()
-            df = pd.DataFrame({'profits': cp[1]})
-            if len(df) < 5:
-                return self.condition
-            df['profits_sum'] = df['profits'].cumsum()
-            df['mean_profits'] = df['profits_sum'].expanding().mean()
-            df['profits_sum_mean'] = df['profits_sum'].rolling(factor).mean()
-            df['profits_sum_std'] = std_*df['profits_sum'].rolling(factor).std()
-            df['boll_up'] = df['profits_sum_mean'] + df['profits_sum_std']
-            df['boll_down'] = df['profits_sum_mean'] - df['profits_sum_std']
-            df['cond'] = (df['boll_up'] < df['mean_profits'])&(df['boll_up'].shift() < df['mean_profits'].shift())
-            try:
-                pos = [i for i in mt.positions_get() if i.symbol == self.symbol]
-                profit_symbol = pos[0].profit
-                printer("Aktualny zysk z otwartych pozycji:", f"{profit_symbol:.2f} PLN")
-            except Exception:
-                profit_symbol = 0
-
-            symbol_profit, symbol_profits = self.closed_pos(self.symbol)
-            if len(symbol_profits) < 2:
-                return self.condition
-
-            if df['cond'].iloc[-1] and symbol_profit < 0 and profit_symbol <= 0 and symbol_profits[-1] < 0 and cp[0] < self.one_percent_balance:
-                self.condition = True
-            return self.condition
-        except Exception:
-            return self.condition
-
-
-class Target:
-    def __init__(self, target=0.05):
-        self.start_balance = mt.account_info().balance - closed_pos()
-        self.target = target
-        self.result = False
-        self.last_self_result = False
-        self.test = 0
-
-    def checkTarget(self):
-        self.last_self_result = self.result
-        if not self.result:
-            actual_result = mt.account_info().balance + sum([i.profit for i  in mt.positions_get()])
-            if actual_result > self.start_balance * (1+self.target):
-                self.result = True
-        if self.last_self_result != self.result:
-            self.test += 1
-        if self.test > 1:
-            return self.result, False
-        return self.result, self.last_self_result != self.result
-
-
-class GlobalProfitTracker:
-    mt.initialize()
-    def __init__(self, symbols: list, multiplier: float):
-        self.barrier = round((len(symbols)*multiplier)/(100), 5)
-        self.global_profit_to_margin = None
-        self.condition = False
-        self.positions = []
-        self.primal_tickets_list = []
-
-    def checkout(self):
-        account = mt.account_info()
-        global_profit_to_margin = round(account.profit/account.balance, 4)
-        printer("Global profit to barrier", round(global_profit_to_margin/self.barrier, 3))
-        if not self.condition:
-            if global_profit_to_margin > self.barrier:
-                self.condition = True
-                self.global_profit_to_margin = global_profit_to_margin
-                self.positions = [i.ticket for i in mt.positions_get()]
-                self.primal_tickets_list = self.positions
-                printer("Barrier switch", self.condition)
-        else:
-            if global_profit_to_margin > self.global_profit_to_margin * profit_decrease_barrier:
-                if global_profit_to_margin > self.global_profit_to_margin:
-                    self.global_profit_to_margin = global_profit_to_margin
-                pass
-            else:
-                if self.positions == [i.ticket for i in mt.positions_get()]:
-                    close_request_("ALL", self.primal_tickets_list, True)
-                    self.reset()
-                else:
-                    self.global_profit_to_margin = global_profit_to_margin
-                    self.positions = [i.ticket for i in mt.positions_get()]
-
-    def reset(self):
-        self.global_profit_to_margin = None
-        self.condition = False
-        self.positions = []
+time_diff = get_timezone_difference()
 
 
 class Bot:
@@ -152,6 +36,7 @@ class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.position_capacity = []
         self.backtest_time = dt.now()
         self.reverse = Reverse(symbol)
         self.if_position_with_trend = 'n'
@@ -312,6 +197,8 @@ class Bot:
                     self.clean_orders(backtest)
 
                 else:
+                    if self.check_capacity():
+                        self.change_tp_sl(tp, True)
                     self.change_tp_sl(tp)
 
                 if self.print_condition():
@@ -370,15 +257,13 @@ class Bot:
     @class_errors
     def positions_(self):
         self.positions = mt.positions_get(symbol=self.symbol)
-        if len(self.positions) == 0 and isinstance(self.positions, tuple):
-            self.positions = [i for i in self.positions if
-                              (i.magic == self.magic)]
-            if len(self.positions) == 0:
-                self.positions = ()
+        if len(self.positions) != 0 and isinstance(self.positions, tuple):
+            self.positions = [i for i in self.positions if (i.magic == self.magic)]
 
     @class_errors
     def request_get(self):
         if not self.positions:
+            self.reset_bot()
             pos_type = self.actual_position_democracy()
             self.request(actions['deal'], pos_type)
         self.positions_()
@@ -402,6 +287,7 @@ class Bot:
         while True:
             self.is_this_the_end()
             self.request_get()
+            self.open_pos_capacity()
             if self.print_condition():
                 printer("\nSymbol:", self.symbol)
                 printer("Czas:", time.strftime("%H:%M:%S"))
@@ -480,6 +366,7 @@ class Bot:
         self.profit0 = None
         self.profit_max = 0
         self.fresh_daily_target = False
+        self.position_capacity = []
 
     @class_errors
     def avg_daily_vol(self):
@@ -758,8 +645,8 @@ class Bot:
         metric_numb = str(metric_numb_dict[self.bt_metric.__name__])
         self.comment = f'{name_}{self.interval[-1:]}_{fast}_{slow}_{reverseornot}{metric_numb}{self.if_position_with_trend}'
 
-        if self.reverse.condition:
-            self.comment = '8'+self.comment[1:]
+        # if self.reverse.condition:
+        #     self.comment = '8'+self.comment[1:]
 
         request = {
             "action": action,
@@ -783,13 +670,57 @@ class Bot:
             sleep(300)
             self.request_get()
         self.request_sltp = True
+        self.position_capacity = []
 
     @class_errors
-    def delete_model(self):
-        os.remove(self.model_buy[1])
-        print(f"Model removed: {self.model_buy[1]}")
-        os.remove(self.model_sell[1])
-        print(f"Model removed: {self.model_sell[1]}")
+    def open_pos_capacity(self):
+        if len(self.capacity) == 0:
+            positions = mt.positions_get(symbol=self.symbol)
+            type_ = positions[0].type
+            oprice = positions[0].price_open
+            cprice = positions[0].price_current
+            self.first_price_diff = abs(cprice - oprice)
+
+        try:
+            position = mt.positions_get(symbol=self.symbol)[0]
+            if position.magic != self.magic:
+                return
+            type_ = position.type
+            oprice = position.price_open
+            cprice = position.price_current
+            drop = 0
+            if type_ == 0:
+                drop = (cprice - oprice) + self.first_price_diff
+            elif type_ == 1:
+                drop = (oprice - cprice) + self.first_price_diff
+            self.position_capacity.append(drop)
+        except Exception:
+            pass
+
+    @class_errors
+    def check_capacity(self):
+        try:
+            position_efficiency = len([i for i in self.position_capacity if i > 0]) / len(self.position_capacity)
+            capacity = round(np.mean(self.position_capacity), 2)
+            efficiency = round(position_efficiency, 2)
+            print("Position capacity:  ", capacity)
+            print("Position efficiency:", efficiency)
+            if capacity < 0 and efficiency < 0.49 and self.duration():
+                return True
+            return False
+        except Exception:
+            return False
+
+    @class_errors
+    def duration(self):
+        intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
+        duration_time = int(intervals[intervals.index(self.interval)+6][1:])
+        positions = mt.positions_get(symbol=self.symbol)[0]
+        time_diff = get_timezone_difference()
+        dt_timestamp = dt.fromtimestamp(positions.time)
+        now = dt.now()
+        diff = now - dt_timestamp
+        return round((diff.total_seconds() / 60) - time_diff*60) > duration_time
 
     @class_errors
     def check_new_bar(self):
@@ -919,20 +850,6 @@ class Bot:
             print("High volatility risk.")
             return 1
         return 1# if not Bot.target_class.checkTarget() else 2
-
-    @class_errors
-    def get_open_positions_durations(self):
-        positions = mt.positions_get(symbol=self.symbol)
-        if len(positions) == 0:
-            return 0
-        tick = mt.symbol_info_tick(self.symbol)
-        server_time = dt.fromtimestamp(tick.time, timezone.utc)
-        durations = []
-        for pos in positions:
-            time_open = dt.fromtimestamp(pos.time, timezone.utc)
-            duration = (server_time - time_open).total_seconds() / 60
-            durations.append((pos.ticket, duration))
-        return durations[0][1]
 
     @class_errors
     def volume_metrics_data(self, name_):
@@ -1204,7 +1121,7 @@ class Bot:
 
 
     @class_errors
-    def change_tp_sl(self, tp_profit):
+    def change_tp_sl(self, tp_profit, capacity_condition=False):
         try:
             info = mt.symbol_info(self.symbol)
             positions = mt.positions_get(symbol=self.symbol)
@@ -1212,33 +1129,44 @@ class Bot:
             type_to_rsi = 0 if pos_.type == 1 else 1
             new_tp = 0.0
             new_sl = 0.0
-            if pos_.sl == 0.0 and pos_.tp == 0.0:
-                if rsi_condition_for_tpsl(self.symbol, type_to_rsi, self.interval):
-                    if pos_.type == 0:
-                        if pos_.profit > tp_profit/10:
-                            new_tp = round(((1+self.avg_vol/5)*info.ask), info.digits)
-                            new_sl = round((pos_.price_open + info.ask*2)/3, info.digits)
-                        elif pos_.profit < 0:
-                            new_tp = round(((1+self.avg_vol/10)*pos_.price_open), info.digits)
-                            new_sl = round((1-self.avg_vol/25)*info.ask, info.digits)
-                    elif pos_.type == 1:
-                        if pos_.profit > tp_profit/10:
-                            new_tp = round(((1-self.avg_vol/5)*info.bid), info.digits)
-                            new_sl = round((pos_.price_open + info.bid*2)/3, info.digits)
-                        elif pos_.profit < 0:
-                            new_tp = round(((1-self.avg_vol/10)*pos_.price_open), info.digits)
-                            new_sl = round((1+self.avg_vol/25)*info.bid, info.digits)
 
-                    request = {
-                    "action": mt.TRADE_ACTION_SLTP,
-                    "symbol": self.symbol,
-                    "position": pos_.ticket,
-                    "magic": self.magic,
-                    "tp": new_tp,
-                    "sl": new_sl,
-                    #"comment": comment
-                    }
-                    order_result = mt.order_send(request)
+            def sltprequest(new_tp, new_sl, pos_):
+                request = {
+                        "action": mt.TRADE_ACTION_SLTP,
+                        "symbol": self.symbol,
+                        "position": pos_.ticket,
+                        "magic": self.magic,
+                        "tp": new_tp,
+                        "sl": new_sl,
+                        }
+                order_result = mt.order_send(request)
+                print(order_result)
+
+            if capacity_condition:
+                if pos_.type == 0:
+                    new_sl = round((1-self.avg_vol/30)*info.ask, info.digits)
+                elif pos_.type == 1:
+                    new_sl = round((1+self.avg_vol/30)*info.bid, info.digits)
+                sltprequest(new_tp, new_sl, pos_)
+            else:
+                if pos_.sl == 0.0 and pos_.tp == 0.0:
+                    if rsi_condition_for_tpsl(self.symbol, type_to_rsi, self.interval):
+                        if pos_.type == 0:
+                            if pos_.profit > tp_profit/10:
+                                new_tp = round(((1+self.avg_vol/5)*info.ask), info.digits)
+                                new_sl = round((pos_.price_open + info.ask*2)/3, info.digits)
+                            elif pos_.profit < 0:
+                                new_tp = round(((1+self.avg_vol/10)*pos_.price_open), info.digits)
+                                new_sl = round((1-self.avg_vol/25)*info.ask, info.digits)
+                        elif pos_.type == 1:
+                            if pos_.profit > tp_profit/10:
+                                new_tp = round(((1-self.avg_vol/5)*info.bid), info.digits)
+                                new_sl = round((pos_.price_open + info.bid*2)/3, info.digits)
+                            elif pos_.profit < 0:
+                                new_tp = round(((1-self.avg_vol/10)*pos_.price_open), info.digits)
+                                new_sl = round((1+self.avg_vol/25)*info.bid, info.digits)
+                        sltprequest(new_tp, new_sl, pos_)
+
         except Exception as e:
             print("change_tp_sl", e)
 
