@@ -305,7 +305,7 @@ def corrc_trend(df_raw, slow, fast, symbol):
     return df, position
 
 
-def hybrid_trend(df_raw, slow, fast, symbol):
+def hybri_trend(df_raw, slow, fast, symbol):
     slow *= 3
     df = df_raw.copy()
     df['rsi'] = df.ta.rsi(length=fast)
