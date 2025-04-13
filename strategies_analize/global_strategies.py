@@ -303,3 +303,25 @@ def corrc_trend(df_raw, slow, fast, symbol):
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
+
+
+def hybrid_trend(df_raw, slow, fast, symbol):
+    slow *= 3
+    df = df_raw.copy()
+    df['rsi'] = df.ta.rsi(length=fast)
+    df['rsi_mean'] = df['rsi'].rolling(slow).mean()
+    df['rsi_std'] =  df['rsi'].rolling(slow).std()
+    df['rsi_up'] = df['rsi_mean'] + df['rsi_std']
+    df['rsi_down'] = df['rsi_mean'] - df['rsi_std']
+    df['rsi_upsum'] = np.where((df['rsi'] > df['rsi_up'])&(df['rsi'].shift() < df['rsi_up'].shift()), 1, 0)
+    df['rsi_upsum'] = df['rsi_upsum'].rolling(slow).sum()
+    df['rsi_downsum'] = np.where((df['rsi'] < df['rsi_down'])&(df['rsi'].shift() > df['rsi_down'].shift()), 1, 0)
+    df['rsi_downsum'] = df['rsi_downsum'].rolling(slow).sum()
+    df['capacity'] = (df['close'] - df['close'].shift()).rolling(slow).sum()
+    df['efficency_c'] = np.where(df['close'] > df['close'].shift(), 1, -1)
+    df['efficency'] =  df['efficency_c'].rolling(slow).sum()
+    df['stance'] = np.where((df['rsi_upsum']>df['rsi_downsum'])&(df['efficency']>0)&(df['capacity']>0), 1, np.nan)
+    df['stance'] = np.where((df['rsi_upsum']<df['rsi_downsum'])&(df['efficency']<0)&(df['capacity']<0), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
