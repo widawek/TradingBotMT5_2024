@@ -173,8 +173,8 @@ class Bot:
                 kind_ = self.strategies[self.strategy_number][7]
                 sl=min([self.profit_needed, self.sl_money])
                 tp = min([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
-                if kind_ == 'counter':
-                    sl = round(sl/1.1, 2)
+                # if kind_ == 'counter':
+                #     sl = round(sl/1.1, 2)
 
                 if self.print_condition():
                     printer("Kind:", kind_)
@@ -376,11 +376,13 @@ class Bot:
     def volume_calc(self, max_pos_margin: float, posType: int, min_volume: bool) -> None:
 
         def atr():
-            df = get_data(self.symbol, 'M5', 1, 40*12*24)
-            daily = df.iloc[-100:].copy()
+            df = get_data(self.symbol, 'M5', 1, 20*12*24)
+            df['hour'] = df['time'].dt.hour
+            daily = df.iloc[-50:].copy()
+            df = df[(df['hour'] > 9)&(df['hour'] < 20)]
             volatility_5 = ((df['high']-df['low'])/df['open']).mean()
             volatility_d = ((daily['high']-daily['low'])/daily['open']).mean()
-            return round((1/(volatility_d/volatility_5)), 4)
+            return round((volatility_d/volatility_5), 4)
 
         try:
             another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
