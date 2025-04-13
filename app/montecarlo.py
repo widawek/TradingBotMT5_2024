@@ -152,7 +152,7 @@ class Montecarlo:
             print(f"90% przedział ufności dla wyniku strategii: {bounds[0]*100:.2f}% - {bounds[1]*100:.2f}%")
 
         #if p_values_mean_to_score < 0 or bounds_mean < 0 or lower_bound_value < 0 or bounds[0] < -(daily_volatility) or strategy_p_value > 0.5 or z_zcore_strategy < 1 or nan_test:
-        if metric_p_value > 0.05 or lower_bound_value < 0 or nan_test:
+        if metric_p_value > 0.05 or lower_bound_value <= 0 or nan_test or z_zcore_metric < 0 or z_zcore_strategy < 0:
             if self.print_tqdm:
                 print_it('NOT OK')
             return -1
