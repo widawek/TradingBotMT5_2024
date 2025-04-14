@@ -262,11 +262,12 @@ class Bot:
 
     @class_errors
     def request_get(self):
+        self.positions_()
         if not self.positions:
             self.reset_bot()
             pos_type = self.actual_position_democracy()
             self.request(actions['deal'], pos_type)
-        self.positions_()
+            self.positions_()
 
     @class_errors
     def is_this_the_end(self):
@@ -676,7 +677,7 @@ class Bot:
 
     @class_errors
     def open_pos_capacity(self):
-        if len(self.capacity) == 0:
+        if len(self.position_capacity) == 0:
             positions = mt.positions_get(symbol=self.symbol)
             type_ = positions[0].type
             oprice = positions[0].price_open
