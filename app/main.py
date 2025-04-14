@@ -265,8 +265,7 @@ class Bot:
         self.positions_()
         if not self.positions:
             self.reset_bot()
-            pos_type = self.actual_position_democracy()
-            self.request(actions['deal'], pos_type)
+            self.request(actions['deal'], self.actual_position_democracy())
             self.positions_()
 
     @class_errors
@@ -302,11 +301,13 @@ class Bot:
     @class_errors
     def data(self, report=True):
         profit = sum([i.profit for i in self.positions if (i.magic == self.magic)])
-        if self.check_new_bar():
+        if self.check_new_bar() or self.pos_type is None:
             self.pos_type = self.actual_position_democracy()
         try:
             act_pos = self.positions[0].type
-            if self.pos_type != act_pos:
+            print(f"Actual position from open {act_pos} type {type(act_pos)}")
+            print(f"Actual position demo {self.pos_type} type {type(self.pos_type)}")
+            if int(self.pos_type) != int(act_pos):
                 self.clean_orders()
         except Exception as e:
             print("data", e)
@@ -362,7 +363,7 @@ class Bot:
     @class_errors
     def reset_bot(self):
         self.pos_type = None
-        self.positions = None
+        self.positions = ()
         self.profits = []
         self.profit0 = None
         self.profit_max = 0
@@ -697,8 +698,9 @@ class Bot:
             elif type_ == 1:
                 drop = (oprice - cprice) + self.first_price_diff
             self.position_capacity.append(drop)
-        except Exception:
-            pass
+        except Exception as e:
+            print('open_pos_capacity', e)
+            return
 
     @class_errors
     def check_capacity(self):
@@ -975,7 +977,7 @@ class Bot:
             strategy_ = globals()[name_]
             interval = strategy[2]
             kind = name_.split('_')[-1]
-            today_direction = 1 # strategy[4+dt.now().weekday()]
+            today_direction = strategy[4+dt.now().weekday()]
             print(f'\n\nStrategy {i} from {len(strategies)}')
             i += 1
             results_pack = self.trend_backtest(strategy_, interval)
