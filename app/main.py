@@ -305,8 +305,6 @@ class Bot:
             self.pos_type = self.actual_position_democracy()
         try:
             act_pos = self.positions[0].type
-            print(f"Actual position from open {act_pos} type {type(act_pos)}")
-            print(f"Actual position demo {self.pos_type} type {type(self.pos_type)}")
             if int(self.pos_type) != int(act_pos):
                 self.clean_orders()
         except Exception as e:
@@ -706,10 +704,10 @@ class Bot:
     def check_capacity(self):
         try:
             position_efficiency = len([i for i in self.position_capacity if i > 0]) / len(self.position_capacity)
-            capacity = round(np.mean(self.position_capacity), 2)
-            efficiency = round(position_efficiency, 2)
-            print("Position capacity:  ", capacity)
-            print("Position efficiency:", efficiency)
+            capacity = np.mean(self.position_capacity)
+            efficiency = position_efficiency
+            print("Position capacity:  ", round(capacity, 5))
+            print("Position efficiency:", round(efficiency, 3))
             if capacity < 0 and efficiency < 0.49 and self.duration():
                 return True
             return False
