@@ -36,6 +36,7 @@ class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.checkout_stoploss = True
         self.position_capacity = []
         self.backtest_time = dt.now()
         self.reverse = Reverse(symbol)
@@ -109,7 +110,9 @@ class Bot:
             pass
 
     @class_errors
-    def tiktok_slcheck(self):
+    def tiktok_slcheck(self, check_it):
+        if not check_it:
+            return False, 0
         try:
             tt=0
             positions = mt.positions_get(symbol=self.symbol)
@@ -127,7 +130,8 @@ class Bot:
                 comment = zamkniete_transakcje[-1].comment
                 profit = zamkniete_transakcje[-1].profit
                 print(comment, profit)
-                return 'sl' in comment, profit
+                self.checkout_stoploss = False
+                return ('sl' in comment) or ('tp' in comment), profit
             return False, 0
         except Exception as e:
             print("tiktok_slcheck", e)
@@ -135,49 +139,66 @@ class Bot:
 
     @class_errors
     def if_tiktok(self, backtest=False):
-        last_pos_by_sl, last_profit = self.tiktok_slcheck()
-
         try:
-            self.drift = self.strategies[self.strategy_number][12]
-        except Exception:
-            self.drift = self.drift
+            last_pos_by_sl, last_profit = self.tiktok_slcheck(backtest)
 
-        pos = mt.positions_get(symbol=self.symbol)
-        profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].magic == self.magic])
-        self.close_profits.append((profit_, self.comment[:-1]))
-        if len(self.close_profits) >= 2:
-            self.drift_giver()
             try:
-                last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment[:-1]]
-                if len(last_to_by_comment) >= 2:
-                    last_two = sum(last_to_by_comment[-2:])
-                    printer("Last two positions profit", f"{last_two:.2f} {self.currency}")
-                else:
-                    last_two = 0
+                self.drift = self.strategies[self.strategy_number][12]
             except Exception:
-                last_two = 0
-        else:
-            last_two = 0
+                self.drift = self.drift
 
-        #if '_0_0_' not in self.comment:
-        if self.tiktok < 1:
-            if ((profit_ > 0) and (last_two >= 0)) or (last_pos_by_sl and last_profit > 0):
-                self.tiktok -= 1
-            elif (profit_ < 0) or (last_pos_by_sl and last_profit < 0):
-                self.tiktok += 1
+            pos = mt.positions_get(symbol=self.symbol)
+            profit_ = sum([pos[i].profit for i in range(len(pos)) if pos[i].magic == self.magic])
+            self.close_profits.append((profit_, self.comment[:-1]))
+            if len(self.close_profits) >= 2:
+                self.drift_giver()
+                try:
+                    last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment[:-1]]
+                    if len(last_to_by_comment) >= 2:
+                        last_two = sum(last_to_by_comment[-2:])
+                        printer("Last two positions profit", f"{last_two:.2f} {self.currency}")
+                    else:
+                        last_two = 0
+                except Exception:
+                    last_two = 0
             else:
-                pass
-        else:
-            if ((profit_ > 0) and (last_two >= 0)) or (last_pos_by_sl and last_profit > 0):
-                self.tiktok -= 1
+                last_two = 0
+
+            #if '_0_0_' not in self.comment:
+            if not backtest:
+                if self.tiktok < 1:
+                    if ((profit_ > 0) and (last_two >= 0)):
+                        self.tiktok -= 1
+                    elif (profit_ < 0):
+                        self.tiktok += 1
+                    else:
+                        pass
+                else:
+                    if ((profit_ > 0) and (last_two >= 0)):
+                        self.tiktok -= 1
+                    else:
+                        self.new_strategy()
+                        self.tiktok = 0
+                        self.position_size = position_size
             else:
-                self.new_strategy()
-                self.tiktok = 0
-                self.position_size = position_size
-        # if not backtest:
-        #     if self.strategy_number > len(self.strategies)-1:
-        #         self.test_strategies()
-        self.tiktok = 0 if self.tiktok < 0 else self.tiktok
+                if self.tiktok < 1:
+                    if (last_pos_by_sl and last_profit > 0):
+                        self.tiktok -= 1
+                    elif (last_pos_by_sl and last_profit < 0):
+                        self.tiktok += 1
+                    else:
+                        pass
+                else:
+                    if (last_pos_by_sl and last_profit > 0):
+                        self.tiktok -= 1
+                    else:
+                        self.new_strategy()
+                        self.tiktok = 0
+                        self.position_size = position_size
+
+            self.tiktok = 0 if self.tiktok < 0 else self.tiktok
+        except Exception as e:
+            print('if_tiktok', e)
 
     @class_errors
     def check_trigger(self, backtest=False):
@@ -238,6 +259,7 @@ class Bot:
     @class_errors
     def clean_orders(self, backtest=False):
         self.if_tiktok(backtest)
+        self.checkout_stoploss = True
         self.close_request()
         orders = mt.orders_get(symbol=self.symbol)
         print(orders)
@@ -291,6 +313,8 @@ class Bot:
     def request_get(self):
         self.positions_()
         if not self.positions:
+            if self.checkout_stoploss:
+                self.if_tiktok(self.checkout_stoploss)
             self.reset_bot()
             self.request(actions['deal'], self.actual_position_democracy())
             self.positions_()
