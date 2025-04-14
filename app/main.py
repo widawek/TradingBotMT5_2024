@@ -86,7 +86,7 @@ class Bot:
             dt_from_timestamp = dt.fromtimestamp(mt.positions_get(symbol=self.symbol)[0][1])
         except Exception:
             return 0
-        return int((dt.now() - dt_from_timestamp - timedelta(hours=tz_diff)).seconds/60)
+        return round((dt.now() - dt_from_timestamp - timedelta(hours=tz_diff)).seconds/60)
 
     @class_errors
     def drift_giver(self):
@@ -109,7 +109,34 @@ class Bot:
             pass
 
     @class_errors
+    def tiktok_slcheck(self):
+        try:
+            tt=0
+            positions = mt.positions_get(symbol=self.symbol)
+            try:
+                tt = positions[0].ticket
+                print(tt)
+            except Exception:
+                print('no position')
+            dzisiaj = dt.now().date()
+            poczatek_dnia = dt.combine(dzisiaj, dt.min.time())
+            koniec_dnia = dt.now() + timedelta(days=2)
+            zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia, group=self.symbol)
+            zamkniete_transakcje = [i for i in zamkniete_transakcje if i.position_id != tt]
+            if len(zamkniete_transakcje) != 0:
+                comment = zamkniete_transakcje[-1].comment
+                profit = zamkniete_transakcje[-1].profit
+                print(comment, profit)
+                return 'sl' in comment, profit
+            return False, 0
+        except Exception as e:
+            print("tiktok_slcheck", e)
+            return False, 0
+
+    @class_errors
     def if_tiktok(self, backtest=False):
+        last_pos_by_sl, last_profit = self.tiktok_slcheck()
+
         try:
             self.drift = self.strategies[self.strategy_number][12]
         except Exception:
@@ -134,14 +161,14 @@ class Bot:
 
         #if '_0_0_' not in self.comment:
         if self.tiktok < 1:
-            if (profit_ > 0) and (last_two >= 0):
+            if ((profit_ > 0) and (last_two >= 0)) or (last_pos_by_sl and last_profit > 0):
                 self.tiktok -= 1
-            elif (profit_ < 0):# or (last_two < 0):
+            elif (profit_ < 0) or (last_pos_by_sl and last_profit < 0):
                 self.tiktok += 1
             else:
                 pass
         else:
-            if (profit_ > 0) and (last_two >= 0):
+            if ((profit_ > 0) and (last_two >= 0)) or (last_pos_by_sl and last_profit > 0):
                 self.tiktok -= 1
             else:
                 self.new_strategy()
@@ -171,7 +198,7 @@ class Bot:
                 self.self_decline_factor()
 
                 kind_ = self.strategies[self.strategy_number][7]
-                sl=min([self.profit_needed, self.sl_money])
+                sl = min([self.profit_needed, self.sl_money])
                 tp = min([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
                 # if kind_ == 'counter':
                 #     sl = round(sl/1.1, 2)
@@ -605,13 +632,21 @@ class Bot:
     @class_errors
     def last_pos_sltp(self):
         try:
+            tt=0
+            positions = mt.positions_get(symbol=self.symbol)
+            try:
+                tt = positions[0].ticket
+                print(tt)
+            except Exception:
+                print('no position')
             dzisiaj = dt.now().date()
             poczatek_dnia = dt.combine(dzisiaj, dt.min.time())
-            koniec_dnia = dt.combine(dzisiaj, dt.max.time())
+            koniec_dnia = dt.now() + timedelta(days=2)
             zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia, group=self.symbol)
+            zamkniete_transakcje = [i for i in zamkniete_transakcje if i.position_id != tt]
             intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
             rsi_interval = int(intervals[intervals.index(self.interval)+6][1:])
-            comment = zamkniete_transakcje[-2].comment
+            comment = zamkniete_transakcje[-1].comment
             condition = ('tp' in comment) or ('sl' in comment)
             return condition, rsi_interval
         except Exception as e:
@@ -678,6 +713,7 @@ class Bot:
     def open_pos_capacity(self):
         if len(self.position_capacity) == 0:
             positions = mt.positions_get(symbol=self.symbol)
+            positions = [i for i in positions if i.magic == self.magic]
             type_ = positions[0].type
             oprice = positions[0].price_open
             cprice = positions[0].price_current
@@ -718,12 +754,7 @@ class Bot:
     def duration(self):
         intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
         duration_time = int(intervals[intervals.index(self.interval)+6][1:])
-        positions = mt.positions_get(symbol=self.symbol)[0]
-        time_diff = get_timezone_difference()
-        dt_timestamp = dt.fromtimestamp(positions.time)
-        now = dt.now()
-        diff = now - dt_timestamp
-        return round((diff.total_seconds() / 60) - time_diff*60) > duration_time
+        return self.position_time() > duration_time
 
     @class_errors
     def check_new_bar(self):
@@ -1146,13 +1177,14 @@ class Bot:
                 print(order_result)
 
             if capacity_condition:
-                if pos_.type == 0:
-                    new_sl = round((1-self.avg_vol/30)*info.ask, info.digits)
-                elif pos_.type == 1:
-                    new_sl = round((1+self.avg_vol/30)*info.bid, info.digits)
-                sltprequest(new_tp, new_sl, pos_)
+                if pos_.sl == 0.0:
+                    if pos_.type == 0:
+                        new_sl = round((1-self.avg_vol/20)*info.ask, info.digits)
+                    elif pos_.type == 1:
+                        new_sl = round((1+self.avg_vol/20)*info.bid, info.digits)
+                    sltprequest(new_tp, new_sl, pos_)
             else:
-                if pos_.sl == 0.0 and pos_.tp == 0.0:
+                if pos_.tp == 0.0:
                     if rsi_condition_for_tpsl(self.symbol, type_to_rsi, self.interval):
                         if pos_.type == 0:
                             if pos_.profit > tp_profit/10:
@@ -1160,14 +1192,14 @@ class Bot:
                                 new_sl = round((pos_.price_open + info.ask*2)/3, info.digits)
                             elif pos_.profit < 0:
                                 new_tp = round(((1+self.avg_vol/10)*pos_.price_open), info.digits)
-                                new_sl = round((1-self.avg_vol/25)*info.ask, info.digits)
+                                new_sl = round((1-self.avg_vol/20)*info.ask, info.digits)
                         elif pos_.type == 1:
                             if pos_.profit > tp_profit/10:
                                 new_tp = round(((1-self.avg_vol/5)*info.bid), info.digits)
                                 new_sl = round((pos_.price_open + info.bid*2)/3, info.digits)
                             elif pos_.profit < 0:
                                 new_tp = round(((1-self.avg_vol/10)*pos_.price_open), info.digits)
-                                new_sl = round((1+self.avg_vol/25)*info.bid, info.digits)
+                                new_sl = round((1+self.avg_vol/20)*info.bid, info.digits)
                         sltprequest(new_tp, new_sl, pos_)
 
         except Exception as e:
