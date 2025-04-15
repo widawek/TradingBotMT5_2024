@@ -18,6 +18,7 @@ position_history.db-journal
 database_analize.py
 old_strategies.py
 play.py
+manual_play.py
 excel_helper.py
 xxxx.py
 start.bat

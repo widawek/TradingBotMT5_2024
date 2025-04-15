@@ -242,7 +242,7 @@ class Backtest_complex:
         def group_to_get_metric(df):
             dfs = df.copy().dropna()
             dfs['meansum'] = dfs[['mon', 'tue', 'wed', 'thu', 'fri']].sum(axis=1)
-            dfs = dfs[(dfs['sharpe'] > 0) & (dfs['density'] > 0.6) & (dfs['meansum'] > 0)]
+            dfs = dfs[(dfs['sharpe'] > 0) & (dfs['density'] > 0.55) & (dfs['meansum'] > 0)]
             #dfs = dfs.rename(columns={'mon': '0', 'tue': '1', 'wed': '2', 'thu': '3', 'fri': '4'})
             dfs['mon'] = np.where(dfs['mon'] <= 0, -1, 1)
             dfs['tue'] = np.where(dfs['tue'] <= 0, -1, 1)
@@ -303,7 +303,7 @@ class Backtest_complex:
         result_ = group_to_get_metric(df)
 
         df['meansum'] = df[['mon', 'tue', 'wed', 'thu', 'fri']].sum(axis=1)
-        df = df[(df['sharpe'] > 0) & (df['density'] > 0.6) & (df['meansum'] > 0)]
+        df = df[(df['sharpe'] > 0) & (df['density'] > 0.55) & (df['meansum'] > 0)]
         df['mon'] = np.where(df['mon'] <= 0, -1, 1)
         df['tue'] = np.where(df['tue'] <= 0, -1, 1)
         df['wed'] = np.where(df['wed'] <= 0, -1, 1)

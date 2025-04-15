@@ -254,8 +254,9 @@ class Bot:
                     self.clean_orders(backtest)
 
                 else:
-                    if self.check_capacity():
-                        self.change_tp_sl(tp, True)
+                    condition = self.check_capacity()
+                    if condition:
+                        self.change_tp_sl(tp, condition)
                     self.change_tp_sl(tp)
 
                 if self.print_condition():
@@ -438,7 +439,7 @@ class Bot:
         def atr():
             df = get_data(self.symbol, 'M5', 1, 20*12*24)
             df['hour'] = df['time'].dt.hour
-            daily = df.iloc[-50:].copy()
+            daily = df.iloc[-10:].copy()
             df = df[(df['hour'] > 9)&(df['hour'] < 20)]
             volatility_5 = ((df['high']-df['low'])/df['open']).mean()
             volatility_d = ((daily['high']-daily['low'])/daily['open']).mean()
@@ -774,10 +775,14 @@ class Bot:
             position_efficiency = len([i for i in self.position_capacity if i > 0]) / len(self.position_capacity)
             capacity = np.mean(self.position_capacity)
             efficiency = position_efficiency
+            efficiency_sum = sum(self.position_capacity)
             print("Position capacity:  ", round(capacity, 5))
             print("Position efficiency:", round(efficiency, 3))
-            if capacity < 0 and efficiency < 0.49 and self.duration():
-                return True
+            print("Position efficiency_sum:", round(efficiency_sum, 5))
+            if capacity < 0 and efficiency < 0.49 and efficiency_sum < 0 and self.duration():
+                return 'loss'
+            elif capacity > 0 and efficiency > 0.75 and (efficiency_sum > 0.2*mt.symbol_info(self.symbol).ask) and self.duration():
+                return 'profit'
             return False
         except Exception:
             return False
@@ -1192,6 +1197,7 @@ class Bot:
     def change_tp_sl(self, tp_profit, capacity_condition=False):
         try:
             info = mt.symbol_info(self.symbol)
+            digits_ = info.digits
             positions = mt.positions_get(symbol=self.symbol)
             pos_ = [i for i in positions if i.magic == self.magic][0]
             type_to_rsi = 0 if pos_.type == 1 else 1
@@ -1213,33 +1219,40 @@ class Bot:
             if capacity_condition:
                 if pos_.sl == 0.0:
                     if pos_.type == 0:
-                        new_sl = round((1-self.avg_vol/20)*info.ask, info.digits)
+                        if capacity_condition == 'loss':
+                            new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
+                        elif capacity_condition == 'profit':
+                            new_sl = round((1-self.avg_vol/20)*pos_.price_open, digits_)
                     elif pos_.type == 1:
-                        new_sl = round((1+self.avg_vol/20)*info.bid, info.digits)
-                    sltprequest(new_tp, new_sl, pos_)
+                        if capacity_condition == 'loss':
+                            new_sl = round((1+self.avg_vol/20)*info.bid, digits_)
+                        elif capacity_condition == 'profit':
+                            new_sl = round((1+self.avg_vol/20)*pos_.price_open, digits_)
             else:
                 if pos_.tp == 0.0:
                     if rsi_condition_for_tpsl(self.symbol, type_to_rsi, self.interval):
                         if pos_.type == 0:
                             if pos_.profit > tp_profit/10:
-                                new_tp = round(((1+self.avg_vol/5)*info.ask), info.digits)
-                                new_sl = round((pos_.price_open + info.ask*2)/3, info.digits)
+                                new_tp = round(((1+self.avg_vol/5)*info.ask), digits_)
+                                new_sl = round((pos_.price_open + info.ask*2)/3, digits_)
                             elif pos_.profit < 0:
-                                new_tp = round(((1+self.avg_vol/10)*pos_.price_open), info.digits)
-                                new_sl = round((1-self.avg_vol/20)*info.ask, info.digits)
+                                new_tp = round(((1+self.avg_vol/20)*pos_.price_open), digits_)
+                                new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
                         elif pos_.type == 1:
                             if pos_.profit > tp_profit/10:
-                                new_tp = round(((1-self.avg_vol/5)*info.bid), info.digits)
-                                new_sl = round((pos_.price_open + info.bid*2)/3, info.digits)
+                                new_tp = round(((1-self.avg_vol/5)*info.bid), digits_)
+                                new_sl = round((pos_.price_open + info.bid*2)/3, digits_)
                             elif pos_.profit < 0:
-                                new_tp = round(((1-self.avg_vol/10)*pos_.price_open), info.digits)
-                                new_sl = round((1+self.avg_vol/20)*info.bid, info.digits)
-                        sltprequest(new_tp, new_sl, pos_)
+                                new_tp = round(((1-self.avg_vol/20)*pos_.price_open), digits_)
+                                new_sl = round((1+self.avg_vol/20)*info.bid, digits_)
+
+            if new_sl != 0.0 or new_tp != 0.0:
+                sltprequest(new_tp, new_sl, pos_)
 
         except Exception as e:
             print("change_tp_sl", e)
 
-
+    @class_errors
     def new_strategy(self):
 
         del self.strategies[0]
