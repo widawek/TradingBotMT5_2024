@@ -82,12 +82,14 @@ class Bot:
         self.test_strategies()
 
     @class_errors
-    def position_time(self):
+    def position_time_minutes(self):
         try:
             dt_from_timestamp = dt.fromtimestamp(mt.positions_get(symbol=self.symbol)[0][1])
         except Exception:
             return 0
-        return round((dt.now() - dt_from_timestamp - timedelta(hours=tz_diff)).seconds/60)
+        tick = mt.symbol_info_tick(self.symbol)
+        broker_time = dt.fromtimestamp(tick.time)
+        return int((broker_time-dt_from_timestamp).seconds/60)
 
     @class_errors
     def drift_giver(self):
@@ -181,6 +183,12 @@ class Bot:
                         self.tiktok = 0
                         self.position_size = position_size
             else:
+                cond, time_ = self.last_pos_sltp()
+                if cond and self.request_sltp:
+                    self.request_sltp = False
+                    print(f"Sleep {time_} minutes after sl or tp")
+                    time.sleep(time_*60)
+
                 if self.tiktok < 1:
                     if (last_pos_by_sl and last_profit > 0):
                         self.tiktok -= 1
@@ -195,8 +203,9 @@ class Bot:
                         self.new_strategy()
                         self.tiktok = 0
                         self.position_size = position_size
-
+                self.request_sltp = True
             self.tiktok = 0 if self.tiktok < 0 else self.tiktok
+            printer("Tiktok", self.tiktok)
         except Exception as e:
             print('if_tiktok', e)
 
@@ -730,7 +739,6 @@ class Bot:
             print(f"No enough money to open position. Waiting {round(seconds/60, 2)} minutes")
             sleep(300)
             self.request_get()
-        self.request_sltp = True
         self.position_capacity = []
 
     @class_errors
@@ -778,7 +786,9 @@ class Bot:
     def duration(self):
         intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
         duration_time = int(intervals[intervals.index(self.interval)+6][1:])
-        return self.position_time() > duration_time
+        duration = self.position_time_minutes()
+        print(f"Duration: {duration}")
+        return duration > duration_time
 
     @class_errors
     def check_new_bar(self):
