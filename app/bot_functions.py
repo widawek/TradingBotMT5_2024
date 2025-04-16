@@ -783,7 +783,8 @@ def rsi_condition(symbol, position, interval):
     df = get_data(symbol, intervals[intervals.index(interval)+6], 1, 10)
     df['rsi'] = df.ta.rsi(length=2)
     rsi = df['rsi'].iloc[-1]
-    if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
+    if (rsi <= 10 and position == 0) or (rsi >= 90 and position == 1):  # trend - buy best price (counter)
+    #if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
         return True
     return False
 
@@ -802,7 +803,7 @@ def find_density_results(data, epsilon=10):
     """
     Dodaje do każdego punktu w `data` wartość zagęszczenia punktów w jego pobliżu,
     obliczoną na podstawie odległości euklidesowej w przestrzeni (fast, slow).
-    
+
     :param data: lista list [fast, slow, result, actual_condition, daily_return, end_result, risk_data]
     :param epsilon: promień określający "bliskość" punktów
     :return: lista list [fast, slow, result * density, actual_condition, daily_return, end_result, risk_data]

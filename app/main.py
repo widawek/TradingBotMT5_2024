@@ -71,6 +71,7 @@ class Bot:
         self.trend_or_not = trend_or_not(symbol)
         self.df_d1 = get_data(symbol, "D1", 1, 40)
         self.avg_daily_vol()
+        self.mdv = self.mdv_()
         self.round_number = round_number_(symbol)
         self.volume_calc(position_size, 0, True)
         self.positions_()
@@ -228,8 +229,8 @@ class Bot:
                 self.self_decline_factor()
 
                 kind_ = self.strategies[self.strategy_number][7]
-                sl = min([self.profit_needed, self.sl_money])
-                tp = min([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
+                sl = self.sl_money #min([self.profit_needed, ])
+                tp = sl #min([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
                 # if kind_ == 'counter':
                 #     sl = round(sl/1.1, 2)
 
@@ -778,12 +779,12 @@ class Bot:
             efficiency_sum = sum(self.position_capacity)
             print("Position capacity:  ", round(capacity, 5))
             print("Position efficiency:", round(efficiency, 3))
-            print("Position efficiency_sum:", round(efficiency_sum, 5))
-            if capacity < 0 and efficiency < 0.49 and efficiency_sum < 0 and self.duration():
-                return 'loss'
-            elif capacity < 0 and efficiency < 0.1 and efficiency_sum < 0 and self.duration():
+            print("Position efficiency_sum:", round(efficiency_sum/self.mdv, 5))
+            if capacity < 0 and efficiency < 0.1 and efficiency_sum < -1 and self.duration():
                 return 'super loss'
-            elif capacity > 0 and efficiency > 0.75 and (efficiency_sum > 0.2*mt.symbol_info(self.symbol).ask) and self.duration():
+            if capacity < 0 and efficiency < 0.49 and efficiency_sum/self.mdv < 1 and self.duration():
+                return 'loss'
+            elif capacity > 0 and efficiency > 0.75 and efficiency_sum/self.mdv > 2 and self.duration():
                 return 'profit'
             return False
         except Exception:
