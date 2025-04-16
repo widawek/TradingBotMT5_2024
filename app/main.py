@@ -781,6 +781,8 @@ class Bot:
             print("Position efficiency_sum:", round(efficiency_sum, 5))
             if capacity < 0 and efficiency < 0.49 and efficiency_sum < 0 and self.duration():
                 return 'loss'
+            elif capacity < 0 and efficiency < 0.1 and efficiency_sum < 0 and self.duration():
+                return 'super loss'
             elif capacity > 0 and efficiency > 0.75 and (efficiency_sum > 0.2*mt.symbol_info(self.symbol).ask) and self.duration():
                 return 'profit'
             return False
@@ -1217,6 +1219,8 @@ class Bot:
                 print(order_result)
 
             if capacity_condition:
+                if capacity_condition == 'super loss':
+                    self.clean_orders()
                 if pos_.sl == 0.0:
                     if pos_.type == 0:
                         if capacity_condition == 'loss':
