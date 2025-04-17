@@ -1239,15 +1239,15 @@ class Bot:
                         if pos_.type == 0:
                             if pos_.profit > tp_profit/10:
                                 new_tp = round(((1+self.avg_vol/5)*info.ask), digits_)
-                                new_sl = round((pos_.price_open + info.ask*2)/3, digits_)
-                            elif pos_.profit < 0:
+                                new_sl = round((pos_.price_open*3 + info.ask)/4, digits_)
+                            else:
                                 new_tp = round(((1+self.avg_vol/20)*pos_.price_open), digits_)
                                 new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
                         elif pos_.type == 1:
                             if pos_.profit > tp_profit/10:
                                 new_tp = round(((1-self.avg_vol/5)*info.bid), digits_)
-                                new_sl = round((pos_.price_open + info.bid*2)/3, digits_)
-                            elif pos_.profit < 0:
+                                new_sl = round((pos_.price_open*3 + info.bid)/4, digits_)
+                            else:
                                 new_tp = round(((1-self.avg_vol/20)*pos_.price_open), digits_)
                                 new_sl = round((1+self.avg_vol/20)*info.bid, digits_)
 
