@@ -325,3 +325,24 @@ def hybri_trend(df_raw, slow, fast, symbol):
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
+
+
+def orsio_counter(df_raw, slow, fast, symbol):
+    df = df_raw.copy()
+    df['ma'] = df.ta.sma(length=slow)
+    df['rsi'] = df.ta.rsi(length=fast)
+    df['ma'] = ta.sma(df['rsi'], length=slow)
+    df['rsi_std'] = df['rsi'].rolling(slow).std()
+    df['bollup'] = df['ma'] + df['rsi_std']
+    df['bolldown'] = df['ma'] - df['rsi_std']
+    df['to_max'] = np.where(df['close'] > df['open'], df['close'], df['open'])
+    df['max_price'] = df['to_max'].rolling(slow).max()
+    df['new_max'] = np.where(df['max_price'] > df['max_price'].shift(), 1, 0)
+    df['to_min'] = np.where(df['close'] < df['open'], df['close'], df['open'])
+    df['min_price'] = df['to_min'].rolling(slow).min()
+    df['new_min'] = np.where(df['min_price'] < df['min_price'].shift(), 1, 0)
+    df['stance'] = np.where((df['rsi']>df['bollup'])&(df['new_max']==1), -1, np.NaN)
+    df['stance'] = np.where((df['rsi']<df['bolldown'])&(df['new_min']==1), 1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position

@@ -776,15 +776,15 @@ class Bot:
             position_efficiency = len([i for i in self.position_capacity if i > 0]) / len(self.position_capacity)
             capacity = np.mean(self.position_capacity)
             efficiency = position_efficiency
-            efficiency_sum = sum(self.position_capacity)
+            efficiency_sum = sum(self.position_capacity)/self.mdv
             print("Position capacity:  ", round(capacity, 5))
             print("Position efficiency:", round(efficiency, 3))
-            print("Position efficiency_sum:", round(efficiency_sum/self.mdv, 5))
+            print("Position efficiency_sum:", round(efficiency_sum, 5))
             if capacity < 0 and efficiency < 0.1 and efficiency_sum < -1 and self.duration():
                 return 'super loss'
-            if capacity < 0 and efficiency < 0.49 and efficiency_sum/self.mdv < 1 and self.duration():
+            if capacity < 0 and efficiency < 0.49 and efficiency_sum < 1 and self.duration():
                 return 'loss'
-            elif capacity > 0 and efficiency > 0.75 and efficiency_sum/self.mdv > 2 and self.duration():
+            elif capacity > 0 and efficiency > 0.75 and efficiency_sum > 2 and self.duration():
                 return 'profit'
             return False
         except Exception:
@@ -1219,10 +1219,26 @@ class Bot:
                 order_result = mt.order_send(request)
                 print(order_result)
 
-            if capacity_condition:
-                if capacity_condition == 'super loss':
-                    self.clean_orders()
-                if pos_.sl == 0.0:
+            if rsi_condition_for_tpsl(self.symbol, type_to_rsi, self.interval):
+                if pos_.tp == 0.0:
+                    if pos_.type == 0:
+                        if pos_.profit > tp_profit/10:
+                            new_tp = round(((1+self.avg_vol/5)*info.ask), digits_)
+                            new_sl = round((pos_.price_open*2 + info.ask)/4, digits_)
+                        else:
+                            new_tp = round(((1+self.avg_vol/20)*info.ask), digits_)
+                            new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
+                    elif pos_.type == 1:
+                        if pos_.profit > tp_profit/10:
+                            new_tp = round(((1-self.avg_vol/5)*info.bid), digits_)
+                            new_sl = round((pos_.price_open*2 + info.bid)/4, digits_)
+                        else:
+                            new_tp = round(((1-self.avg_vol/20)*info.bid), digits_)
+                            new_sl = round((1+self.avg_vol/20)*info.bid, digits_)
+            elif capacity_condition and pos_.sl == 0.0:
+                if pos_.sl == 0.0 or (capacity_condition == 'super loss'):
+                    if capacity_condition == 'super loss':
+                        self.clean_orders()
                     if pos_.type == 0:
                         if capacity_condition == 'loss':
                             new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
@@ -1234,22 +1250,7 @@ class Bot:
                         elif capacity_condition == 'profit':
                             new_sl = round((1+self.avg_vol/20)*pos_.price_open, digits_)
             else:
-                if pos_.tp == 0.0:
-                    if rsi_condition_for_tpsl(self.symbol, type_to_rsi, self.interval):
-                        if pos_.type == 0:
-                            if pos_.profit > tp_profit/10:
-                                new_tp = round(((1+self.avg_vol/5)*info.ask), digits_)
-                                new_sl = round((pos_.price_open*3 + info.ask)/4, digits_)
-                            else:
-                                new_tp = round(((1+self.avg_vol/20)*pos_.price_open), digits_)
-                                new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
-                        elif pos_.type == 1:
-                            if pos_.profit > tp_profit/10:
-                                new_tp = round(((1-self.avg_vol/5)*info.bid), digits_)
-                                new_sl = round((pos_.price_open*3 + info.bid)/4, digits_)
-                            else:
-                                new_tp = round(((1-self.avg_vol/20)*pos_.price_open), digits_)
-                                new_sl = round((1+self.avg_vol/20)*info.bid, digits_)
+                pass
 
             if new_sl != 0.0 or new_tp != 0.0:
                 sltprequest(new_tp, new_sl, pos_)

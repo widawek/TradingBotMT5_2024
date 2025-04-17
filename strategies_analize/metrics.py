@@ -147,11 +147,28 @@ def profit_factor_metric(dfx, penalty=True):
     return round(profit_factor * penalty_, 6)
 
 
+def real_profit_factor_metric(dfx, penalty=True):
+    df = dfx.copy()
+    df = df.dropna()
+    ep = exponential_penalty(df) if penalty else 1
+    df = df[df['cross']==1]
+    df['result'] = df['open'].shift(-1) - df['open'] # result dodatni long = 1
+    df['metric_profit'] = np.where((df['stance']==1)&(df['result']>0), 1, 0)
+    df['metric_loss'] = np.where((df['stance']==-1)&(df['result']<0), 1, 0)
+    df = df.dropna()
+    try:
+        profit_factor = (df['metric_profit'].sum()/df['metric_loss'].sum())-1
+    except ZeroDivisionError:
+        return 0
+    return round(profit_factor*ep, 6)
+
+
 metric_numb_dict = {
     'only_strategy_metric':         '1',
     'sharpe_metric':                '2',
     'sharpe_drawdown_metric':       '3',
     'sharpe_drawdown_daily_metric': '4',
     'mean_return_metric':           '5',
-    'profit_factor_metric':         '6'
+    'profit_factor_metric':         '6',
+    'real_profit_factor_metric':    '7',
     }
