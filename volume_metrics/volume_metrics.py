@@ -99,7 +99,7 @@ def returns_(df, symbol):
     df[f'return_{symbol}'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open))*leverage
     df[f'return_{symbol}'] = np.where(df['time'].dt.date != df['time'].dt.date.shift(), 0, df[f'return_{symbol}'])
     df = df.rename(columns={'close':f'close_{symbol}'})
-    return df[['time', f'return_{symbol}']]
+    return df[['time', f'return_{symbol}']]#, 'cross', 'stance', 'open', 'close']]
 
 
 def give_me_all_returns(strategies_to_bt, bars, interval):
@@ -195,7 +195,7 @@ class SymbolsByProfile:
         for i in tqdm(self.all_combinations):
             df = self.all_returns.copy()
             df['return'] = np.sum(df[i], axis=1)
-            results.append((i, final_metric_(df, penalty=False))) # change metric for last best metric
+            results.append((i, only_strategy_metric(df, penalty=False))) # change metric for last best metric
 
         self.results_df_raw = pd.DataFrame(results, columns=['combination', 'sharpe_omega']).sort_values(by='sharpe_omega', ascending=False)
         self.results_df = self.results_df_raw[self.results_df_raw['sharpe_omega'] > 0.8*self.results_df_raw['sharpe_omega'].max()]
