@@ -204,7 +204,6 @@ class Bot:
                         self.new_strategy()
                         self.tiktok = 0
                         self.position_size = position_size
-                self.request_sltp = True
             self.tiktok = 0 if self.tiktok < 0 else self.tiktok
             printer("Tiktok", self.tiktok)
         except Exception as e:
@@ -270,7 +269,6 @@ class Bot:
     @class_errors
     def clean_orders(self, backtest=False):
         self.if_tiktok(backtest)
-        self.checkout_stoploss = True
         self.close_request()
         orders = mt.orders_get(symbol=self.symbol)
         print(orders)
@@ -690,12 +688,6 @@ class Bot:
 
     @class_errors
     def request(self, action, posType, price=None):
-        cond, time_ = self.last_pos_sltp()
-        if cond and self.request_sltp:
-            self.request_sltp = False
-            print(f"Sleep {time_} minutes after sl or tp")
-            time.sleep(time_*60)
-            return self.request_get()
 
         if action == actions['deal']:
             print("YES")
@@ -736,6 +728,8 @@ class Bot:
             }
         order_result = mt.order_send(request)
         print(order_result)
+        self.checkout_stoploss = True
+        self.request_sltp = True
         if order_result.comment == 'No money':
             seconds = 300
             print(f"No enough money to open position. Waiting {round(seconds/60, 2)} minutes")
@@ -1224,14 +1218,14 @@ class Bot:
                     if pos_.type == 0:
                         if pos_.profit > tp_profit/10:
                             new_tp = round(((1+self.avg_vol/5)*info.ask), digits_)
-                            new_sl = round((pos_.price_open*2 + info.ask)/4, digits_)
+                            new_sl = round((pos_.price_open*2 + info.ask)/3, digits_)
                         else:
                             new_tp = round(((1+self.avg_vol/20)*info.ask), digits_)
                             new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
                     elif pos_.type == 1:
                         if pos_.profit > tp_profit/10:
                             new_tp = round(((1-self.avg_vol/5)*info.bid), digits_)
-                            new_sl = round((pos_.price_open*2 + info.bid)/4, digits_)
+                            new_sl = round((pos_.price_open*2 + info.bid)/3, digits_)
                         else:
                             new_tp = round(((1-self.avg_vol/20)*info.bid), digits_)
                             new_sl = round((1+self.avg_vol/20)*info.bid, digits_)

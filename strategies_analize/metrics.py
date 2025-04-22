@@ -138,8 +138,7 @@ def mean_return_metric(dfx, penalty=True):
 
 def profit_factor_metric(dfx, penalty=True):
     # number '6'
-    df = dfx.copy()
-    df = df.dropna()
+    df = dfx.dropna().copy()
     sum_profits = sum(i for i in df['return'] if i > 0)
     sum_losses = abs(sum(i for i in df['return'] if i < 0))
     profit_factor = (sum_profits/sum_losses)-1
@@ -148,19 +147,25 @@ def profit_factor_metric(dfx, penalty=True):
 
 
 def real_profit_factor_metric(dfx, penalty=True):
-    df = dfx.copy()
-    df = df.dropna()
+    df = dfx.dropna().copy()
     ep = exponential_penalty(df) if penalty else 1
     df = df[df['cross']==1]
-    df['result'] = df['open'].shift(-1) - df['open'] # result dodatni long = 1
-    df['metric_profit'] = np.where((df['stance']==1)&(df['result']>0), 1, 0)
-    df['metric_loss'] = np.where((df['stance']==-1)&(df['result']<0), 1, 0)
+    df['result'] = (df['open'].shift(-1) - df['open'])*df['stance']
+    df['metric_profit'] = np.where(df['result']>0, 1, 0)
+    df['metric_loss'] = np.where(df['result']<0, 1, 0)
     df = df.dropna()
     try:
         profit_factor = (df['metric_profit'].sum()/df['metric_loss'].sum())-1
     except ZeroDivisionError:
         return 0
     return round(profit_factor*ep, 6)
+
+
+def combo_metric(dfx, penalty=True):
+    df = dfx.dropna().copy()
+    pfm = real_profit_factor_metric(df, False)
+    osm = only_strategy_metric(df, penalty)
+    return round(pfm*osm, 6)
 
 
 metric_numb_dict = {
@@ -171,4 +176,5 @@ metric_numb_dict = {
     'mean_return_metric':           '5',
     'profit_factor_metric':         '6',
     'real_profit_factor_metric':    '7',
+    'combo_metric':                 '8',
     }
