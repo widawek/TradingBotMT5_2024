@@ -1029,7 +1029,7 @@ class Bot:
         strategies_number = 11 + add_number
         super_start_time = time.time()
         strategies, intervals_ = self.load_strategies_from_json()
-        self.results_for_rsi_condition = rsi_condition_backtest(self.symbol, intervals, leverage, bars)
+        self.results_for_rsi_condition = rsi_condition_backtest(self.symbol, intervals_, leverage, bars)
 
         metric_name = strategies[0][3]
         self.bt_metric = globals()[metric_name]
