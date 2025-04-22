@@ -32,7 +32,8 @@ time_diff = get_timezone_difference()
 
 
 class Bot:
-    montecarlo_for_all = True
+    montecarlo_for_all = False
+    print('montecarlo_for_all', montecarlo_for_all)
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
@@ -615,6 +616,7 @@ class Bot:
             #         return self.actual_position_democracy()
 
             positions_ = mt.positions_get(symbol=self.symbol)
+            positions_ = [i for i in positions_ if i.magic == self.magic]
             #kind = strategy[0].split('_')[1]
             if len(positions_) == 0:
                 minute_ = 0
@@ -629,8 +631,8 @@ class Bot:
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
 
                     match position:
-                        case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0, self.interval) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
-                        case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1, self.interval) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0, self.interval, self.results_for_rsi_condition) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1, self.interval, self.results_for_rsi_condition) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
 
                     if self.good_price_to_open_pos:
                         break
@@ -1027,6 +1029,8 @@ class Bot:
         strategies_number = 11 + add_number
         super_start_time = time.time()
         strategies, intervals_ = self.load_strategies_from_json()
+        self.results_for_rsi_condition = rsi_condition_backtest(self.symbol, intervals, leverage, bars)
+
         metric_name = strategies[0][3]
         self.bt_metric = globals()[metric_name]
         self.strategies_raw = []

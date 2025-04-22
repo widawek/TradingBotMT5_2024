@@ -5,13 +5,14 @@ from datetime import timedelta
 import MetaTrader5 as mt
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
+from tqdm import tqdm, trange
 from math import ceil
 import sys
 import json
 sys.path.append("..")
 import copy
 from app.functions import get_data
+from strategies_analize.metrics import *
 from scipy.stats import linregress
 #from app.mg_functions import omega_ratio
 mt.initialize()
@@ -778,27 +779,6 @@ def volume_metrics_data():
     print(data)  # Otrzymasz listę list
 
 
-def rsi_condition(symbol, position, interval):
-    intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-    df = get_data(symbol, intervals[intervals.index(interval)+6], 1, 10)
-    df['rsi'] = df.ta.rsi(length=2)
-    rsi = df['rsi'].iloc[-1]
-    if (rsi <= 10 and position == 0) or (rsi >= 90 and position == 1):  # trend - buy best price (counter)
-    #if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
-        return True
-    return False
-
-
-def rsi_condition_for_tpsl(symbol, position, interval):
-    intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-    df = get_data(symbol, intervals[intervals.index(interval)+6], 1, 10)
-    df['rsi'] = df.ta.rsi(length=2)
-    rsi = df['rsi'].iloc[-1]
-    if (rsi >= 90 and position == 1) or (rsi <= 10 and position == 0): # contra - best_price mode
-        return True
-    return False
-
-
 def find_density_results(data, epsilon=10):
     """
     Dodaje do każdego punktu w `data` wartość zagęszczenia punktów w jego pobliżu,
@@ -824,3 +804,80 @@ def find_density_results(data, epsilon=10):
         row[2] *= density
 
     return results
+
+
+def strategy_rsi(df, factor, leverage, backtest=False):
+    df['realrsi2'] = df.ta.rsi(length=2)
+    df['realrsi2_mean'] = df['realrsi2'].rolling(factor).mean()
+    df['realrsi2_std'] = df['realrsi2'].rolling(factor).std()
+    df['real_boll_up'] = df['realrsi2_mean'] + df['realrsi2_std']
+    df['real_boll_down'] = df['realrsi2_mean'] - df['realrsi2_std']
+    df['condl'] = df['close'].rolling(factor).max()
+    df['condl'] = np.where(df['condl']<=df['condl'].shift(), True, False)
+    df['conds'] = df['close'].rolling(factor).min()
+    df['conds'] = np.where(df['conds']>=df['conds'].shift(), True, False)
+    df['stance'] = np.where(
+        ((df['realrsi2'] > df['real_boll_up'])
+        &(df['condl']))
+        , 1, np.nan)
+    df['stance'] = np.where(
+        ((df['realrsi2'] < df['real_boll_down'])
+        &(df['conds']))
+        , -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    if backtest:
+        df, _ = calculate_strategy_returns(df, leverage)
+        df['strategy'] = (1+df['return']).cumprod() - 1
+        osm = only_strategy_metric(df, False)
+        rpf = real_profit_factor_metric(df, False)
+        #print("Metric result:", round(rpf*osm, 5))
+        #miniplot(df, ['realrsi2', 'real_boll_up', 'real_boll_down'], ['strategy'])
+        return rpf, osm
+    else:
+        return df['stance'].iloc[-1]
+
+
+def rsi_condition(symbol, position, interval, results):
+    intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
+    interval_for_data = intervals[intervals.index(interval)+6]
+    factor = int([i for i in results if i[0]==interval_for_data][1])
+    df = get_data(symbol, interval_for_data, 1, 600)
+    position_ = strategy_rsi(df, factor, 1, backtest=False)
+    if (position_ == 1 and position == 0) or (position_ == -1 and position == 1):  # trend - buy best price (counter)
+    #if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
+        return True
+    return False
+
+
+def rsi_condition_for_tpsl(symbol, position, interval):
+    intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
+    df = get_data(symbol, intervals[intervals.index(interval)+6], 1, 10)
+    df['rsi'] = df.ta.rsi(length=2)
+    rsi = df['rsi'].iloc[-1]
+    if (rsi >= 90 and position == 1) or (rsi <= 10 and position == 0): # contra - best_price mode
+        return True
+    return False
+
+
+def rsi_condition_backtest(symbol, intervals, leverage, bars):
+    intervals_ = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
+    real_intervals = [intervals_[intervals_.index(interval)+6] for interval in intervals]
+    best_results_for_intervals = []
+    for interval in real_intervals:
+        df = get_data(symbol, interval, 1, bars)
+        results = []
+        for factor in trange(3, 34):
+            rpf, osm = strategy_rsi(df, factor, leverage, True)
+            results.append([factor, interval, rpf, osm])
+
+        if all([i[3]<0 for i in results]):
+            best = sorted(results, key=lambda x: x[2])[0]
+            print(f"Best factor for {interval} is {best[0]} with result from rpf only {round(best[2], 4)}")
+        else:
+            results = [i for i in results if i[2]>1 and i[3]>0]
+            best = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
+            print(f"Best factor for {interval} is {best[0]} with result from rpf and osm {round(best[2]*best[3], 4)}")
+        best_results_for_intervals.append([interval, best[0]])
+
+    print(best_results_for_intervals)
+    return best_results_for_intervals
