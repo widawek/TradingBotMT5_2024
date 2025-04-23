@@ -586,9 +586,9 @@ class Bot:
             self.force, self.actual_force, self.win_ratio_cond, daily_return = self.calc_pos_condition(dfx)
             self.actual_force = True if self.actual_force == 1 else False
 
-            # if strategy[15] == -1:# and self.backtest_time.hour < 12:
-            #     print("Position is reverse by backtest weekday results.")
-            #     stance = int(stance*strategy[15])
+            if strategy[15] == -1:# and self.backtest_time.hour < 12:
+                print("Position is reverse by backtest weekday results.")
+                stance = int(stance*strategy[15])
 
             position = int(0) if stance == 1 else int(1)
 
@@ -1000,10 +1000,10 @@ class Bot:
             self.strategies[i][8] = self.calc_pos_condition(strategyy(get_data(self.symbol, intervall, 1, 5000), sloww, fastt, self.symbol)[0])[-1]
 
         if dt.now().hour >= change_hour or (not self.virgin_test):# all([i[6] == -2 for i in self.strategies]) :
-            self.strategies = [i for i in self.strategies if i[8] > 0 and i[5] > 0 and i[13] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
+            self.strategies = [i for i in self.strategies if i[8]*i[15] > 0 and i[5] > 0 and i[13] > 0]
+            sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[15]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
         else:
-            self.strategies = [i for i in self.strategies if i[8] > 0 and i[5] > 0 and i[13] > 0]
+            self.strategies = [i for i in self.strategies if i[8]*i[15] > 0 and i[5] > 0 and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True)
         first_ = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True)[0][7]
         printer("Daily starter", first_)
@@ -1223,15 +1223,15 @@ class Bot:
                 if pos_.tp == 0.0:
                     if pos_.type == 0:
                         if pos_.profit > tp_profit/10:
-                            new_tp = round(((1+self.avg_vol/3)*info.ask), digits_)
-                            new_sl = round((pos_.price_open*2 + info.ask)/3, digits_)
+                            new_tp = round(((1+self.avg_vol/6)*info.ask), digits_)
+                            new_sl = round((pos_.price_open + info.ask*2)/3, digits_)
                         else:
                             new_tp = round(((1+self.avg_vol/10)*info.ask), digits_)
                             new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
                     elif pos_.type == 1:
                         if pos_.profit > tp_profit/10:
-                            new_tp = round(((1-self.avg_vol/3)*info.bid), digits_)
-                            new_sl = round((pos_.price_open*2 + info.bid)/3, digits_)
+                            new_tp = round(((1-self.avg_vol/6)*info.bid), digits_)
+                            new_sl = round((pos_.price_open + info.bid*2)/3, digits_)
                         else:
                             new_tp = round(((1-self.avg_vol/10)*info.bid), digits_)
                             new_sl = round((1+self.avg_vol/20)*info.bid, digits_)
