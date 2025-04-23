@@ -324,6 +324,10 @@ class Bot:
     def request_get(self):
         self.positions_()
         if not self.positions:
+            try:
+                self.results_for_rsi_condition = rsi_condition_backtest(self.symbol, self.intervals_, leverage, 3000)
+            except Exception:
+                pass
             if self.checkout_stoploss:
                 self.if_tiktok(self.checkout_stoploss)
             self.reset_bot()
@@ -506,6 +510,14 @@ class Bot:
             volume = round((max_pos_margin2 * 100 / (margin_min*divider_condition))) *\
                             symbol_info["volume_min"]
             printer('Volume from value:', round((max_pos_margin2 * 100 / margin_min), 2))
+        try:
+            another_volume_condition = rsi_condition(self.symbol, posType, 'D1', self.results_for_rsi_condition)
+            volume = volume*2 if another_volume_condition else volume
+            if another_volume_condition:
+                print("Position is ok. Go with the flow.")
+        except Exception as e:
+            print("volume_condition - volume*2: ", e)
+            pass
         if volume > symbol_info["volume_max"]:
             volume = float(symbol_info["volume_max"])
         self.volume = volume
@@ -1029,14 +1041,14 @@ class Bot:
         self.close_request(True)
         strategies_number = 11 + add_number
         super_start_time = time.time()
-        strategies, intervals_ = self.load_strategies_from_json()
-        self.results_for_rsi_condition = rsi_condition_backtest(self.symbol, intervals_, leverage, bars)
+        strategies, self.intervals_ = self.load_strategies_from_json()
+        self.results_for_rsi_condition = rsi_condition_backtest(self.symbol, self.intervals_, leverage, 3000)
 
         metric_name = strategies[0][3]
         self.bt_metric = globals()[metric_name]
         self.strategies_raw = []
 
-        dfperms = PermutatedDataFrames(self.symbol, intervals_, int(self.number_of_bars_for_backtest))
+        dfperms = PermutatedDataFrames(self.symbol, self.intervals_, int(self.number_of_bars_for_backtest))
         permutated_dataframes = dfperms.dataframes_output()
 
         i = 1
@@ -1102,7 +1114,7 @@ class Bot:
         if len(self.strategies) > strategies_number:
             self.strategies = self.strategies[:strategies_number]
 
-        if len(self.strategies) == 0:
+        if len(self.strategies) <= 1:
             self.close_request()
             print("You don't have any strategy to open position right now. Waiting a half an hour for backtest.")
             sleep(1800)

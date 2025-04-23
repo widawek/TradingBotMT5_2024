@@ -14,12 +14,6 @@ def pandas_options():
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_colwidth', None)
 
-# establish connection to MetaTrader 5 terminal
-# if not mt.initialize():
-#     print("initialize() failed, error code =", mt.last_error())
-#     quit()
-
-# get account currency
 account_currency=mt.account_info().currency
 print("Account currency:",account_currency)
 
@@ -43,18 +37,18 @@ def volume_calc(symbol: str, max_pos_margin: int, min_volume: int) -> None:
     if "JP" not in symbol:
         volume = round((max_pos_margin / margin_min)) *\
                         symbol_info["volume_min"]
-        print('Volume form: ', (max_pos_margin / margin_min))
+        #print('Volume form: ', (max_pos_margin / margin_min))
     else:
         volume = round((max_pos_margin * 100 / margin_min)) *\
                         symbol_info["volume_min"]
-        print('Volume form: ', (max_pos_margin * 100 / margin_min))
+        #print('Volume form: ', (max_pos_margin * 100 / margin_min))
     if volume > symbol_info["volume_max"]:
         volume = float(symbol_info["volume_max"])
-    print('Min volume: ', min_volume)
-    print('Calculated volume: ', volume)
+    # print('Min volume: ', min_volume)
+    # print('Calculated volume: ', volume)
     if min_volume and (volume < symbol_info["volume_min"]):
         volume = symbol_info["volume_min"]
-    return volume / symbol_info["volume_min"]
+    return volume# / symbol_info["volume_min"]
 
 
 def avg_daily_vol_points(symbol):
@@ -94,17 +88,9 @@ if __name__ == '__main__':
     profit_factor = 1.5
     balance = mt.account_info().balance
 
-    symbols = [
-        'EURUSD',
-        'GBPUSD',
-        'USDCAD',
-        'USDCHF',
-        'USDJPY',
-        'US30',
-        'XAUUSD',
-        'EURJPY',
-        'BTCUSD'
-        ]
+    symbols = ["GBPJPY", "GBPUSD", "EURUSD", "USDPLN", "XAUUSD", "US30",
+                "XTIUSD", "XAGUSD", "USDJPY", "AUDUSD", "EURJPY", "DE40",
+                "DXY", "BTCUSD", "USTEC", "CHINA50", "USDCHF", "EURGBP"]
 
     symbols = list(set(symbols))
 
@@ -115,21 +101,23 @@ if __name__ == '__main__':
         margin_open, margin_close, real_spread_to_volatility = symbol_stats(symbol, volume_min, 1.5)
         symbols_list.append((symbol, margin_open, margin_close, real_spread_to_volatility))
     df = pd.DataFrame(symbols_list, columns=['symbol', 'margin_open', 'margin_close', 'real_spread_to_volatility'])
+    
     vectorized = np.vectorize(volume_calc)
     df['volume'] = vectorized(df['symbol'], 6, True)
-    df['profit_by_trigger'] = round(df['margin_close'] * df['volume'] / trigger_model_divider, 2)
-    df['profit_by_trigger_%'] = round((df['profit_by_trigger'] *100 / balance), 2)
-    df['loss_by_trigger'] = round(df['profit_by_trigger'] * profit_factor, 2)
-    df['result'] = round(df['margin_open']*df['margin_close']*df['real_spread_to_volatility'],4)
-    df = df.sort_values(by='real_spread_to_volatility')
-    df.reset_index(drop=True, inplace=True)
     print(df)
-    print("Mean profit %: ", round(df['profit_by_trigger_%'].mean(), 2))
-    print(df['symbol'].to_list())
-    number_ = df.margin_close.sum()
-    print("All by min vol sum: ", round(df.margin_open.sum(), 2))
-    print("All not good by bot killer: ", round(number_, 2))
-    print("All good by bot tp killer: ", round(number_*2, 2))
-    print(f"Propose start account balance: {round(number_*4, 2)}")
+    # df['profit_by_trigger'] = round(df['margin_close'] * df['volume'] / trigger_model_divider, 2)
+    # df['profit_by_trigger_%'] = round((df['profit_by_trigger'] *100 / balance), 2)
+    # df['loss_by_trigger'] = round(df['profit_by_trigger'] * profit_factor, 2)
+    # df['result'] = round(df['margin_open']*df['margin_close']*df['real_spread_to_volatility'],4)
+    # df = df.sort_values(by='real_spread_to_volatility')
+    # df.reset_index(drop=True, inplace=True)
+    # print(df)
+    # print("Mean profit %: ", round(df['profit_by_trigger_%'].mean(), 2))
+    # print(df['symbol'].to_list())
+    # number_ = df.margin_close.sum()
+    # print("All by min vol sum: ", round(df.margin_open.sum(), 2))
+    # print("All not good by bot killer: ", round(number_, 2))
+    # print("All good by bot tp killer: ", round(number_*2, 2))
+    # print(f"Propose start account balance: {round(number_*4, 2)}")
 
 
