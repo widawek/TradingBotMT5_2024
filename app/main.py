@@ -37,6 +37,7 @@ class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.montecarlo_for_all = Bot.montecarlo_for_all
         self.checkout_stoploss = True
         self.position_capacity = []
         self.backtest_time = dt.now()
@@ -1091,6 +1092,7 @@ class Bot:
         try:
             self.strategies = self.sort_strategies()
         except Exception:
+            self.montecarlo_for_all = True if self.montecarlo_for_all==False else False
             sleep(1800)
             self.test_strategies()
 
@@ -1120,7 +1122,7 @@ class Bot:
 
         results = []
         results_raw = []
-        if Bot.montecarlo_for_all:
+        if self.montecarlo_for_all:
             dfperms_mini = PermutatedDataFrames(self.symbol, [interval], int(self.number_of_bars_for_backtest), how_many=100)
             permutated_dataframes_mini = dfperms_mini.dataframes_output()
 
@@ -1141,7 +1143,7 @@ class Bot:
 
                     if result > 0:
                         results_raw.sort()
-                        if Bot.montecarlo_for_all:
+                        if self.montecarlo_for_all:
                             if len(results_raw) > 1:
                                 if len(results_raw) > 8:
                                     if result > min(results_raw[-7:]):
@@ -1165,7 +1167,7 @@ class Bot:
                                 results_raw.append(result)
 
                         _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
-                        if Bot.montecarlo_for_all:
+                        if self.montecarlo_for_all:
                             monte_mini = Montecarlo(self.symbol, interval, strategy, self.bt_metric, int(self.number_of_bars_for_backtest), slow, fast, permutated_dataframes_mini, how_many=100, print_tqdm=False)
                             p_value = monte_mini.final_p_value(self.avg_vol)
                             if p_value > 0:
