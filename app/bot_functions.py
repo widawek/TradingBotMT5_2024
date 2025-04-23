@@ -839,7 +839,7 @@ def strategy_rsi(df, factor, leverage, backtest=False):
 
 def rsi_condition(symbol, position, interval, results):
     intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-    interval_for_data = intervals[intervals.index(interval)+6]
+    interval_for_data = intervals[intervals.index(interval)+3]
     factor = int([i for i in results if i[0]==interval_for_data][0][1])
     df = get_data(symbol, interval_for_data, 1, 600)
     position_ = strategy_rsi(df, factor, 1, backtest=False)
@@ -851,7 +851,7 @@ def rsi_condition(symbol, position, interval, results):
 
 def rsi_condition_for_tpsl(symbol, position, interval):
     intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-    df = get_data(symbol, intervals[intervals.index(interval)+6], 1, 10)
+    df = get_data(symbol, intervals[intervals.index(interval)+4], 1, 10)
     df['rsi'] = df.ta.rsi(length=2)
     rsi = df['rsi'].iloc[-1]
     if (rsi >= 90 and position == 1) or (rsi <= 10 and position == 0): # contra - best_price mode
@@ -861,7 +861,7 @@ def rsi_condition_for_tpsl(symbol, position, interval):
 
 def rsi_condition_backtest(symbol, intervals, leverage, bars):
     intervals_ = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-    real_intervals = [intervals_[intervals_.index(interval)+6] for interval in intervals]
+    real_intervals = [intervals_[intervals_.index(interval)+3] for interval in intervals]
     best_results_for_intervals = []
     for interval in real_intervals:
         df = get_data(symbol, interval, 1, bars)

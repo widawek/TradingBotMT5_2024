@@ -680,7 +680,7 @@ class Bot:
             zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia, group=self.symbol)
             zamkniete_transakcje = [i for i in zamkniete_transakcje if i.position_id != tt]
             intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-            rsi_interval = int(intervals[intervals.index(self.interval)+6][1:])
+            rsi_interval = int(intervals[intervals.index(self.interval)+4][1:])
             comment = zamkniete_transakcje[-1].comment
             condition = ('tp' in comment) or ('sl' in comment)
             return condition, rsi_interval
@@ -789,7 +789,7 @@ class Bot:
     @class_errors
     def duration(self):
         intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-        duration_time = int(intervals[intervals.index(self.interval)+6][1:])
+        duration_time = int(intervals[intervals.index(self.interval)+4][1:])
         duration = self.position_time_minutes()
         print(f"Duration: {duration}")
         return duration > duration_time
@@ -1221,17 +1221,17 @@ class Bot:
                 if pos_.tp == 0.0:
                     if pos_.type == 0:
                         if pos_.profit > tp_profit/10:
-                            new_tp = round(((1+self.avg_vol/5)*info.ask), digits_)
+                            new_tp = round(((1+self.avg_vol/3)*info.ask), digits_)
                             new_sl = round((pos_.price_open*2 + info.ask)/3, digits_)
                         else:
-                            new_tp = round(((1+self.avg_vol/20)*info.ask), digits_)
+                            new_tp = round(((1+self.avg_vol/10)*info.ask), digits_)
                             new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
                     elif pos_.type == 1:
                         if pos_.profit > tp_profit/10:
-                            new_tp = round(((1-self.avg_vol/5)*info.bid), digits_)
+                            new_tp = round(((1-self.avg_vol/3)*info.bid), digits_)
                             new_sl = round((pos_.price_open*2 + info.bid)/3, digits_)
                         else:
-                            new_tp = round(((1-self.avg_vol/20)*info.bid), digits_)
+                            new_tp = round(((1-self.avg_vol/10)*info.bid), digits_)
                             new_sl = round((1+self.avg_vol/20)*info.bid, digits_)
             elif capacity_condition and pos_.sl == 0.0:
                 if pos_.sl == 0.0 or (capacity_condition == 'super loss'):
