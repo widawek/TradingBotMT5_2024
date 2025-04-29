@@ -227,11 +227,11 @@ class Bot:
                 self.profits.append(profit+self.profit0)
                 self.profit_max = max(self.profits)
                 self.profit_min = min(self.profits)
-                self.self_decline_factor()
 
                 kind_ = self.strategies[self.strategy_number][7]
                 sl = self.sl_money #min([self.profit_needed, ])
                 tp = sl #min([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
+                self.self_decline_factor(tp)
                 # if kind_ == 'counter':
                 #     sl = round(sl/1.1, 2)
 
@@ -300,11 +300,11 @@ class Bot:
         return ((self.print_count == 0) or (self.print_count % 10 == 0))
 
     @class_errors
-    def self_decline_factor(self, multiplier: int=2):
+    def self_decline_factor(self, tp, multiplier: float=1.22):
         min_val = 0.65
-        max_val = 0.93
+        max_val = 0.9
         min_value = 0
-        max_value = self.profit_needed*multiplier
+        max_value = tp*multiplier
         # only variable is self.profit_max
         normalized_value = (self.profit_max - min_value) / (max_value - min_value)
         exp_value = np.exp(normalized_value) - 1
@@ -448,7 +448,7 @@ class Bot:
             df = df[(df['hour'] > 9)&(df['hour'] < 20)]
             volatility_5 = ((df['high']-df['low'])/df['open']).mean()
             volatility_d = ((daily['high']-daily['low'])/daily['open']).mean()
-            return round((volatility_d/volatility_5), 4)
+            return round((volatility_5/volatility_d), 4)
 
         try:
             another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
@@ -956,7 +956,7 @@ class Bot:
     @class_errors
     def volume_reducer(self, pos_type, name_):
         try:
-            if_not_ok = 0.6
+            if_not_ok = 0.9
             if_ok = 1
             try:
                 data = self.volume_metrics_data(name_)
@@ -1012,10 +1012,10 @@ class Bot:
             self.strategies[i][8] = self.calc_pos_condition(strategyy(get_data(self.symbol, intervall, 1, 5000), sloww, fastt, self.symbol)[0])[-1]
 
         if dt.now().hour >= change_hour or (not self.virgin_test):# all([i[6] == -2 for i in self.strategies]) :
-            self.strategies = [i for i in self.strategies if i[8]*i[15] > 0 and i[5] > 0 and i[13] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[15]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
+            self.strategies = [i for i in self.strategies if i[5] > 0 and i[13] > 0]# i[8] > 0 and ]
+            sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True) #x[8]*
         else:
-            self.strategies = [i for i in self.strategies if i[8]*i[15] > 0 and i[5] > 0 and i[13] > 0]
+            self.strategies = [i for i in self.strategies if i[8] > 0 and i[5] > 0 and i[13] > 0]
             sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True)
         first_ = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True)[0][7]
         printer("Daily starter", first_)
@@ -1235,17 +1235,17 @@ class Bot:
                 if pos_.tp == 0.0:
                     if pos_.type == 0:
                         if pos_.profit > tp_profit/10:
-                            new_tp = round(((1+self.avg_vol/6)*info.ask), digits_)
+                            new_tp = round(((1+self.avg_vol/5)*info.ask), digits_)
                             new_sl = round((pos_.price_open + info.ask*2)/3, digits_)
                         else:
-                            new_tp = round(((1+self.avg_vol/10)*info.ask), digits_)
+                            new_tp = round(((1+self.avg_vol/8)*info.ask), digits_)
                             new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
                     elif pos_.type == 1:
                         if pos_.profit > tp_profit/10:
-                            new_tp = round(((1-self.avg_vol/6)*info.bid), digits_)
+                            new_tp = round(((1-self.avg_vol/5)*info.bid), digits_)
                             new_sl = round((pos_.price_open + info.bid*2)/3, digits_)
                         else:
-                            new_tp = round(((1-self.avg_vol/10)*info.bid), digits_)
+                            new_tp = round(((1-self.avg_vol/8)*info.bid), digits_)
                             new_sl = round((1+self.avg_vol/20)*info.bid, digits_)
             elif capacity_condition and pos_.sl == 0.0:
                 if pos_.sl == 0.0 or (capacity_condition == 'super loss'):

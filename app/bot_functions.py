@@ -843,7 +843,7 @@ def rsi_condition(symbol, position, interval, results):
     factor = int([i for i in results if i[0]==interval_for_data][0][1])
     df = get_data(symbol, interval_for_data, 1, 600)
     position_ = strategy_rsi(df, factor, 1, backtest=False)
-    if (position_ == 1 and position == 0) or (position_ == -1 and position == 1):  # trend - buy best price (counter)
+    if (position_ == 1 and position == 1) or (position_ == 0 and position == -1):  # trend - buy best price (counter)   # test
     #if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
         return True
     return False
@@ -854,7 +854,7 @@ def rsi_condition_for_tpsl(symbol, position, interval):
     df = get_data(symbol, intervals[intervals.index(interval)+4], 1, 10)
     df['rsi'] = df.ta.rsi(length=2)
     rsi = df['rsi'].iloc[-1]
-    if (rsi >= 90 and position == 1) or (rsi <= 10 and position == 0): # contra - best_price mode
+    if (rsi >= 90 and position == 0) or (rsi <= 10 and position == 1): # contra - best_price mode
         return True
     return False
 

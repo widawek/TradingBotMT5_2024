@@ -150,7 +150,7 @@ def real_profit_factor_metric(dfx, penalty=True):
     df = dfx.dropna().copy()
     ep = exponential_penalty(df) if penalty else 1
     df = df[df['cross']==1]
-    df['result'] = (df['open'].shift(-1) - df['open'])*df['stance']
+    df['result'] = (df['close'].shift(-1) - df['close'])*df['stance']
     df['metric_profit'] = np.where(df['result']>0, 1, 0)
     df['metric_loss'] = np.where(df['result']<0, 1, 0)
     df = df.dropna()
