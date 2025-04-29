@@ -98,7 +98,8 @@ def only_strategy_metric(dfx, penalty=True):
     df = dfx.dropna().copy()
     df['strategy'] = (1+df['return']).cumprod() - 1
     penalty_ = exponential_penalty(df) if penalty else 1
-    return round(np.mean([df['strategy'].min(), df['strategy'].max(), df['strategy'].iloc[-1]])*penalty_, 6)
+    threshold = abs((1+df['mkt_move']).cumprod() - 1).max()
+    return round((np.mean([df['strategy'].min(), df['strategy'].max(), df['strategy'].iloc[-1]])/threshold)*penalty_, 6)
 
 
 def sharpe_metric(dfx, penalty=True):
