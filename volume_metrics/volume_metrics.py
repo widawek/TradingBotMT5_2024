@@ -149,8 +149,8 @@ class Backtest:
                 result = [strategy, self.interval]+self.strategy_bt(strategy, bt_metric, df_raw.copy(), symbol)
                 self.strategies_to_test.append(result)
             except Exception as e:
-                print(e)
-                input()
+                # print(e)
+                # input()
                 continue
 
     def strategy_bt(self, strategy, bt_metric, df_raw, symbol):
@@ -173,7 +173,7 @@ class SymbolsByProfile:
         self.interval = interval
         self.backtest = Backtest(interval)
         self.backtest.backtest_strategies()
-        self.min_number_of_symbols = len(symbols) - 2
+        self.min_number_of_symbols = len(symbols) - 3
         self.bars = bars
 
     def all_returns_please(self):
@@ -195,7 +195,7 @@ class SymbolsByProfile:
         for i in tqdm(self.all_combinations):
             df = self.all_returns.copy()
             df['return'] = np.sum(df[i], axis=1)
-            results.append((i, only_strategy_metric(df, penalty=False))) # change metric for last best metric
+            results.append((i, only_strategy_metric(df, False))) # change metric for last best metric
 
         self.results_df_raw = pd.DataFrame(results, columns=['combination', 'sharpe_omega']).sort_values(by='sharpe_omega', ascending=False)
         self.results_df = self.results_df_raw[self.results_df_raw['sharpe_omega'] > 0.8*self.results_df_raw['sharpe_omega'].max()]

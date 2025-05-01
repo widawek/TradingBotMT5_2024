@@ -174,20 +174,20 @@ def real_profit_factor_metric(dfx, penalty=True):
     df = df[df['cross']==1]
     df['result'] = (df['close'].shift(-1) - df['close'])*df['stance']
 
-    # df['metric_profit'] = np.where(df['result']>0, 1, 0)
-    # najdluzsza_sekwencja_zyskow = max(
-    #     (sum(1 for _ in group) for key, group in
-    #      groupby(df['metric_profit'].tolist()) if key == 1), default=0)
+    df['metric_profit'] = np.where(df['result']>0, 1, 0)
+    najdluzsza_sekwencja_zyskow = max(
+        (sum(1 for _ in group) for key, group in
+         groupby(df['metric_profit'].tolist()) if key == 1), default=0)
 
-    # df['metric_loss'] = np.where(df['result']<0, 1, 0)
-    # najdluzsza_sekwencja_strat = max(
-    #     (sum(1 for _ in group) for key, group in
-    #      groupby(df['metric_loss'].tolist()) if key == 1), default=0)
+    df['metric_loss'] = np.where(df['result']<0, 1, 0)
+    najdluzsza_sekwencja_strat = max(
+        (sum(1 for _ in group) for key, group in
+         groupby(df['metric_loss'].tolist()) if key == 1), default=0)
 
-    # try:
-    #     sequence_meter = round(najdluzsza_sekwencja_zyskow/najdluzsza_sekwencja_strat, 3)
-    # except Exception:
-    #     sequence_meter = 1
+    try:
+        sequence_meter = round(najdluzsza_sekwencja_zyskow/najdluzsza_sekwencja_strat, 3)
+    except Exception:
+        sequence_meter = 1
 
     df = df.dropna()
 
