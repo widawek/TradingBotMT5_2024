@@ -325,7 +325,7 @@ class Bot:
         self.positions_()
         if not self.positions:
             try:
-                self.results_for_rsi_condition = rsi_condition_backtest(self.symbol, self.intervals_, leverage, 3000)
+                self.results_for_rsi_condition = rsi_condition_backtest(self.symbol, self.intervals_, leverage, 5000)
             except Exception:
                 pass
             if self.checkout_stoploss:
@@ -598,9 +598,10 @@ class Bot:
             self.force, self.actual_force, self.win_ratio_cond, daily_return = self.calc_pos_condition(dfx)
             self.actual_force = True if self.actual_force == 1 else False
 
-            # if strategy[15] == -1:# and self.backtest_time.hour < 12:
-            #     print("Position is reverse by backtest weekday results.")
-            #     stance = int(stance*strategy[15])
+            kind = strategy[15]
+            if kind == -1:# and self.backtest_time.hour < 12:
+                print("Position is reverse by backtest weekday results.")
+                stance = int(stance*kind)
 
             position = int(0) if stance == 1 else int(1)
 
@@ -644,8 +645,10 @@ class Bot:
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
 
                     match position:
-                        case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0, self.interval, self.results_for_rsi_condition) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
-                        case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1, self.interval, self.results_for_rsi_condition) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 0: self.good_price_to_open_pos = True if \
+                            rsi_condition(self.symbol, 0, self.interval, self.results_for_rsi_condition, kind) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 1: self.good_price_to_open_pos = True if \
+                            rsi_condition(self.symbol, 1, self.interval, self.results_for_rsi_condition, kind) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
 
                     if self.good_price_to_open_pos:
                         break
@@ -661,8 +664,8 @@ class Bot:
 
                     if self.use_tracker:
                         self.positionTracker.checkout()
-
                     time.sleep(5)
+
         except KeyError as e:
             try:
                 print("actual_position_democracy", e)
@@ -1042,7 +1045,7 @@ class Bot:
         strategies_number = 11 + add_number
         super_start_time = time.time()
         strategies, self.intervals_ = self.load_strategies_from_json()
-        self.results_for_rsi_condition = rsi_condition_backtest(self.symbol, self.intervals_, leverage, 3000)
+        self.results_for_rsi_condition = rsi_condition_backtest(self.symbol, self.intervals_, leverage, 5000)
 
         metric_name = strategies[0][3]
         self.bt_metric = globals()[metric_name]

@@ -688,7 +688,6 @@ def play_with_trend_bt(symbol):
         close_long = np.where((up)&(df.close.shift()>df.boll_up.shift())&(df.close<df.boll_up), 3, 0)
         stance_up_1 = np.where((up)&(df.close.shift()>df.ma_short.shift())&(df.close<df.ma_short), 1, 0)
         stance_up_2 = np.where((up)&(df.close.shift()>df.boll_down.shift())&(df.close<df.boll_down), 2, 0)
-
         close_short = np.where((down)&(df.close.shift()<df.boll_down.shift())&(df.close>df.boll_down), -3, 0)
         stance_down_1 = np.where((down)&(df.close.shift()<df.ma_short.shift())&(df.close>df.ma_short), -1, 0)
         stance_down_2 = np.where((down)&(df.close.shift()<df.boll_up.shift())&(df.close>df.boll_up), -2, 0)
@@ -837,19 +836,19 @@ def strategy_rsi(df, factor, leverage, backtest=False):
     doji_low = (df.close-df.open)/2<(df.high-df.low)/2
     df['dhigh'] = doji1 & doji_high
     df['dlow'] = doji1 & doji_low
-    
+
     cond2_long = (df['real_boll_up'] > df['real_boll_up'].shift())&(df['real_boll_down'] > df['real_boll_down'].shift())
     cond2_short = (df['real_boll_up'] < df['real_boll_up'].shift())&(df['real_boll_down'] < df['real_boll_down'].shift())
-    
+
     df['condl'] = df['close'].rolling(factor).max()
     df['condl'] = np.where(((df['condl']<=df['condl'].shift())&(cond2_long)), True, False)
-    
+
     df['condl2'] = df['close'].rolling(factor).max()
     df['condl2'] = np.where(((df['condl2']<=df['condl2'].shift())&(cond2_long)), False, True)
 
     df['conds'] = df['close'].rolling(factor).min()
     df['conds'] = np.where(((df['conds']>=df['conds'].shift())&(cond2_short)), True, False)
-    
+
     df['conds2'] = df['close'].rolling(factor).min()
     df['conds2'] = np.where(((df['conds2']>=df['conds2'].shift())&(cond2_short)), False, True)
     #strategy rsi2
@@ -864,7 +863,7 @@ def strategy_rsi(df, factor, leverage, backtest=False):
         &
         (df['conds']))#|cond3_short)
         , -1, df['stance'])
-    
+
     df['stance'] = df['stance'].ffill()
 
     if backtest:
@@ -880,15 +879,20 @@ def strategy_rsi(df, factor, leverage, backtest=False):
         return df['stance'].iloc[-1]
 
 
-def rsi_condition(symbol, position, interval, results):
+def rsi_condition(symbol, position, interval, results, kind):
     intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
     interval_for_data = "D1" if interval=="D1" else intervals[intervals.index(interval)+3]
     factor = int([i for i in results if i[0]==interval_for_data][0][1])
     df = get_data(symbol, interval_for_data, 1, 600)
     position_ = strategy_rsi(df, factor, 1, backtest=False)
-    if (position_ == -1 and position == 1) or (position_ == 1 and position == 0):  # trend - buy best price (counter)   # test
-    #if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
-        return True
+    if kind == -1:
+        if (position_ == -1 and position == 0) or (position_ == 1 and position == 1):  # trend - buy best price (counter)   # test
+        #if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
+            return True
+    else:
+        if (position_ == 1 and position == 0) or (position_ == -1 and position == 1):  # trend - buy best price (counter)   # test
+        #if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
+            return True
     return False
 
 
@@ -914,8 +918,9 @@ def rsi_condition_backtest(symbol, intervals, leverage, bars):
             results.append([factor, interval, rpf, osm, combo])
 
         if all([i[3]<0 for i in results]):
-            best = sorted(results, key=lambda x: x[2])[0]
-            print(f"Best factor for {interval} is {best[0]} with result from rpf only {round(best[2], 4)}")
+            continue
+            # best = sorted(results, key=lambda x: x[2])[0]
+            # print(f"Best factor for {interval} is {best[0]} with result from rpf only {round(best[2], 4)}")
         else:
             results = [i for i in results if i[2]>0 and i[3]>0]
             best = sorted(results, key=lambda x: x[4], reverse=True)[0]
