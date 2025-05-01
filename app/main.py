@@ -1215,7 +1215,7 @@ class Bot:
             digits_ = info.digits
             positions = mt.positions_get(symbol=self.symbol)
             pos_ = [i for i in positions if i.magic == self.magic][0]
-            type_to_rsi = 0 if pos_.type == 1 else 1
+            type_to_rsi = 1 if pos_.type == 1 else 0
             new_tp = 0.0
             new_sl = 0.0
 
