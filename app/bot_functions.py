@@ -260,8 +260,8 @@ def calculate_strategy_returns(df, leverage):
     spread_mean = spread_mean.mean()
     df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
                             ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
-    df['mkt_move'] = np.log(df.close/df.close.shift(1))
-    df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open))*leverage
+    df['mkt_move'] = np.log(df.close/df.close.shift(1))*leverage
+    df['return'] = df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open)*leverage
     density = df['cross'].sum()/len(df)
     #df['strategy'] = (1+df['return']).cumprod() - 1
     return df, density
@@ -807,32 +807,75 @@ def find_density_results(data, epsilon=10):
 
 
 def strategy_rsi(df, factor, leverage, backtest=False):
+    # df['realrsi2'] = df.ta.rsi(length=2)
+    # df['realrsi2_mean'] = df['realrsi2'].rolling(factor).mean()
+    # df['realrsi2_std'] = df['realrsi2'].rolling(factor).std()
+    # df['real_boll_up'] = df['realrsi2_mean'] + df['realrsi2_std']
+    # df['real_boll_down'] = df['realrsi2_mean'] - df['realrsi2_std']
+    # df['condl'] = df['close'].rolling(factor).max()
+    # df['condl'] = np.where(df['condl']<=df['condl'].shift(), True, False)
+    # df['conds'] = df['close'].rolling(factor).min()
+    # df['conds'] = np.where(df['conds']>=df['conds'].shift(), True, False)
+    # df['stance'] = np.where(
+    #     ((df['realrsi2'] > df['real_boll_up'])
+    #     &(df['condl']))
+    #     , 1, np.nan)
+    # df['stance'] = np.where(
+    #     ((df['realrsi2'] < df['real_boll_down'])
+    #     &(df['conds']))
+    #     , -1, df['stance'])
+    # df['stance'] = df['stance'].ffill()
+
     df['realrsi2'] = df.ta.rsi(length=2)
     df['realrsi2_mean'] = df['realrsi2'].rolling(factor).mean()
     df['realrsi2_std'] = df['realrsi2'].rolling(factor).std()
     df['real_boll_up'] = df['realrsi2_mean'] + df['realrsi2_std']
-    df['real_boll_down'] = df['realrsi2_mean'] - df['realrsi2_std']
+    df['real_boll_down'] = df['realrsi2_mean'] - df['realrsi2_std']#
+
+    doji1 = (df.high-df.low)/2>abs(df.close-df.open)
+    doji_high = (df.close-df.open)/2>(df.high-df.low)/2
+    doji_low = (df.close-df.open)/2<(df.high-df.low)/2
+    df['dhigh'] = doji1 & doji_high
+    df['dlow'] = doji1 & doji_low
+    
+    cond2_long = (df['real_boll_up'] > df['real_boll_up'].shift())&(df['real_boll_down'] > df['real_boll_down'].shift())
+    cond2_short = (df['real_boll_up'] < df['real_boll_up'].shift())&(df['real_boll_down'] < df['real_boll_down'].shift())
+    
     df['condl'] = df['close'].rolling(factor).max()
-    df['condl'] = np.where(df['condl']<=df['condl'].shift(), True, False)
+    df['condl'] = np.where(((df['condl']<=df['condl'].shift())&(cond2_long)), True, False)
+    
+    df['condl2'] = df['close'].rolling(factor).max()
+    df['condl2'] = np.where(((df['condl2']<=df['condl2'].shift())&(cond2_long)), False, True)
+
     df['conds'] = df['close'].rolling(factor).min()
-    df['conds'] = np.where(df['conds']>=df['conds'].shift(), True, False)
+    df['conds'] = np.where(((df['conds']>=df['conds'].shift())&(cond2_short)), True, False)
+    
+    df['conds2'] = df['close'].rolling(factor).min()
+    df['conds2'] = np.where(((df['conds2']>=df['conds2'].shift())&(cond2_short)), False, True)
+    #strategy rsi2
     df['stance'] = np.where(
         ((df['realrsi2'] > df['real_boll_up'])
-        &(df['condl']))
+        &
+        (df['condl']))#|cond3_long)
         , 1, np.nan)
+
     df['stance'] = np.where(
         ((df['realrsi2'] < df['real_boll_down'])
-        &(df['conds']))
+        &
+        (df['conds']))#|cond3_short)
         , -1, df['stance'])
+    
     df['stance'] = df['stance'].ffill()
+
     if backtest:
         df, _ = calculate_strategy_returns(df, leverage)
         df['strategy'] = (1+df['return']).cumprod() - 1
         osm = only_strategy_metric(df, False)
-        rpf = real_profit_factor_metric(df, False)
+        rpf = real_profit_factor_metric(df, penalty=False)
+        combo = combo_metric(df, False)
         #print("Metric result:", round(rpf*osm, 5))
         #miniplot(df, ['realrsi2', 'real_boll_up', 'real_boll_down'], ['strategy'])
-        return rpf, osm
+        return rpf, osm, combo
     else:
         return df['stance'].iloc[-1]
 
@@ -843,7 +886,7 @@ def rsi_condition(symbol, position, interval, results):
     factor = int([i for i in results if i[0]==interval_for_data][0][1])
     df = get_data(symbol, interval_for_data, 1, 600)
     position_ = strategy_rsi(df, factor, 1, backtest=False)
-    if (position_ == 1 and position == 1) or (position_ == 0 and position == -1):  # trend - buy best price (counter)   # test
+    if (position_ == -1 and position == 1) or (position_ == 1 and position == 0):  # trend - buy best price (counter)   # test
     #if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
         return True
     return False
@@ -867,16 +910,16 @@ def rsi_condition_backtest(symbol, intervals, leverage, bars):
         df = get_data(symbol, interval, 1, bars)
         results = []
         for factor in trange(3, 34):
-            rpf, osm = strategy_rsi(df, factor, leverage, True)
-            results.append([factor, interval, rpf, osm])
+            rpf, osm, combo = strategy_rsi(df, factor, leverage, True)
+            results.append([factor, interval, rpf, osm, combo])
 
         if all([i[3]<0 for i in results]):
             best = sorted(results, key=lambda x: x[2])[0]
             print(f"Best factor for {interval} is {best[0]} with result from rpf only {round(best[2], 4)}")
         else:
-            results = [i for i in results if i[2]>1 and i[3]>0]
-            best = sorted(results, key=lambda x: x[2]*x[3], reverse=True)[0]
-            print(f"Best factor for {interval} is {best[0]} with result from rpf and osm {round(best[2]*best[3], 4)}")
+            results = [i for i in results if i[2]>0 and i[3]>0]
+            best = sorted(results, key=lambda x: x[4], reverse=True)[0]
+            print(f"Best factor for {interval} is {best[0]} with result from rpf and osm {round(best[4], 4)}")
         best_results_for_intervals.append([interval, best[0]])
 
     print(best_results_for_intervals)

@@ -598,9 +598,9 @@ class Bot:
             self.force, self.actual_force, self.win_ratio_cond, daily_return = self.calc_pos_condition(dfx)
             self.actual_force = True if self.actual_force == 1 else False
 
-            if strategy[15] == -1:# and self.backtest_time.hour < 12:
-                print("Position is reverse by backtest weekday results.")
-                stance = int(stance*strategy[15])
+            # if strategy[15] == -1:# and self.backtest_time.hour < 12:
+            #     print("Position is reverse by backtest weekday results.")
+            #     stance = int(stance*strategy[15])
 
             position = int(0) if stance == 1 else int(1)
 
@@ -612,9 +612,9 @@ class Bot:
             #     mode__ = "NORMAL"
             #     print("NORMAL MODE")
 
-            mode__ = "NORMAL"
+            mode__ = "REVERSE"
 
-            # # everything reverse test
+            # everyt hing reverse test
             # position = int(0) if stance == -1 else int(1)
 
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
@@ -789,11 +789,11 @@ class Bot:
             print("Position capacity:  ", round(capacity, 5))
             print("Position efficiency:", round(efficiency, 3))
             print("Position efficiency_sum:", round(efficiency_sum, 5))
-            if capacity < 0 and efficiency < 0.1 and efficiency_sum < -1 and self.duration():
+            if capacity < 0 and efficiency < 0.1 and efficiency_sum < -50 and self.duration():
                 return 'super loss'
-            if capacity < 0 and efficiency < 0.49 and efficiency_sum < 1 and self.duration():
+            if capacity < 0 and efficiency < 0.33 and efficiency_sum < -20 and self.duration():
                 return 'loss'
-            elif capacity > 0 and efficiency > 0.75 and efficiency_sum > 2 and self.duration():
+            elif capacity > 0 and efficiency > 0.75 and efficiency_sum > 20 and self.duration():
                 return 'profit'
             return False
         except Exception:
@@ -802,7 +802,7 @@ class Bot:
     @class_errors
     def duration(self):
         intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-        duration_time = int(intervals[intervals.index(self.interval)+4][1:])
+        duration_time = int(intervals[intervals.index(self.interval)+6][1:])
         duration = self.position_time_minutes()
         print(f"Duration: {duration}")
         return duration > duration_time
@@ -1233,34 +1233,41 @@ class Bot:
 
             if rsi_condition_for_tpsl(self.symbol, type_to_rsi, self.interval):
                 if pos_.tp == 0.0:
+
                     if pos_.type == 0:
                         if pos_.profit > tp_profit/10:
                             new_tp = round(((1+self.avg_vol/5)*info.ask), digits_)
-                            new_sl = round((pos_.price_open + info.ask*2)/3, digits_)
+                            new_sl = round((pos_.price_open*2 + info.ask)/3, digits_)
                         else:
                             new_tp = round(((1+self.avg_vol/8)*info.ask), digits_)
                             new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
+
                     elif pos_.type == 1:
                         if pos_.profit > tp_profit/10:
                             new_tp = round(((1-self.avg_vol/5)*info.bid), digits_)
-                            new_sl = round((pos_.price_open + info.bid*2)/3, digits_)
+                            new_sl = round((pos_.price_open*2 + info.bid)/3, digits_)
                         else:
                             new_tp = round(((1-self.avg_vol/8)*info.bid), digits_)
                             new_sl = round((1+self.avg_vol/20)*info.bid, digits_)
+
             elif capacity_condition and pos_.sl == 0.0:
                 if pos_.sl == 0.0 or (capacity_condition == 'super loss'):
+
                     if capacity_condition == 'super loss':
                         self.clean_orders()
+
                     if pos_.type == 0:
                         if capacity_condition == 'loss':
-                            new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
+                            new_sl = round((1-self.avg_vol/10)*info.ask, digits_)
                         elif capacity_condition == 'profit':
                             new_sl = round((1-self.avg_vol/20)*pos_.price_open, digits_)
+
                     elif pos_.type == 1:
                         if capacity_condition == 'loss':
-                            new_sl = round((1+self.avg_vol/20)*info.bid, digits_)
+                            new_sl = round((1+self.avg_vol/10)*info.bid, digits_)
                         elif capacity_condition == 'profit':
                             new_sl = round((1+self.avg_vol/20)*pos_.price_open, digits_)
+
             else:
                 pass
 

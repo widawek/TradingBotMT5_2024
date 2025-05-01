@@ -139,7 +139,7 @@ class Backtest_complex:
                     df = returns_bt(strategy(df, slow, fast, symbol)[0])
                     if (len(df) > 0.8*self.bars) or (df['cross'].sum() > 7):
                         for i in self.metrics:
-                            results.append([i.__name__, symbol, fast, slow, i(df)])
+                            results.append([i.__name__, symbol, fast, slow, i(df, False)])
                     else:
                         continue
                 except Exception as e:
