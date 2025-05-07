@@ -50,7 +50,7 @@ class Bot:
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
-        self.number_of_bars_for_backtest = 40000
+        self.number_of_bars_for_backtest = 17000
         printer(dt.now(), symbol)
         self.symbol = symbol
         #self.active_session()
