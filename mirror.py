@@ -54,31 +54,32 @@ def close_request_only(position):
     order_result = mt.order_send(request)
     print(order_result)
 
-multiplier = int(input("Wprowadz mnoznik (int): "))
 
-while True:
-    positions = mt.positions_get()
-    for i in positions:
-        if i.comment.count("_") == 3 and i.comment[-2] == '8':
-            type_ = i.type
-            volume_ = i.volume
-            dig = mt.symbol_info(i.symbol).digits
+def mirror():
+    multiplier = 9 #int(input("Wprowadz mnoznik (int): "))
+    while True:
+        positions = mt.positions_get()
+        for i in positions:
+            if i.comment.count("_") == 3 and i.comment[-2] == '8':
+                type_ = i.type
+                volume_ = i.volume
+                dig = mt.symbol_info(i.symbol).digits
 
-            mirror_type = int(0) if type_ == 1 else int(1)
-            mirror_volume = round(multiplier*volume_, dig)
+                mirror_type = int(0) if type_ == 1 else int(1)
+                mirror_volume = round(multiplier*volume_, dig)
 
-            if any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == mirror_type)) for n in positions]): # mirror position is open
-                pass
-            elif any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == type_)) for n in positions]): # mirror position is open in the same direction
-                close_request_only([n for n in positions if ((n.symbol == i.symbol) and (n.comment == commment) and (n.type == type_))][0])
-            else:
-                request(i.symbol, mirror_type, mirror_volume)
+                if any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == mirror_type)) for n in positions]): # mirror position is open
+                    pass
+                elif any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == type_)) for n in positions]): # mirror position is open in the same direction
+                    close_request_only([n for n in positions if ((n.symbol == i.symbol) and (n.comment == commment) and (n.type == type_))][0])
+                else:
+                    request(i.symbol, mirror_type, mirror_volume)
 
-        if i.comment == commment:
-            if any([(n.comment.count("_") == 3 and n.comment[-2] == '8') and (i.symbol == n.symbol) for n in positions]):
-                pass
-            else:
-                position = [n for n in positions if (n.comment == commment and n.symbol == i.symbol)][0]
-                print(position)
-                close_request_only(position)
-    sleep(0.5)
+            if i.comment == commment:
+                if any([(n.comment.count("_") == 3 and n.comment[-2] == '8') and (i.symbol == n.symbol) for n in positions]):
+                    pass
+                else:
+                    position = [n for n in positions if (n.comment == commment and n.symbol == i.symbol)][0]
+                    print(position)
+                    close_request_only(position)
+        sleep(0.5)

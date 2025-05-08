@@ -50,7 +50,7 @@ class Bot:
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
-        self.number_of_bars_for_backtest = 17000
+        self.number_of_bars_for_backtest = 40000
         printer(dt.now(), symbol)
         self.symbol = symbol
         #self.active_session()
@@ -644,8 +644,11 @@ class Bot:
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
 
                     match position:
-                        case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0, self.interval, self.results_for_rsi_condition) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
-                        case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1, self.interval, self.results_for_rsi_condition) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        #case 0: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 0, self.interval, self.results_for_rsi_condition) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        #case 1: self.good_price_to_open_pos = True if rsi_condition(self.symbol, 1, self.interval, self.results_for_rsi_condition) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+
+                        case 0: self.good_price_to_open_pos = True if (price <= self.strategy_pos_open_price) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 1: self.good_price_to_open_pos = True if (price >= self.strategy_pos_open_price) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
 
                     if self.good_price_to_open_pos:
                         break

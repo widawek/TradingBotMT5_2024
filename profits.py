@@ -12,7 +12,7 @@ mt.initialize()
 
 def correlations(symbols):
     symbols = [symbol for symbol in symbols if 'USD' in symbol]
-    
+
     def returns_symbol(symbol):
         df = get_data(symbol, 'M1', 1, 500)
         df['returns'] = np.log(df.close/df.close.shift())
@@ -22,26 +22,13 @@ def correlations(symbols):
     retrns = {}
     for symbol in symbols:
         retrns[symbol] = returns_symbol(symbol)
-        
+
     df = pd.DataFrame(retrns)
     corr_matrix = df.corr()
     det_corr = np.linalg.det(corr_matrix)
     print(f"Wyznacznik macierzy korelacji: {det_corr:.2f}")
     return det_corr
 
-
-def closed_pos():
-    dzisiaj = dt.now().date()
-    poczatek_dnia = dt.combine(dzisiaj, dt.min.time())
-    koniec_dnia = dt.combine(dzisiaj, dt.max.time())
-    zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia)
-
-    if zamkniete_transakcje is None or len(zamkniete_transakcje) == 0:
-        return 0
-    else:
-        suma_zyskow = sum(deal.profit for deal in zamkniete_transakcje)
-        print(f"Suma zysków z zamkniętych pozycji dzisiaj: {suma_zyskow:.2f} USD")
-        return suma_zyskow
 
 def profit_chart():
     results = []
