@@ -56,7 +56,7 @@ def close_request_only(position):
 
 
 def mirror():
-    multiplier = 9 #int(input("Wprowadz mnoznik (int): "))
+    multiplier = 7 #int(input("Wprowadz mnoznik (int): "))
     while True:
         positions = mt.positions_get()
         for i in positions:
