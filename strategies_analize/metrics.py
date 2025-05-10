@@ -172,7 +172,7 @@ def real_profit_factor_metric(dfx, penalty=True):
     df = dfx.dropna().copy()
     ep = exponential_penalty(df) if penalty else 1
     df = df[df['cross']==1]
-    df['result'] = (df['close'].shift(-1) - df['close'])*df['stance']
+    df['result'] = (df['open'].shift(-1) - df['open'])*df['stance'] # wrong data for purpose should use close instead of open
 
     df['metric_profit'] = np.where(df['result']>0, 1, 0)
     najdluzsza_sekwencja_zyskow = max(
