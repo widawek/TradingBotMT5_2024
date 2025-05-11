@@ -1062,7 +1062,11 @@ class Bot:
             strategy_ = globals()[name_]
             interval = strategy[2]
             kind = name_.split('_')[-1]
-            today_direction = strategy[4+dt.now().weekday()]
+            try:
+                today_direction = strategy[4+dt.now().weekday()]
+            except Exception as e:
+                print(e)
+                today_direction = 1
             print(f'\n\nStrategy {i} from {len(strategies)}')
             i += 1
             results_pack = self.trend_backtest(strategy_, interval)

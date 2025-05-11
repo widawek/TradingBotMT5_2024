@@ -232,7 +232,11 @@ class SymbolsByProfile:
         def give_me_direction(symbol, strategy_name, interval, data):
             for n in data:
                 if str(n[0])==str(symbol) and str(n[1])==str(strategy_name) and str(n[2])==str(interval):
-                    return n[4+dt.now().weekday()]
+                    try:
+                        return n[4+dt.now().weekday()]
+                    except Exception as e:
+                        print(e)
+                        return 1
 
         self.output = [[*i[:5], give_me_direction(i[0], i[1], i[4], data)] for i in self.output]
         print(self.output)
