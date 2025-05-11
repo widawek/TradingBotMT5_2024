@@ -599,9 +599,9 @@ class Bot:
             self.actual_force = True if self.actual_force == 1 else False
 
             kind = strategy[15]
-            if kind == -1:# and self.backtest_time.hour < 12:
-                print("Position is reverse by backtest weekday results.")
-                stance = int(stance*kind)
+            # if kind == -1:# and self.backtest_time.hour < 12:
+            #     print("Position is reverse by backtest weekday results.")
+            #     stance = int(stance*kind)
 
             position = int(0) if stance == 1 else int(1)
 
@@ -792,11 +792,11 @@ class Bot:
             print("Position capacity:  ", round(capacity, 5))
             print("Position efficiency:", round(efficiency, 3))
             print("Position efficiency_sum:", round(efficiency_sum, 5))
-            if capacity < 0 and efficiency < 0.1 and efficiency_sum < -50 and self.duration():
+            if capacity < 0 and efficiency < 0.1 and efficiency_sum < -5 and self.duration():
                 return 'super loss'
-            if capacity < 0 and efficiency < 0.33 and efficiency_sum < -20 and self.duration():
+            if capacity < 0 and efficiency < 0.33 and efficiency_sum < -2 and self.duration():
                 return 'loss'
-            elif capacity > 0 and efficiency > 0.75 and efficiency_sum > 20 and self.duration():
+            elif capacity > 0 and efficiency > 0.75 and efficiency_sum > 2 and self.duration():
                 return 'profit'
             return False
         except Exception:
