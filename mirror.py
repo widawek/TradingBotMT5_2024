@@ -76,7 +76,7 @@ def mirror():
                     request(i.symbol, mirror_type, mirror_volume)
 
             if i.comment == commment:
-                if any([(n.comment.count("_") == 3 and n.comment[-2] == '8') and (i.symbol == n.symbol) for n in positions]):
+                if any([(n.comment.count("_") == 3 and n.comment[-2] in [str(i) for i in range(1, 9)]) and (i.symbol == n.symbol) for n in positions]):
                     pass
                 else:
                     position = [n for n in positions if (n.comment == commment and n.symbol == i.symbol)][0]
