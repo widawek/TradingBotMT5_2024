@@ -55,12 +55,14 @@ def close_request_only(position):
     print(order_result)
 
 
+numbers_ = [str(x) for x in range(1, 9)]
+
 def mirror():
-    multiplier = 7 #int(input("Wprowadz mnoznik (int): "))
+    multiplier = 4 #int(input("Wprowadz mnoznik (int): "))
     while True:
         positions = mt.positions_get()
         for i in positions:
-            if i.comment.count("_") == 3 and i.comment[-2] in [str(i) for i in range(1, 9)]:
+            if i.comment.count("_") == 3 and i.comment[-2] in numbers_:
                 type_ = i.type
                 volume_ = i.volume
                 dig = mt.symbol_info(i.symbol).digits
@@ -76,7 +78,7 @@ def mirror():
                     request(i.symbol, mirror_type, mirror_volume)
 
             if i.comment == commment:
-                if any([(n.comment.count("_") == 3 and n.comment[-2] in [str(i) for i in range(1, 9)]) and (i.symbol == n.symbol) for n in positions]):
+                if any([(n.comment.count("_") == 3 and n.comment[-2] in numbers_ and i.symbol == n.symbol) for n in positions]):
                     pass
                 else:
                     position = [n for n in positions if (n.comment == commment and n.symbol == i.symbol)][0]

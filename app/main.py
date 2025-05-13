@@ -32,7 +32,7 @@ time_diff = get_timezone_difference()
 
 
 class Bot:
-    montecarlo_for_all = False
+    montecarlo_for_all = True
     print('montecarlo_for_all', montecarlo_for_all)
     target_class = Target()
     weekday = dt.now().weekday()
@@ -441,86 +441,87 @@ class Bot:
     @class_errors
     def volume_calc(self, max_pos_margin: float, posType: int, min_volume: bool) -> None:
 
-        def atr():
-            df = get_data(self.symbol, 'M5', 1, 20*12*24)
-            df['hour'] = df['time'].dt.hour
-            daily = df.iloc[-10:].copy()
-            df = df[(df['hour'] > 9)&(df['hour'] < 20)]
-            volatility_5 = ((df['high']-df['low'])/df['open']).mean()
-            volatility_d = ((daily['high']-daily['low'])/daily['open']).mean()
-            return round((volatility_5/volatility_d), 4)
+        if not min_volume:
+            def atr():
+                df = get_data(self.symbol, 'M5', 1, 20*12*24)
+                df['hour'] = df['time'].dt.hour
+                daily = df.iloc[-10:].copy()
+                df = df[(df['hour'] > 9)&(df['hour'] < 20)]
+                volatility_5 = ((df['high']-df['low'])/df['open']).mean()
+                volatility_d = ((daily['high']-daily['low'])/daily['open']).mean()
+                return round((volatility_5/volatility_d), 4)
 
-        try:
-            another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
-        except AttributeError:
-            another_new_volume_multiplier_from_win_rate_condition = 0.6
+            try:
+                another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
+            except AttributeError:
+                another_new_volume_multiplier_from_win_rate_condition = 0.6
 
-        bonus = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
+            bonus = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
 
-        # antitrend = 1
-        try:
-            strategy = self.strategies[self.strategy_number]
-        except Exception as e:
-            print('volume_calc anti trend no strategy', e)
+            # antitrend = 1
+            try:
+                strategy = self.strategies[self.strategy_number]
+            except Exception as e:
+                print('volume_calc anti trend no strategy', e)
 
-        trend_bonus = bonus if posType == 0 else -bonus
-        volume_m15 = self.volume_reducer(posType, 'M15')
-        volume_m20 = self.volume_reducer(posType, 'M20')
-        if volume_m15 == 1 and volume_m20 == 1:
-            self.if_position_with_trend = 'y'
-        elif volume_m15 != 1 and volume_m20 != 1:
-            self.if_position_with_trend = 'n'
-        elif volume_m15 == 1 and volume_m20 != 1:
-            self.if_position_with_trend = 's'
-        elif volume_m15 != 1 and volume_m20 == 1:
-            self.if_position_with_trend = 'l'
+            trend_bonus = bonus if posType == 0 else -bonus
+            volume_m15 = self.volume_reducer(posType, 'M15')
+            volume_m20 = self.volume_reducer(posType, 'M20')
+            if volume_m15 == 1 and volume_m20 == 1:
+                self.if_position_with_trend = 'y'
+            elif volume_m15 != 1 and volume_m20 != 1:
+                self.if_position_with_trend = 'n'
+            elif volume_m15 == 1 and volume_m20 != 1:
+                self.if_position_with_trend = 's'
+            elif volume_m15 != 1 and volume_m20 == 1:
+                self.if_position_with_trend = 'l'
 
-        max_pos_margin2 = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
-        max_pos_margin2 = (max_pos_margin2 + max_pos_margin2*trend_bonus)*volume_m15*volume_m20
-        try:
-            max_pos_margin2 = max_pos_margin2 / vol_cond_result(strategy[14], posType)
-        except Exception as e:
-            print("volume_condition: ", e)
-            pass
-        x, _ = Bot.target_class.checkTarget()
+            max_pos_margin2 = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
+            max_pos_margin2 = (max_pos_margin2 + max_pos_margin2*trend_bonus)*volume_m15*volume_m20
+            try:
+                max_pos_margin2 = max_pos_margin2 / vol_cond_result(strategy[14], posType)
+            except Exception as e:
+                print("volume_condition: ", e)
+                pass
+            x, _ = Bot.target_class.checkTarget()
 
-        if x:
-            max_pos_margin2 = max_pos_margin2 / 2
-        print('max_pos_margin', round(max_pos_margin2, 3))
+            if x:
+                max_pos_margin2 = max_pos_margin2 / 2
+            print('max_pos_margin', round(max_pos_margin2, 3))
 
-        info_ = mt.account_info()
-        if (info_.margin_free < info_.balance/10) and (not x):
-            max_pos_margin2 = max_pos_margin2 / 5
+            info_ = mt.account_info()
+            if (info_.margin_free < info_.balance/10) and (not x):
+                max_pos_margin2 = max_pos_margin2 / 5
 
-        leverage_ = info_.leverage
-        symbol_info = mt.symbol_info(self.symbol)._asdict()
-        price = mt.symbol_info_tick(self.symbol)._asdict()
-        margin_min = round(((symbol_info["volume_min"] *
-                        symbol_info["trade_contract_size"])/leverage_) *
-                        price["bid"], 2)
-        account = info_._asdict()
-        max_pos_margin2 = round(account["balance"] * (max_pos_margin2/100) /
-                            (self.avg_vol * 100))
-        divider_condition = 1 if self.too_much_risk() == 1 else 2
-        if "JP" not in self.symbol:
-            volume = round((max_pos_margin2 / (margin_min*divider_condition))) *\
-                            symbol_info["volume_min"]
-            printer('Volume from value:', round((max_pos_margin2 / margin_min), 2))
-        else:
-            volume = round((max_pos_margin2 * 100 / (margin_min*divider_condition))) *\
-                            symbol_info["volume_min"]
-            printer('Volume from value:', round((max_pos_margin2 * 100 / margin_min), 2))
-        try:
-            another_volume_condition = rsi_condition(self.symbol, posType, 'D1', self.results_for_rsi_condition)
-            volume = volume*2 if another_volume_condition else volume
-            if another_volume_condition:
-                print("Position is ok. Go with the flow.")
-        except Exception as e:
-            print("volume_condition - volume*2: ", e)
-            pass
-        if volume > symbol_info["volume_max"]:
-            volume = float(symbol_info["volume_max"])
-        self.volume = volume
+            leverage_ = info_.leverage
+            symbol_info = mt.symbol_info(self.symbol)._asdict()
+            price = mt.symbol_info_tick(self.symbol)._asdict()
+            margin_min = round(((symbol_info["volume_min"] *
+                            symbol_info["trade_contract_size"])/leverage_) *
+                            price["bid"], 2)
+            account = info_._asdict()
+            max_pos_margin2 = round(account["balance"] * (max_pos_margin2/100) /
+                                (self.avg_vol * 100))
+            divider_condition = 1 if self.too_much_risk() == 1 else 2
+            if "JP" not in self.symbol:
+                volume = round((max_pos_margin2 / (margin_min*divider_condition))) *\
+                                symbol_info["volume_min"]
+                printer('Volume from value:', round((max_pos_margin2 / margin_min), 2))
+            else:
+                volume = round((max_pos_margin2 * 100 / (margin_min*divider_condition))) *\
+                                symbol_info["volume_min"]
+                printer('Volume from value:', round((max_pos_margin2 * 100 / margin_min), 2))
+            try:
+                another_volume_condition = rsi_condition(self.symbol, posType, 'D1', self.results_for_rsi_condition)
+                volume = volume*2 if another_volume_condition else volume
+                if another_volume_condition:
+                    print("Position is ok. Go with the flow.")
+            except Exception as e:
+                print("volume_condition - volume*2: ", e)
+                pass
+            if volume > symbol_info["volume_max"]:
+                volume = float(symbol_info["volume_max"])
+            self.volume = volume
         if min_volume or (volume < symbol_info["volume_min"]):
             self.volume = symbol_info["volume_min"]
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, kill_multiplier)
@@ -1121,7 +1122,7 @@ class Bot:
         if len(self.strategies) > strategies_number:
             self.strategies = self.strategies[:strategies_number]
 
-        if len(self.strategies) <= 1:
+        if len(self.strategies) == 0:
             self.close_request()
             print("You don't have any strategy to open position right now. Waiting a half an hour for backtest.")
             sleep(1800)
