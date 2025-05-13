@@ -890,7 +890,7 @@ def rsi_condition(symbol, position, interval, results, kind):
     #     #if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
     #         return True
     # else:
-    if (position_ == 1 and position == 0) or (position_ == -1 and position == 1):  # trend - buy best price (counter)   # test
+    if (position_ == -1 and position == 0) or (position_ == 1 and position == 1):  # trend - buy best price (counter)   # test
     #if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
         return True
     return False

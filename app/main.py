@@ -1016,12 +1016,12 @@ class Bot:
             self.strategies[i][8] = self.calc_pos_condition(strategyy(get_data(self.symbol, intervall, 1, 5000), sloww, fastt, self.symbol)[0])[-1]
 
         if dt.now().hour >= change_hour or (not self.virgin_test):# all([i[6] == -2 for i in self.strategies]) :
-            self.strategies = [i for i in self.strategies if i[5] > 0 and i[13] > 0]# i[8] > 0 and ]
-            sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True) #x[8]*
+            self.strategies = [i for i in self.strategies if i[5] > 0 and i[8] > 0 and i[13] > 0]
+            sorted_data = sorted(self.strategies, key=lambda x: i[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True) #x[8]*
         else:
-            self.strategies = [i for i in self.strategies if i[8] > 0 and i[5] > 0 and i[13] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True)
-        first_ = sorted(self.strategies, key=lambda x: x[5]*x[13]*(x[10]/x[11]), reverse=True)[0][7]
+            self.strategies = [i for i in self.strategies if i[5] > 0 and i[8] > 0 and i[13] > 0]
+            sorted_data = sorted(self.strategies, key=lambda x: i[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
+        first_ = sorted(self.strategies, key=lambda x: i[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)[0][7]
         printer("Daily starter", first_)
         self.actual_today_best = first_
         second_ = 'trend' if first_ == 'counter' else 'counter'
