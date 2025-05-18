@@ -724,29 +724,32 @@ class Bot:
         name_ = strategy[0][:5]
         fast = strategy[3]
         slow = strategy[4]
-        reverseornot = 'n' if strategy[15] != -1 else 'r'
+        reverseornot = 'a'
 
+        try:
+            alphabet = list(string.ascii_lowercase)
+            profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
+            if profit > 0 and efficiency > 50 and self.actual_mirror <= 0:
+                self.actual_mirror = 1
+            elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
+                self.actual_mirror = -1
+            elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
+                self.actual_mirror = 0
+            elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
+                self.actual_mirror += 1
+            elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
+                self.actual_mirror -= 1
 
-        alphabet = list(string.ascii_lowercase)
-        profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
-        if profit > 0 and efficiency > 50 and self.actual_mirror <= 0:
-            self.actual_mirror = 1
-        elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
-            self.actual_mirror = -1
-        elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
-            self.actual_mirror = 0
-        elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
-            self.actual_mirror += 1
-        elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
-            self.actual_mirror -= 1
+            if self.actual_mirror > 5:
+                self.actual_mirror = 5
 
-        if self.actual_mirror > 5:
-            self.actual_mirror = 5
-        
-        if self.actual_mirror < -5:
-            self.actual_mirror = -5
+            if self.actual_mirror < -5:
+                self.actual_mirror = -5
 
-        reverseornot = alphabet[self.actual_mirror]
+            reverseornot = alphabet[self.actual_mirror]
+        except Exception as e:
+            print(e)
+
         metric_numb = str(metric_numb_dict[self.bt_metric.__name__])
         self.comment = f'{name_}{self.interval[-1:][0]}_{fast}_{slow}_{reverseornot}{metric_numb}{self.if_position_with_trend}'
 

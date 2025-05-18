@@ -76,7 +76,10 @@ def mirror():
                     multiplier = alphabet.index(letter)
 
                 if letter == 'a':
-                    close_request_only([n for n in positions if ((n.symbol == i.symbol) and (n.comment == commment))][0])
+                    try:
+                        close_request_only([n for n in positions if ((n.symbol == i.symbol) and (n.comment == commment))][0])
+                    except Exception:
+                        pass
                 elif alphabet.index(letter) > len(alphabet)/2:
                     mirror_type = int(0) if type_ == 1 else int(1)
                 elif alphabet.index(letter) < len(alphabet)/2:
@@ -84,15 +87,16 @@ def mirror():
 
                 mirror_volume = round(multiplier*volume_, dig)
 
-                if any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == mirror_type)) for n in positions]): # mirror position is open
-                    pass
-                elif any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == 0 if mirror_type==1 else 1)) for n in positions]): # mirror position is open incorrectly
-                    close_request_only([n for n in positions if ((n.symbol == i.symbol) and (n.comment == commment) and (n.type == type_))][0])
-                else:
-                    if i.comment[-3] == 'a':
+                if letter != 'a':
+                    if any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == mirror_type)) for n in positions]): # mirror position is open
                         pass
+                    elif any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == 0 if mirror_type==1 else 1)) for n in positions]): # mirror position is open incorrectly
+                        close_request_only([n for n in positions if ((n.symbol == i.symbol) and (n.comment == commment) and (n.type == type_))][0])
                     else:
-                        request(i.symbol, mirror_type, mirror_volume)
+                        if i.comment[-3] == 'a':
+                            pass
+                        else:
+                            request(i.symbol, mirror_type, mirror_volume)
 
             if i.comment == commment:
                 if any([(n.comment.count("_") == 3 and n.comment[-2] in numbers_ and i.symbol == n.symbol) for n in positions]):
@@ -102,3 +106,7 @@ def mirror():
                     print(position)
                     close_request_only(position)
         sleep(0.5)
+
+
+if __name__ == '__main__':
+    mirror()
