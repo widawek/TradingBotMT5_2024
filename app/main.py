@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import MetaTrader5 as mt
 import time
+import string
 import sys
 import os
 from datetime import timedelta, timezone
@@ -37,6 +38,7 @@ class Bot:
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
+        self.actual_mirror = 0
         self.montecarlo_for_all = Bot.montecarlo_for_all
         self.checkout_stoploss = True
         self.position_capacity = []
@@ -50,7 +52,7 @@ class Bot:
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
-        self.number_of_bars_for_backtest = 40000
+        self.number_of_bars_for_backtest = 17000
         printer(dt.now(), symbol)
         self.symbol = symbol
         #self.active_session()
@@ -441,87 +443,86 @@ class Bot:
     @class_errors
     def volume_calc(self, max_pos_margin: float, posType: int, min_volume: bool) -> None:
 
-        if not min_volume:
-            def atr():
-                df = get_data(self.symbol, 'M5', 1, 20*12*24)
-                df['hour'] = df['time'].dt.hour
-                daily = df.iloc[-10:].copy()
-                df = df[(df['hour'] > 9)&(df['hour'] < 20)]
-                volatility_5 = ((df['high']-df['low'])/df['open']).mean()
-                volatility_d = ((daily['high']-daily['low'])/daily['open']).mean()
-                return round((volatility_5/volatility_d), 4)
+        def atr():
+            df = get_data(self.symbol, 'M5', 1, 20*12*24)
+            df['hour'] = df['time'].dt.hour
+            daily = df.iloc[-10:].copy()
+            df = df[(df['hour'] > 9)&(df['hour'] < 20)]
+            volatility_5 = ((df['high']-df['low'])/df['open']).mean()
+            volatility_d = ((daily['high']-daily['low'])/daily['open']).mean()
+            return round((volatility_5/volatility_d), 4)
 
-            try:
-                another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
-            except AttributeError:
-                another_new_volume_multiplier_from_win_rate_condition = 0.6
+        try:
+            another_new_volume_multiplier_from_win_rate_condition = 1 if self.win_ratio_cond else 0.6
+        except AttributeError:
+            another_new_volume_multiplier_from_win_rate_condition = 0.6
 
-            bonus = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
+        bonus = play_with_trend(self.symbol, self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider)
 
-            # antitrend = 1
-            try:
-                strategy = self.strategies[self.strategy_number]
-            except Exception as e:
-                print('volume_calc anti trend no strategy', e)
+        # antitrend = 1
+        try:
+            strategy = self.strategies[self.strategy_number]
+        except Exception as e:
+            print('volume_calc anti trend no strategy', e)
 
-            trend_bonus = bonus if posType == 0 else -bonus
-            volume_m15 = self.volume_reducer(posType, 'M15')
-            volume_m20 = self.volume_reducer(posType, 'M20')
-            if volume_m15 == 1 and volume_m20 == 1:
-                self.if_position_with_trend = 'y'
-            elif volume_m15 != 1 and volume_m20 != 1:
-                self.if_position_with_trend = 'n'
-            elif volume_m15 == 1 and volume_m20 != 1:
-                self.if_position_with_trend = 's'
-            elif volume_m15 != 1 and volume_m20 == 1:
-                self.if_position_with_trend = 'l'
+        trend_bonus = bonus if posType == 0 else -bonus
+        volume_m15 = self.volume_reducer(posType, 'M15')
+        volume_m20 = self.volume_reducer(posType, 'M20')
+        if volume_m15 == 1 and volume_m20 == 1:
+            self.if_position_with_trend = 'y'
+        elif volume_m15 != 1 and volume_m20 != 1:
+            self.if_position_with_trend = 'n'
+        elif volume_m15 == 1 and volume_m20 != 1:
+            self.if_position_with_trend = 's'
+        elif volume_m15 != 1 and volume_m20 == 1:
+            self.if_position_with_trend = 'l'
 
-            max_pos_margin2 = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
-            max_pos_margin2 = (max_pos_margin2 + max_pos_margin2*trend_bonus)*volume_m15*volume_m20
-            try:
-                max_pos_margin2 = max_pos_margin2 / vol_cond_result(strategy[14], posType)
-            except Exception as e:
-                print("volume_condition: ", e)
-                pass
-            x, _ = Bot.target_class.checkTarget()
+        max_pos_margin2 = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
+        max_pos_margin2 = (max_pos_margin2 + max_pos_margin2*trend_bonus)*volume_m15*volume_m20
+        try:
+            max_pos_margin2 = max_pos_margin2 / vol_cond_result(strategy[14], posType)
+        except Exception as e:
+            print("volume_condition: ", e)
+            pass
+        x, _ = Bot.target_class.checkTarget()
 
-            if x:
-                max_pos_margin2 = max_pos_margin2 / 2
-            print('max_pos_margin', round(max_pos_margin2, 3))
+        if x:
+            max_pos_margin2 = max_pos_margin2 / 2
+        print('max_pos_margin', round(max_pos_margin2, 3))
 
-            info_ = mt.account_info()
-            if (info_.margin_free < info_.balance/10) and (not x):
-                max_pos_margin2 = max_pos_margin2 / 5
+        info_ = mt.account_info()
+        if (info_.margin_free < info_.balance/10) and (not x):
+            max_pos_margin2 = max_pos_margin2 / 5
 
-            leverage_ = info_.leverage
-            symbol_info = mt.symbol_info(self.symbol)._asdict()
-            price = mt.symbol_info_tick(self.symbol)._asdict()
-            margin_min = round(((symbol_info["volume_min"] *
-                            symbol_info["trade_contract_size"])/leverage_) *
-                            price["bid"], 2)
-            account = info_._asdict()
-            max_pos_margin2 = round(account["balance"] * (max_pos_margin2/100) /
-                                (self.avg_vol * 100))
-            divider_condition = 1 if self.too_much_risk() == 1 else 2
-            if "JP" not in self.symbol:
-                volume = round((max_pos_margin2 / (margin_min*divider_condition))) *\
-                                symbol_info["volume_min"]
-                printer('Volume from value:', round((max_pos_margin2 / margin_min), 2))
-            else:
-                volume = round((max_pos_margin2 * 100 / (margin_min*divider_condition))) *\
-                                symbol_info["volume_min"]
-                printer('Volume from value:', round((max_pos_margin2 * 100 / margin_min), 2))
-            try:
-                another_volume_condition = rsi_condition(self.symbol, posType, 'D1', self.results_for_rsi_condition)
-                volume = volume*2 if another_volume_condition else volume
-                if another_volume_condition:
-                    print("Position is ok. Go with the flow.")
-            except Exception as e:
-                print("volume_condition - volume*2: ", e)
-                pass
-            if volume > symbol_info["volume_max"]:
-                volume = float(symbol_info["volume_max"])
-            self.volume = volume
+        leverage_ = info_.leverage
+        symbol_info = mt.symbol_info(self.symbol)._asdict()
+        price = mt.symbol_info_tick(self.symbol)._asdict()
+        margin_min = round(((symbol_info["volume_min"] *
+                        symbol_info["trade_contract_size"])/leverage_) *
+                        price["bid"], 2)
+        account = info_._asdict()
+        max_pos_margin2 = round(account["balance"] * (max_pos_margin2/100) /
+                            (self.avg_vol * 100))
+        divider_condition = 1 if self.too_much_risk() == 1 else 2
+        if "JP" not in self.symbol:
+            volume = round((max_pos_margin2 / (margin_min*divider_condition))) *\
+                            symbol_info["volume_min"]
+            printer('Volume from value:', round((max_pos_margin2 / margin_min), 2))
+        else:
+            volume = round((max_pos_margin2 * 100 / (margin_min*divider_condition))) *\
+                            symbol_info["volume_min"]
+            printer('Volume from value:', round((max_pos_margin2 * 100 / margin_min), 2))
+        try:
+            another_volume_condition = rsi_condition(self.symbol, posType, 'D1', self.results_for_rsi_condition)
+            volume = volume*2 if another_volume_condition else volume
+            if another_volume_condition:
+                print("Position is ok. Go with the flow.")
+        except Exception as e:
+            print("volume_condition - volume*2: ", e)
+            pass
+        if volume > symbol_info["volume_max"]:
+            volume = float(symbol_info["volume_max"])
+        self.volume = volume
         if min_volume or (volume < symbol_info["volume_min"]):
             self.volume = symbol_info["volume_min"]
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, kill_multiplier)
@@ -725,8 +726,29 @@ class Bot:
         slow = strategy[4]
         reverseornot = 'n' if strategy[15] != -1 else 'r'
 
+
+        alphabet = list(string.ascii_lowercase)
+        profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
+        if profit > 0 and efficiency > 50 and self.actual_mirror <= 0:
+            self.actual_mirror = 1
+        elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
+            self.actual_mirror = -1
+        elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
+            self.actual_mirror = 0
+        elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
+            self.actual_mirror += 1
+        elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
+            self.actual_mirror -= 1
+
+        if self.actual_mirror > 5:
+            self.actual_mirror = 5
+        
+        if self.actual_mirror < -5:
+            self.actual_mirror = -5
+
+        reverseornot = alphabet[self.actual_mirror]
         metric_numb = str(metric_numb_dict[self.bt_metric.__name__])
-        self.comment = f'{name_}{self.interval[-1:]}_{fast}_{slow}_{reverseornot}{metric_numb}{self.if_position_with_trend}'
+        self.comment = f'{name_}{self.interval[-1:][0]}_{fast}_{slow}_{reverseornot}{metric_numb}{self.if_position_with_trend}'
 
         # if self.reverse.condition:
         #     self.comment = '8'+self.comment[1:]
@@ -805,7 +827,7 @@ class Bot:
 
     @class_errors
     def duration(self):
-        intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
+        intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1', 'H2']
         duration_time = int(intervals[intervals.index(self.interval)+6][1:])
         duration = self.position_time_minutes()
         print(f"Duration: {duration}")
@@ -1017,11 +1039,11 @@ class Bot:
 
         if dt.now().hour >= change_hour or (not self.virgin_test):# all([i[6] == -2 for i in self.strategies]) :
             self.strategies = [i for i in self.strategies if i[5] > 0 and i[8] > 0 and i[13] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: i[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True) #x[8]*
+            sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True) #x[8]*
         else:
             self.strategies = [i for i in self.strategies if i[5] > 0 and i[8] > 0 and i[13] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: i[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
-        first_ = sorted(self.strategies, key=lambda x: i[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)[0][7]
+            sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
+        first_ = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)[0][7]
         printer("Daily starter", first_)
         self.actual_today_best = first_
         second_ = 'trend' if first_ == 'counter' else 'counter'
@@ -1188,7 +1210,8 @@ class Bot:
 
                         _, actual_condition, _, daily_return = self.calc_pos_condition(df1)
                         if self.montecarlo_for_all:
-                            monte_mini = Montecarlo(self.symbol, interval, strategy, self.bt_metric, int(self.number_of_bars_for_backtest), slow, fast, permutated_dataframes_mini, how_many=100, print_tqdm=False)
+                            monte_mini = Montecarlo(self.symbol, interval, strategy, self.bt_metric, int(self.number_of_bars_for_backtest),
+                                                    slow, fast, permutated_dataframes_mini, how_many=100, print_tqdm=False)
                             p_value = monte_mini.final_p_value(self.avg_vol)
                             if p_value > 0:
                                 #print(f"\nAdd result {fast} {slow} {result} {p_value}")

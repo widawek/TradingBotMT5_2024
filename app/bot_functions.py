@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import tqdm, trange
 from math import ceil
 import sys
+import pytz
 import json
 sys.path.append("..")
 import copy
@@ -929,3 +930,38 @@ def rsi_condition_backtest(symbol, intervals, leverage, bars):
 
     print(best_results_for_intervals)
     return best_results_for_intervals
+
+
+def get_today_closed_profit_for_symbol(symbol, excluded_comments=['mirror', 'nrsix']):
+    # Zakres czasu: od początku dnia do teraz
+    tz = pytz.UTC
+    today = dt.now(tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    now = dt.now(tz) + timedelta(days=1)
+    # Pobierz wszystkie deal'e z historii
+    deals = mt.history_deals_get(today, now)
+
+    if deals == ():
+        return 0, 50
+
+    dflist = []
+    for deal in deals:
+        if deal.symbol == symbol:
+            if any([i in deal.comment for i in excluded_comments]):
+                continue
+            dflist.append(deal._asdict())
+
+    df = pd.DataFrame(dflist)
+    counts = df['position_id'].value_counts()
+    # Krok 2: wybierz tylko te, które występują więcej niż raz
+    mask = df['position_id'].isin(counts[counts > 1].index)
+    # Krok 3: przefiltruj DataFrame
+    filtered_df = df[mask]
+    df = filtered_df.sort_values(by=['position_id', 'time'])
+    df = df[['time', 'type', 'entry', 'magic', 'position_id', 'volume', 'price', 'commission', 'swap', 'profit', 'symbol', 'comment']]
+    df = df[df['entry'] == 1]
+    if len(df) < 3:
+        return 0, 50
+    df['commission'] = df['commission']*2
+    df['profit_sum'] = df.profit + df.commission + df.swap
+    efficiency = (len(df[df['profit_sum']>0])/len(df))*100
+    return df.profit_sum.sum(), efficiency

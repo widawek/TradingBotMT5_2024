@@ -1,7 +1,9 @@
 import MetaTrader5 as mt
 from time import sleep
+import string
 mt.initialize()
 commment = 'mirror'
+alphabet = list(string.ascii_lowercase)
 
 actions = {
     # Place an order for an instant deal with the specified parameters (set a market order)
@@ -67,15 +69,30 @@ def mirror():
                 volume_ = i.volume
                 dig = mt.symbol_info(i.symbol).digits
 
-                mirror_type = int(0) if type_ == 1 else int(1)
+                letter = i.comment[-3]
+                if alphabet.index(letter) > len(alphabet)/2:
+                    multiplier = (len(alphabet)-alphabet.index(letter))
+                else:
+                    multiplier = alphabet.index(letter)
+
+                if letter == 'a':
+                    close_request_only([n for n in positions if ((n.symbol == i.symbol) and (n.comment == commment))][0])
+                elif alphabet.index(letter) > len(alphabet)/2:
+                    mirror_type = int(0) if type_ == 1 else int(1)
+                elif alphabet.index(letter) < len(alphabet)/2:
+                    mirror_type = type_
+
                 mirror_volume = round(multiplier*volume_, dig)
 
                 if any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == mirror_type)) for n in positions]): # mirror position is open
                     pass
-                elif any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == type_)) for n in positions]): # mirror position is open in the same direction
+                elif any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == 0 if mirror_type==1 else 1)) for n in positions]): # mirror position is open incorrectly
                     close_request_only([n for n in positions if ((n.symbol == i.symbol) and (n.comment == commment) and (n.type == type_))][0])
                 else:
-                    request(i.symbol, mirror_type, mirror_volume)
+                    if i.comment[-3] == 'a':
+                        pass
+                    else:
+                        request(i.symbol, mirror_type, mirror_volume)
 
             if i.comment == commment:
                 if any([(n.comment.count("_") == 3 and n.comment[-2] in numbers_ and i.symbol == n.symbol) for n in positions]):
