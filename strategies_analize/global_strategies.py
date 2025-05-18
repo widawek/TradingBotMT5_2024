@@ -346,3 +346,20 @@ def orsio_counter(df_raw, slow, fast, symbol):
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
+
+
+def kdind_counter(df_raw, slow, fast, symbol):
+    df = df_raw.copy()
+    stochxx = df.ta.stoch(k=slow, d=fast)
+    df['k'] = stochxx.iloc[:, 0]
+    df['d'] = stochxx.iloc[:, 1]
+    df['kd'] = 3*df['k'] - 2*df['d']
+    min_ = df['kd'].rolling(slow).min()
+    max_ = df['kd'].rolling(slow).max()
+    df['kd'] = ((df['kd'] - min_)/(max_ - min_))*100
+    df['kdx'] = -np.log(2/(1+0.00999*(2*df['kd']-100))-1)
+    df['stance'] = np.where((df['kd']<5)&(df['kdx']<-5), 1, np.NaN)
+    df['stance'] = np.where((df['kd']>95)&(df['kdx']>5), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
