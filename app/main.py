@@ -726,25 +726,40 @@ class Bot:
         slow = strategy[4]
         reverseornot = 'a'
 
+        max_mul = 5
+
         try:
+            # alphabet = list(string.ascii_lowercase)
+            # profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
+            # if profit > 0 and efficiency > 50 and self.actual_mirror <= 0:
+            #     self.actual_mirror = 1
+            # elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
+            #     self.actual_mirror = -1
+            # elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
+            #     self.actual_mirror = 0
+            # elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
+            #     self.actual_mirror += 1
+            # elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
+            #     self.actual_mirror -= 1
+
             alphabet = list(string.ascii_lowercase)
             profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
-            if profit > 0 and efficiency > 50 and self.actual_mirror <= 0:
-                self.actual_mirror = 1
+            if profit > 0 and efficiency > 50 and self.actual_mirror >= 0:
+                self.actual_mirror = -1
             elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
                 self.actual_mirror = -1
             elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
                 self.actual_mirror = 0
             elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
-                self.actual_mirror += 1
+                self.actual_mirror -= 1
             elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
                 self.actual_mirror -= 1
 
-            if self.actual_mirror > 5:
-                self.actual_mirror = 5
+            if self.actual_mirror > max_mul:
+                self.actual_mirror = max_mul
 
-            if self.actual_mirror < -5:
-                self.actual_mirror = -5
+            if self.actual_mirror < -max_mul:
+                self.actual_mirror = -max_mul
 
             reverseornot = alphabet[self.actual_mirror]
         except Exception as e:

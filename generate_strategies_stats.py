@@ -6,9 +6,9 @@ from strategies_analize.metrics import *
 
 strategies = [avs1s_trend, atr11_counter, rsidi_counter, dnert_counter, macdd_counter, eng2m_counter, hybri_trend,
               hhllx_counter, mo1to_trend, engulf_counter, rsitr_trend, zsnew_trend, madif_trend, corrc_trend, orsio_counter, kdind_counter]
-fast_intervals = ['M5', 'M6', 'M10']
+fast_intervals = ['M3', 'M5', 'M6', 'M10']
 slow_intervals = ['M15', 'M20']
-metrics = [only_strategy_metric, profit_factor_metric, real_profit_factor_metric, combo_metric]
+metrics = [combo_metric]
 
 #self, symbols: list, intervals: list, strategies: list,
 # metrics: list, days=10, max_fast: int=21, max_slow: int=62, bars: int=16000, excel=True
