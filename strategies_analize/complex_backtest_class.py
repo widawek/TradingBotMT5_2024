@@ -318,7 +318,7 @@ class Backtest_complex:
         to_json = [(row.symbol, row.strategy, row.interval, row.metric, row.mon, row.tue, row.wed, row.thu, row.fri) for row in df.itertuples()]
 
         # Zapis do pliku JSON
-        name_ = 'fast' if 'M1' in self.intervals else 'slow' if 'M20' in self.intervals else 'dontknow'
+        name_ = 'fast' if 'M5' in self.intervals else 'slow' if 'M20' in self.intervals else 'dontknow'
 
         if name_ == 'fast':
             df.to_excel('fast.xlsx')

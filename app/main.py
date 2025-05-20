@@ -33,7 +33,7 @@ time_diff = get_timezone_difference()
 
 
 class Bot:
-    montecarlo_for_all = True
+    montecarlo_for_all = False
     print('montecarlo_for_all', montecarlo_for_all)
     target_class = Target()
     weekday = dt.now().weekday()
@@ -729,31 +729,31 @@ class Bot:
         max_mul = 5
 
         try:
-            # alphabet = list(string.ascii_lowercase)
-            # profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
-            # if profit > 0 and efficiency > 50 and self.actual_mirror <= 0:
-            #     self.actual_mirror = 1
-            # elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
-            #     self.actual_mirror = -1
-            # elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
-            #     self.actual_mirror = 0
-            # elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
-            #     self.actual_mirror += 1
-            # elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
-            #     self.actual_mirror -= 1
-
             alphabet = list(string.ascii_lowercase)
             profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
-            if profit > 0 and efficiency > 50 and self.actual_mirror >= 0:
-                self.actual_mirror = -1
+            if profit > 0 and efficiency > 50 and self.actual_mirror <= 0:
+                self.actual_mirror = 1
             elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
                 self.actual_mirror = -1
             elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
                 self.actual_mirror = 0
             elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
-                self.actual_mirror -= 1
+                self.actual_mirror += 1
             elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
                 self.actual_mirror -= 1
+
+            # alphabet = list(string.ascii_lowercase)
+            # profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
+            # if profit > 0 and efficiency > 50 and self.actual_mirror >= 0:
+            #     self.actual_mirror = -1
+            # elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
+            #     self.actual_mirror = -1
+            # elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
+            #     self.actual_mirror = 0
+            # elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
+            #     self.actual_mirror -= 1
+            # elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
+            #     self.actual_mirror -= 1
 
             if self.actual_mirror > max_mul:
                 self.actual_mirror = max_mul
