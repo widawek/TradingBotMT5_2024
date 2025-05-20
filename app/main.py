@@ -726,7 +726,7 @@ class Bot:
         slow = strategy[4]
         reverseornot = 'a'
 
-        max_mul = 5
+        max_mul = 3
 
         try:
             alphabet = list(string.ascii_lowercase)
