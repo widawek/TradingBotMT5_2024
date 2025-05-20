@@ -32,3 +32,9 @@ Note: Some parameters are embedded directly in the function definitions.
 ## Contribution
 
 You're welcome to test the project and give feedback. Thank you!
+
+## Disclaimer
+
+This is an amateur, alpha-stage project created for educational and testing purposes only.  
+It does **not** guarantee any positive results when used on a real trading account.  
+The code and its behavior still require improvements (refactoring, performance, structure) and thorough analysis before any real-world usage.
