@@ -1,6 +1,6 @@
 # Python Algo Trading Project
 
-This is a personal algo trading project for MetaTrader5 written in Python.
+This is a personal algo trading project for MetaTrader5 (Windows) written in Python.
 
 ## How to Run
 
