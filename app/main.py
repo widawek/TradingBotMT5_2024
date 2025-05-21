@@ -30,6 +30,7 @@ parent_catalog = os.path.dirname(catalog)
 catalog = f'{parent_catalog}\\models'
 processor = TradingProcessor()
 time_diff = get_timezone_difference()
+alphabet = list(string.ascii_lowercase)
 
 
 class Bot:
@@ -726,34 +727,33 @@ class Bot:
         slow = strategy[4]
         reverseornot = 'a'
 
-        max_mul = 3
+        max_mul = 4
 
         try:
-            alphabet = list(string.ascii_lowercase)
-            profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
-            if profit > 0 and efficiency > 50 and self.actual_mirror <= 0:
-                self.actual_mirror = 1
-            elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
-                self.actual_mirror = -1
-            elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
-                self.actual_mirror = 0
-            elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
-                self.actual_mirror += 1
-            elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
-                self.actual_mirror -= 1
-
-            # alphabet = list(string.ascii_lowercase)
             # profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
-            # if profit > 0 and efficiency > 50 and self.actual_mirror >= 0:
-            #     self.actual_mirror = -1
+            # if profit > 0 and efficiency > 50 and self.actual_mirror <= 0:
+            #     self.actual_mirror = 1
             # elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
             #     self.actual_mirror = -1
             # elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
             #     self.actual_mirror = 0
             # elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
-            #     self.actual_mirror -= 1
+            #     self.actual_mirror += 1
             # elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
             #     self.actual_mirror -= 1
+
+
+            profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
+            if profit > 0 and efficiency > 50 and self.actual_mirror >= 0:
+                self.actual_mirror = -1
+            elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
+                self.actual_mirror = 1
+            elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
+                self.actual_mirror = 0
+            elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
+                self.actual_mirror -= 1
+            elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
+                self.actual_mirror += 1
 
             if self.actual_mirror > max_mul:
                 self.actual_mirror = max_mul

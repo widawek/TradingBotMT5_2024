@@ -85,7 +85,7 @@ def mirror():
                 elif alphabet.index(letter) < len(alphabet)/2:
                     mirror_type = type_
 
-                mirror_volume = round(multiplier*2*volume_, dig)
+                mirror_volume = round(multiplier*volume_, dig)
 
                 if letter != 'a':
                     if any([((n.symbol == i.symbol) and (n.comment == commment) and (n.type == mirror_type)) for n in positions]): # mirror position is open
