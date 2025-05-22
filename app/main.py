@@ -1000,7 +1000,7 @@ class Bot:
     @class_errors
     def volume_reducer(self, pos_type, name_):
         try:
-            if_not_ok = 0.9
+            if_not_ok = 1
             if_ok = 1
             try:
                 data = self.volume_metrics_data(name_)
@@ -1269,6 +1269,13 @@ class Bot:
             new_sl = 0.0
 
             def sltprequest(new_tp, new_sl, pos_):
+
+                if new_tp == 0.0:
+                    new_tp = pos_.tp
+
+                if new_sl == 0.0:
+                    new_sl = pos_.sl
+
                 request = {
                         "action": mt.TRADE_ACTION_SLTP,
                         "symbol": self.symbol,
@@ -1317,10 +1324,27 @@ class Bot:
                         elif capacity_condition == 'profit':
                             new_sl = round((1+self.avg_vol/20)*pos_.price_open, digits_)
 
+            elif pos_.tp != 0.0:
+                try:
+                    if self.tp_time < dt.now() - timedelta(minutes=int(self.interval[1:])*2):
+                        if pos_.type == 0:
+                            new_tp = round((pos_.tp*7 + info.ask)/8, digits_)
+                            if new_tp > pos_.tp:
+                                new_tp = pos_.tp
+                        elif pos_.type == 1:
+                            new_tp = round((pos_.tp*7 + info.bid)/8, digits_)
+                            if new_tp < pos_.tp:
+                                new_tp = pos_.tp
+                except Exception as e:
+                    self.tp_time = dt.now()
+                    print(e)
+
             else:
                 pass
 
             if new_sl != 0.0 or new_tp != 0.0:
+                if pos_.tp != new_tp:
+                    self.tp_time = dt.now()
                 sltprequest(new_tp, new_sl, pos_)
 
         except Exception as e:

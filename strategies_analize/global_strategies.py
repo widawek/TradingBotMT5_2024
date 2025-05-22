@@ -3,6 +3,12 @@ import numpy as np
 import pandas_ta as ta
 import sys
 from scipy.stats import norm
+
+try:
+    from app.functions import get_data
+except Exception:
+    pass
+
 sys.path.append("..")
 
 
@@ -360,6 +366,27 @@ def kdind_counter(df_raw, slow, fast, symbol):
     df['kdx'] = -np.log(2/(1+0.00999*(2*df['kd']-100))-1)
     df['stance'] = np.where((df['kd']<5)&(df['kdx']<-5), 1, np.NaN)
     df['stance'] = np.where((df['kd']>95)&(df['kdx']>5), -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
+
+
+def mdvte_trend(df_raw, long, short, symbol):
+    df = df_raw.copy()
+    def mdv_(symbol):
+        """Returns mean daily volatility"""
+        df = get_data(symbol, 'D1', 1, 1500)
+        df['mean_vol'] = (df.high - df.low).rolling(30).mean()
+        df['mean_vol'] = df['mean_vol'].shift(1)
+        dfx = df[['time', 'mean_vol']]
+        return dfx
+
+    df = pd.merge_asof(df, mdv_(symbol), on='time' , suffixes=('', '_d'))
+    df['mean_vol'] = df['mean_vol']/short
+    df['std_high'] = df['high'] + df['high'].rolling(long).std()
+    df['std_low'] = df['low'] - df['low'].rolling(long).std()
+    df['stance'] = np.where(df['std_high']>df.close+df.mean_vol, -1, np.nan)
+    df['stance'] = np.where(df['std_low']<df.close-df.mean_vol, 1, df['stance'])
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
