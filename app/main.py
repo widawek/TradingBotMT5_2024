@@ -679,6 +679,8 @@ class Bot:
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
 
+        position = self.position_reverse(position)
+
         printer("Daily return", daily_return)
         printer("POZYCJA", "LONG" if position == 0 else "SHORT" if position != 0 else "None" + f"w trybie {mode__}")
         return position
@@ -1326,13 +1328,13 @@ class Bot:
 
             elif pos_.tp != 0.0:
                 try:
-                    if self.tp_time < dt.now() - timedelta(minutes=int(self.interval[1:])*2):
+                    if self.tp_time < dt.now() - timedelta(minutes=round(int(self.interval[1:])*1.66)):
                         if pos_.type == 0:
-                            new_tp = round((pos_.tp*7 + info.ask)/8, digits_)
+                            new_tp = round((pos_.tp*6 + info.ask)/7, digits_)
                             if new_tp > pos_.tp:
                                 new_tp = pos_.tp
                         elif pos_.type == 1:
-                            new_tp = round((pos_.tp*7 + info.bid)/8, digits_)
+                            new_tp = round((pos_.tp*6 + info.bid)/7, digits_)
                             if new_tp < pos_.tp:
                                 new_tp = pos_.tp
                 except Exception as e:
@@ -1361,6 +1363,28 @@ class Bot:
             pass
         else:
             self.strategies = self.sort_strategies()
+
+    @class_errors
+    def position_reverse(self, position):
+        try:
+            df = pd.read_excel(f'{parent_catalog}\\correlation.xlsx')
+        except Exception as e:
+            print(e)
+            try:
+                df = pd.read_excel(f'{parent_catalog}\\correlation2.xlsx')
+            except Exception as e:
+                print(e)
+                pass
+            pass
+        try:
+            if (df['correlation_expanding'].iloc[-1] < df['correlation'].iloc[-1]) and df['correlation'].iloc[-1] > 0.01:
+                return 0 if position == 1 else 1
+            else:
+                return position
+        except Exception as e:
+            print(e)
+            return position
+
 
 if __name__ == '__main__':
     print('Yo, wtf?')

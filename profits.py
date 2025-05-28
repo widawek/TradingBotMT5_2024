@@ -12,7 +12,7 @@ mt.initialize()
 
 def correlations(symbols):
     symbols = [symbol for symbol in symbols if 'USD' in symbol]
-    
+
     def returns_symbol(symbol):
         df = get_data(symbol, 'M1', 1, 500)
         df['returns'] = np.log(df.close/df.close.shift())
@@ -22,7 +22,7 @@ def correlations(symbols):
     retrns = {}
     for symbol in symbols:
         retrns[symbol] = returns_symbol(symbol)
-        
+
     df = pd.DataFrame(retrns)
     corr_matrix = df.corr()
     det_corr = np.linalg.det(corr_matrix)
@@ -39,7 +39,7 @@ def closed_pos():
     if zamkniete_transakcje is None or len(zamkniete_transakcje) == 0:
         return 0
     else:
-        suma_zyskow = sum(deal.profit for deal in zamkniete_transakcje)
+        suma_zyskow = sum(deal.profit+deal.commission for deal in zamkniete_transakcje)
         print(f"Suma zysków z zamkniętych pozycji dzisiaj: {suma_zyskow:.2f} USD")
         return suma_zyskow
 
@@ -70,6 +70,7 @@ def profit_chart():
                     'percent', 'mrgintobalance', 'correlation'])
                 #df.to_excel('test.xlsx')
                 df['correlation'] = df['correlation'].rolling(40).mean()
+                df['correlation_expanding'] = df['correlation'].expanding().mean()
                 df['zero'] = 0
                 df.set_index('time', inplace=True)
                 fig = plt.figure(figsize=(12, 8))
@@ -79,8 +80,19 @@ def profit_chart():
                 ax2 = plt.subplot(312, sharex=ax1)
                 plt.plot(df.mrgintobalance, c='r', label="Margin to balance")
                 ax3 = plt.subplot(313, sharex=ax1)
-                plt.plot(df.correlation, c='y', label="Symbols correlation to USD")
+                plt.plot(df.correlation, c='g', label="Symbols correlation to USD")
+                plt.plot(df.correlation_expanding, c='r', label="Symbols correlation to USD")
                 date = dt.now().date().strftime('%d-%m-%Y')
+                try:
+                    df.to_excel('correlation.xlsx')
+                except Exception as e:
+                    print(e)
+                    try:
+                        df.to_excel('correlation2.xlsx')
+                    except Exception as e:
+                        print(e)
+                        pass
+                    pass
                 plt.savefig(f'charts\\rezultat_{date}.png', dpi=300, bbox_inches='tight')
                 _ = plt.close()
 
