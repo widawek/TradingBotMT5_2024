@@ -1339,10 +1339,32 @@ class Bot:
                                 new_tp = pos_.tp
                 except Exception as e:
                     self.tp_time = dt.now()
-                    print(e)
+                    print("CHANGE TP", e)
 
             else:
                 pass
+
+            if pos_.sl != 0.0:
+                try:
+                    if pos_.type == 0:
+                        if pos_.sl < pos_.price_open and info.ask > pos_.price_open:
+                            if pos_.profit > tp_profit/8:
+                                new_sl = round((pos_.price_open*6 + info.ask)/7, digits_)
+                        elif pos_.sl > pos_.price_open:
+                            new_slx = round((pos_.price_open*6 + info.ask)/7, digits_)
+                            if new_slx > pos_.sl:
+                                new_sl == new_slx
+
+                    elif pos_.type == 1:
+                        if pos_.sl > pos_.price_open and info.ask < pos_.price_open:
+                            if pos_.profit > tp_profit/8:
+                                new_sl = round((pos_.price_open*6 + info.bid)/7, digits_)
+                        elif pos_.sl < pos_.price_open:
+                            new_slx = round((pos_.price_open*6 + info.bid)/7, digits_)
+                            if new_slx < pos_.sl:
+                                new_sl == new_slx
+                except Exception as e:
+                    print("CHANGE SL", e)
 
             if new_sl != 0.0 or new_tp != 0.0:
                 if pos_.tp != new_tp:
