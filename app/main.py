@@ -602,39 +602,20 @@ class Bot:
             self.actual_force = True if self.actual_force == 1 else False
 
             kind = strategy[15]
-            # if kind == -1:# and self.backtest_time.hour < 12:
-            #     print("Position is reverse by backtest weekday results.")
-            #     stance = int(stance*kind)
-
             position = int(0) if stance == 1 else int(1)
-
-            # if self.reverse.reverse_or_not():
-            #     mode__ = "REVERSE"
-            #     print("REVERSE MODE")
-            #     position = int(0) if position == 1 else int(1)
-            # else:
-            #     mode__ = "NORMAL"
-            #     print("NORMAL MODE")
-
-            mode__ = "REVERSE"
-
-            # everyt hing reverse test
-            # position = int(0) if stance == -1 else int(1)
+            mode__ = "NORMAL"
 
             dfx['cross'] = np.where(dfx['stance'] != dfx['stance'].shift(), 1, 0)
             self.fresh_signal = True if dfx['stance'].iloc[-1] != dfx['stance'].iloc[-2] else False
             cross = dfx[dfx['cross'] == 1]
             self.strategy_pos_open_price = cross['close'].iloc[-1]
             printer("Last open position time by MetaTrader", f"{cross['time'].iloc[-1]}", base_just=60)
-            # if dt.now().hour > 12:
-            #     if cross['time'].dt.date.iloc[-1] != dfx['time'].dt.date.iloc[-1]:
-            #         self.strategy_number += 1
-            #         print("Next strategy because the position is from last working day.")
-            #         return self.actual_position_democracy()
 
             positions_ = mt.positions_get(symbol=self.symbol)
             positions_ = [i for i in positions_ if i.magic == self.magic]
-            #kind = strategy[0].split('_')[1]
+
+            position = self.position_reverse(position)
+
             if len(positions_) == 0:
                 minute_ = 0
                 minutes = 0
@@ -678,8 +659,6 @@ class Bot:
                 print(e)
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
-
-        position = self.position_reverse(position)
 
         printer("Daily return", daily_return)
         printer("POZYCJA", "LONG" if position == 0 else "SHORT" if position != 0 else "None" + f"w trybie {mode__}")
