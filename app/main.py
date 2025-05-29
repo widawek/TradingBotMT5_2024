@@ -1350,6 +1350,9 @@ class Bot:
                         if pos_.sl < pos_.price_open and info.ask > pos_.price_open:
                             if pos_.profit > tp_profit/8:
                                 new_sl = round((pos_.price_open*6 + info.ask)/7, digits_)
+                                if pos_.tp != 0.0:
+                                    new_tp = round(pos_.tp + abs(pos_.tp-info.ask)/2, digits_)
+
                         elif pos_.sl > pos_.price_open:
                             new_slx = round((pos_.price_open*6 + info.ask)/7, digits_)
                             if new_slx > pos_.sl:
@@ -1359,6 +1362,9 @@ class Bot:
                         if pos_.sl > pos_.price_open and info.ask < pos_.price_open:
                             if pos_.profit > tp_profit/8:
                                 new_sl = round((pos_.price_open*6 + info.bid)/7, digits_)
+                                if pos_.tp != 0.0:
+                                    new_tp = round(pos_.tp - abs(pos_.tp-info.bid)/2, digits_)
+
                         elif pos_.sl < pos_.price_open:
                             new_slx = round((pos_.price_open*6 + info.bid)/7, digits_)
                             if new_slx < pos_.sl:
