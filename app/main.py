@@ -233,7 +233,7 @@ class Bot:
 
                 kind_ = self.strategies[self.strategy_number][7]
                 sl = self.sl_money #min([self.profit_needed, ])
-                tp = sl #min([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
+                tp = max([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
                 self.self_decline_factor(tp)
                 # if kind_ == 'counter':
                 #     sl = round(sl/1.1, 2)
@@ -711,30 +711,30 @@ class Bot:
         max_mul = 4
 
         try:
-            # profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
-            # if profit > 0 and efficiency > 50 and self.actual_mirror <= 0:
-            #     self.actual_mirror = 1
-            # elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
-            #     self.actual_mirror = -1
-            # elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
-            #     self.actual_mirror = 0
-            # elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
-            #     self.actual_mirror += 1
-            # elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
-            #     self.actual_mirror -= 1
-
-
             profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
-            if profit > 0 and efficiency > 50 and self.actual_mirror >= 0:
-                self.actual_mirror = -1
-            elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
+            if profit > 0 and efficiency > 50 and self.actual_mirror <= 0:
                 self.actual_mirror = 1
+            elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
+                self.actual_mirror = -1
             elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
                 self.actual_mirror = 0
             elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
-                self.actual_mirror -= 1
-            elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
                 self.actual_mirror += 1
+            elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
+                self.actual_mirror -= 1
+
+
+            # profit, efficiency = get_today_closed_profit_for_symbol(self.symbol)
+            # if profit > 0 and efficiency > 50 and self.actual_mirror >= 0:
+            #     self.actual_mirror = -1
+            # elif profit < 0 and efficiency < 50 and self.actual_mirror >= 0:
+            #     self.actual_mirror = 1
+            # elif (profit < 0 and efficiency > 50) or (profit > 0 and efficiency < 50):
+            #     self.actual_mirror = 0
+            # elif profit > 0 and efficiency > 50 and self.actual_mirror > 0:
+            #     self.actual_mirror -= 1
+            # elif profit < 0 and efficiency < 50 and self.actual_mirror < 0:
+            #     self.actual_mirror += 1
 
             if self.actual_mirror > max_mul:
                 self.actual_mirror = max_mul
@@ -1307,7 +1307,7 @@ class Bot:
 
             elif pos_.tp != 0.0:
                 try:
-                    if self.tp_time < dt.now() - timedelta(minutes=round(int(self.interval[1:])*1.66)):
+                    if self.tp_time < dt.now() - timedelta(minutes=round(int(self.interval[1:]))):
                         if pos_.type == 0:
                             new_tp = round((pos_.tp*6 + info.ask)/7, digits_)
                             if new_tp > pos_.tp:
