@@ -1270,10 +1270,14 @@ class Bot:
 
             if rsi_condition_for_tpsl(self.symbol, type_to_rsi, self.interval):
                 if pos_.tp == 0.0:
-
                     if pos_.type == 0:
                         if pos_.profit > tp_profit/10:
-                            new_tp = round(((1+self.avg_vol/5)*info.ask), digits_)
+                            if pos_.sl != 0.0 and pos_.sl > pos_.price_open:
+                                tp_divider = 3
+                            else:
+                                tp_divider = 5
+
+                            new_tp = round(((1+self.avg_vol/tp_divider)*info.ask), digits_)
                             new_sl = round((pos_.price_open*2 + info.ask)/3, digits_)
                         else:
                             new_tp = round(((1+self.avg_vol/8)*info.ask), digits_)
@@ -1281,7 +1285,12 @@ class Bot:
 
                     elif pos_.type == 1:
                         if pos_.profit > tp_profit/10:
-                            new_tp = round(((1-self.avg_vol/5)*info.bid), digits_)
+                            if pos_.sl != 0.0 and pos_.sl < pos_.price_open:
+                                tp_divider = 3
+                            else:
+                                tp_divider = 5
+
+                            new_tp = round(((1-self.avg_vol/tp_divider)*info.bid), digits_)
                             new_sl = round((pos_.price_open*2 + info.bid)/3, digits_)
                         else:
                             new_tp = round(((1-self.avg_vol/8)*info.bid), digits_)
@@ -1348,6 +1357,7 @@ class Bot:
                             new_slx = round((pos_.price_open*6 + info.bid)/7, digits_)
                             if new_slx < pos_.sl:
                                 new_sl == new_slx
+
                 except Exception as e:
                     print("CHANGE SL", e)
 
