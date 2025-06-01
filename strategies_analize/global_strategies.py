@@ -390,3 +390,17 @@ def mdvte_trend(df_raw, long, short, symbol):
     df['stance'] = df['stance'].ffill()
     position = df['stance'].iloc[-1]
     return df, position
+
+
+def avols_trend(df_raw, slow, fast, symbol):
+    df = df_raw.copy()
+    mean = df['volume'] .rolling(fast).mean()
+    std = df['volume'] .rolling(fast).std()
+    df['vmeanstd'] = mean + std
+    df['volume_price'] = np.where(df['volume']>2*df['vmeanstd'], (df['close']-df['open'])*df['volume'], 0)
+    df['volume_price_sum'] = df['volume_price'].rolling(slow).sum()
+    df['stance'] = np.where(df['volume_price_sum']>0, 1, np.NaN)
+    df['stance'] = np.where(df['volume_price_sum']<0, -1, df['stance'])
+    df['stance'] = df['stance'].ffill()
+    position = df['stance'].iloc[-1]
+    return df, position
