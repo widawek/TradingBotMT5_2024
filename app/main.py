@@ -1225,7 +1225,7 @@ class Bot:
                     print("\ntrend_backtest", e)
                     continue
 
-        if len(results) < 4:
+        if len(results) < 2:
             return None
 
         try:
