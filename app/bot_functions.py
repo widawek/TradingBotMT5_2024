@@ -883,9 +883,12 @@ def strategy_rsi(df, factor, leverage, backtest=False):
 def rsi_condition(symbol, position, interval, results, kind):
     intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
     interval_for_data = "D1" if interval=="D1" else intervals[intervals.index(interval)+3]
-    factor = int([i for i in results if i[0]==interval_for_data][0][1])
-    df = get_data(symbol, interval_for_data, 1, 600)
-    position_ = strategy_rsi(df, factor, 1, backtest=False)
+    try:
+        factor = int([i for i in results if i[0]==interval_for_data][0][1])
+        df = get_data(symbol, interval_for_data, 1, 600)
+        position_ = strategy_rsi(df, factor, 1, backtest=False)
+    except IndexError:
+        return True
     # if kind == -1:
     #     if (position_ == -1 and position == 0) or (position_ == 1 and position == 1):  # trend - buy best price (counter)   # test
     #     #if (rsi >= 50 and rsi < 90 and position == 0) or (rsi <= 50 and rsi > 10 and position == 1):  # trend - buy with trend
