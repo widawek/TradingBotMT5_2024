@@ -233,7 +233,7 @@ class Bot:
 
                 kind_ = self.strategies[self.strategy_number][7]
                 sl = self.sl_money #min([self.profit_needed, ])
-                tp = max([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
+                tp = sl #min([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
                 self.self_decline_factor(tp)
                 # if kind_ == 'counter':
                 #     sl = round(sl/1.1, 2)
@@ -614,8 +614,6 @@ class Bot:
             positions_ = mt.positions_get(symbol=self.symbol)
             positions_ = [i for i in positions_ if i.magic == self.magic]
 
-            position = self.position_reverse(position)
-
             if len(positions_) == 0:
                 minute_ = 0
                 minutes = 0
@@ -659,6 +657,8 @@ class Bot:
                 print(e)
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
+
+        position = self.position_reverse(position)
 
         printer("Daily return", daily_return)
         printer("POZYCJA", "LONG" if position == 0 else "SHORT" if position != 0 else "None" + f"w trybie {mode__}")
@@ -814,9 +814,9 @@ class Bot:
             print("Position capacity:  ", round(capacity, 5))
             print("Position efficiency:", round(efficiency, 3))
             print("Position efficiency_sum:", round(efficiency_sum, 5))
-            if capacity < 0 and efficiency < 0.1 and efficiency_sum < -5 and self.duration():
+            if capacity < 0 and efficiency < 0.1 and efficiency_sum < -10 and self.duration():
                 return 'super loss'
-            if capacity < 0 and efficiency < 0.33 and efficiency_sum < -2 and self.duration():
+            if capacity < 0 and efficiency < 0.33 and efficiency_sum < -4 and self.duration():
                 return 'loss'
             elif capacity > 0 and efficiency > 0.75 and efficiency_sum > 2 and self.duration():
                 return 'profit'
@@ -1240,6 +1240,9 @@ class Bot:
 
     @class_errors
     def change_tp_sl(self, tp_profit, capacity_condition=False):
+
+        strategy = self.strategies[self.strategy_number]
+
         try:
             info = mt.symbol_info(self.symbol)
             digits_ = info.digits
@@ -1304,15 +1307,19 @@ class Bot:
 
                     if pos_.type == 0:
                         if capacity_condition == 'loss':
-                            new_sl = round((1-self.avg_vol/10)*info.ask, digits_)
+                            #new_sl = round((1-self.avg_vol/10)*info.ask, digits_) # strategy[11]
+                            new_sl = round((1-strategy[11]/4)*info.ask, digits_)
                         elif capacity_condition == 'profit':
-                            new_sl = round((1-self.avg_vol/20)*pos_.price_open, digits_)
+                            #new_sl = round((1-self.avg_vol/20)*pos_.price_open, digits_)
+                            new_sl = round((1-strategy[11]/3)*pos_.price_open, digits_)
 
                     elif pos_.type == 1:
                         if capacity_condition == 'loss':
-                            new_sl = round((1+self.avg_vol/10)*info.bid, digits_)
+                            #new_sl = round((1+self.avg_vol/10)*info.bid, digits_)
+                            new_sl = round((1+strategy[11]/4)*info.bid, digits_)
                         elif capacity_condition == 'profit':
-                            new_sl = round((1+self.avg_vol/20)*pos_.price_open, digits_)
+                            #new_sl = round((1+self.avg_vol/20)*pos_.price_open, digits_)
+                            new_sl = round((1+strategy[11]/3)*pos_.price_open, digits_)
 
             elif pos_.tp != 0.0:
                 try:

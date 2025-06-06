@@ -14,7 +14,7 @@ from scipy.stats import linregress
 import random
 from itertools import combinations, product
 from math import comb
-from config.parameters import symbols, slow_range, fast_range
+from config.parameters import symbols, slow_range, fast_range, leverage
 mt.initialize()
 # Ignoruj wszystkie ostrzeżenia
 warnings.filterwarnings('ignore')
@@ -28,7 +28,6 @@ def calc_result_modified(dfx):
 
 
 def returns_bt(df):
-    leverage=6
     z = [len(str(x).split(".")[1])+1 for x in list(df["close"][-101:])]
     divider = 10**round((sum(z)/len(z))-1)
     spread_mean = df.spread/divider
@@ -36,7 +35,7 @@ def returns_bt(df):
     df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
                                     ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
     df['mkt_move'] = np.log(df.close/df.close.shift(1))
-    df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open))*leverage
+    df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *3*(spread_mean)/df.open))*leverage
     df['return'] = np.where(df['time'].dt.date != df['time'].dt.date.shift(), 0, df['return'])
     return df
 
@@ -88,7 +87,6 @@ def columns_combination(all_cols, min_numb_of_symbols, max_results=50000):
 
 
 def returns_(df, symbol):
-    leverage=6
     z = [len(str(x).split(".")[1])+1 for x in list(df["close"][-101:])]
     divider = 10**round((sum(z)/len(z))-1)
     spread_mean = df.spread/divider
@@ -96,7 +94,7 @@ def returns_(df, symbol):
     df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
                                     ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
     df['mkt_move'] = np.log(df.close/df.close.shift(1))
-    df[f'return_{symbol}'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open))*leverage
+    df[f'return_{symbol}'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *3*(spread_mean)/df.open))*leverage
     df[f'return_{symbol}'] = np.where(df['time'].dt.date != df['time'].dt.date.shift(), 0, df[f'return_{symbol}'])
     df = df.rename(columns={'close':f'close_{symbol}'})
     return df[['time', f'return_{symbol}']]#, 'cross', 'stance', 'open', 'close']]

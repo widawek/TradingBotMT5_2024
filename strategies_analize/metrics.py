@@ -7,10 +7,10 @@ from scipy.stats import linregress
 sys.path.append("..")
 
 
-def exponential_penalty(dfx, alpha: int = 10) -> float:
+def exponential_penalty(dfx, alpha: int = 5) -> float:
     cross = np.where(dfx.stance != dfx.stance.shift(), 1, 0)
     density = cross.sum()/len(dfx)
-    threshold = 0.055  # Próg akceptowalnej gęstości
+    threshold = 0.06  # Próg akceptowalnej gęstości
     return math.exp(-alpha * max(0, density - threshold))
 
 
@@ -175,19 +175,19 @@ def real_profit_factor_metric(dfx, penalty=True):
     df['result'] = (df['close'].shift(-1) - df['close'])*df['stance'] # wrong data for purpose should use close instead of open
 
     df['metric_profit'] = np.where(df['result']>0, 1, 0)
-    najdluzsza_sekwencja_zyskow = max(
-        (sum(1 for _ in group) for key, group in
-         groupby(df['metric_profit'].tolist()) if key == 1), default=0)
+    # najdluzsza_sekwencja_zyskow = max(
+    #     (sum(1 for _ in group) for key, group in
+    #      groupby(df['metric_profit'].tolist()) if key == 1), default=0)
 
     df['metric_loss'] = np.where(df['result']<0, 1, 0)
-    najdluzsza_sekwencja_strat = max(
-        (sum(1 for _ in group) for key, group in
-         groupby(df['metric_loss'].tolist()) if key == 1), default=0)
+    # najdluzsza_sekwencja_strat = max(
+    #     (sum(1 for _ in group) for key, group in
+    #      groupby(df['metric_loss'].tolist()) if key == 1), default=0)
 
-    try:
-        sequence_meter = round(najdluzsza_sekwencja_zyskow/najdluzsza_sekwencja_strat, 3)
-    except Exception:
-        sequence_meter = 1
+    # try:
+    #     sequence_meter = round(najdluzsza_sekwencja_zyskow/najdluzsza_sekwencja_strat, 3)
+    # except Exception:
+    #     sequence_meter = 1
 
     df = df.dropna()
 

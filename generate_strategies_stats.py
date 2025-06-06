@@ -6,7 +6,7 @@ from strategies_analize.metrics import *
 
 strategies = [mdvte_trend, avs1s_trend, atr11_counter, rsidi_counter, dnert_counter, macdd_counter,
               eng2m_counter, hybri_trend, hhllx_counter, mo1to_trend, engulf_counter, rsitr_trend,
-              zsnew_trend, madif_trend, corrc_trend, orsio_counter, kdind_counter, avols_trend]
+              zsnew_trend, madif_trend, corrc_trend, orsio_counter, kdind_counter]#, avols_trend]
 fast_intervals = ['M4', 'M5', 'M6']
 slow_intervals = ['M15', 'M20']
 metrics = [only_strategy_metric, profit_factor_metric, real_profit_factor_metric]

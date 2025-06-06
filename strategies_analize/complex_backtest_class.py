@@ -41,7 +41,7 @@ def returns_bt(df):
     df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
                                     ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
     df['mkt_move'] = np.log(df.close/df.close.shift(1))
-    df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open))*leverage
+    df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *3*(spread_mean)/df.open))*leverage
     df['return'] = np.where(df['time'].dt.date != df['time'].dt.date.shift(), 0, df['return'])
     return df
 
@@ -60,7 +60,7 @@ def returns_bt_full_anal(df_raw, interval):
     df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
                                     ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
     df['mkt_move'] = np.log(df.close/df.close.shift(1))
-    df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open))*leverage
+    df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *3*(spread_mean)/df.open))*leverage
     # if interval not in ['M10', 'M12', 'M15', 'M20', 'M30']:
     #     start_index = df[(df['hour'] >= 6) & (df['cross'] == 1)].index.min()
     #     df = df.loc[start_index:]

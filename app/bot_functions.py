@@ -262,7 +262,7 @@ def calculate_strategy_returns(df, leverage):
     df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
                             ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
     df['mkt_move'] = np.log(df.close/df.close.shift(1))*leverage
-    df['return'] = df.mkt_move * df.stance.shift(1) - (df["cross"] *(spread_mean)/df.open)*leverage
+    df['return'] = df.mkt_move * df.stance.shift(1) - (df["cross"] *3*(spread_mean)/df.open)*leverage
     density = df['cross'].sum()/len(df)
     #df['strategy'] = (1+df['return']).cumprod() - 1
     return df, density
@@ -962,7 +962,7 @@ def get_today_closed_profit_for_symbol(symbol, excluded_comments=['mirror', 'nrs
     df = filtered_df.sort_values(by=['position_id', 'time'])
     df = df[['time', 'type', 'entry', 'magic', 'position_id', 'volume', 'price', 'commission', 'swap', 'profit', 'symbol', 'comment']]
     df = df[df['entry'] == 1]
-    if len(df) < 3:
+    if len(df) < 7:
         return 0, 50
     df['commission'] = df['commission']*2
     df['profit_sum'] = df.profit + df.commission + df.swap
