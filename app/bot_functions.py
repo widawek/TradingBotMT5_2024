@@ -263,6 +263,7 @@ def calculate_strategy_returns(df, leverage):
                             ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
     df['mkt_move'] = np.log(df.close/df.close.shift(1))*leverage
     df['return'] = df.mkt_move * df.stance.shift(1) - (df["cross"] *3*(spread_mean)/df.open)*leverage
+    df['return'] = np.where(df['time'].dt.date != df['time'].dt.date.shift(), 0, df['return'])
     density = df['cross'].sum()/len(df)
     #df['strategy'] = (1+df['return']).cumprod() - 1
     return df, density

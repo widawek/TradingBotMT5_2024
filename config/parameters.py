@@ -21,14 +21,17 @@ symbols:                                list = [
                                             'EURJPY',
                                             'EURUSD',
                                             'GBPUSD',
-                                            'USDCAD',
+                                            #'USDCAD',
                                             'USDCHF',
                                             'USDJPY',
                                             'US30',
                                             'AUDUSD',
                                             'CADJPY',
-                                            'AUDJPY',
-                                            'XTIUSD',
+                                            "AMD",
+                                            "INTC",
+                                            "DE40"
+                                            #'AUDJPY',
+                                            #'XTIUSD',
                                             ]
 
 
