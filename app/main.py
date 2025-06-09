@@ -513,14 +513,15 @@ class Bot:
             volume = round((max_pos_margin2 * 100 / (margin_min*divider_condition))) *\
                             symbol_info["volume_min"]
             printer('Volume from value:', round((max_pos_margin2 * 100 / margin_min), 2))
-        try:
-            another_volume_condition = rsi_condition(self.symbol, posType, 'D1', self.results_for_rsi_condition)
-            volume = volume*2 if another_volume_condition else volume
-            if another_volume_condition:
-                print("Position is ok. Go with the flow.")
-        except Exception as e:
-            print("volume_condition - volume*2: ", e)
-            pass
+
+        # try:
+        #     another_volume_condition = rsi_condition(self.symbol, posType, 'D1', self.results_for_rsi_condition)
+        #     volume = volume*2 if another_volume_condition else volume
+        #     if another_volume_condition:
+        #         print("Position is ok. Go with the flow.")
+        # except Exception as e:
+        #     print("volume_condition - volume*2: ", e)
+
         if volume > symbol_info["volume_max"]:
             volume = float(symbol_info["volume_max"])
         self.volume = volume

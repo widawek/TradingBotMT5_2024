@@ -76,3 +76,4 @@ respect_overnight: bool                 = True
 hardcore_hours: list                    = [] if dt.now().weekday() in [5, 6] else scraper.give_me_hardcore_hours()
 fast_range: int                         = 21
 slow_range: int                         = 63
+spread_multiplier: int                  = 4

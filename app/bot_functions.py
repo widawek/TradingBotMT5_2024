@@ -13,6 +13,7 @@ import json
 sys.path.append("..")
 import copy
 from app.functions import get_data
+from config.parameters import spread_multiplier
 from strategies_analize.metrics import *
 from scipy.stats import linregress
 #from app.mg_functions import omega_ratio
@@ -262,7 +263,7 @@ def calculate_strategy_returns(df, leverage):
     df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
                             ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
     df['mkt_move'] = np.log(df.close/df.close.shift(1))*leverage
-    df['return'] = df.mkt_move * df.stance.shift(1) - (df["cross"] *3*(spread_mean)/df.open)*leverage
+    df['return'] = df.mkt_move * df.stance.shift(1) - (df["cross"] *spread_multiplier*(spread_mean)/df.open)*leverage
     df['return'] = np.where(df['time'].dt.date != df['time'].dt.date.shift(), 0, df['return'])
     density = df['cross'].sum()/len(df)
     #df['strategy'] = (1+df['return']).cumprod() - 1
@@ -913,7 +914,7 @@ def rsi_condition_for_tpsl(symbol, position, interval):
 
 def rsi_condition_backtest(symbol, intervals, leverage, bars):
     intervals_ = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-    real_intervals = [intervals_[intervals_.index(interval)+3] for interval in intervals] + ['D1']
+    real_intervals = [intervals_[intervals_.index(interval)+3] for interval in intervals]# + ['D1']
     best_results_for_intervals = []
     for interval in real_intervals:
         df = get_data(symbol, interval, 1, bars)

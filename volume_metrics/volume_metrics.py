@@ -14,7 +14,7 @@ from scipy.stats import linregress
 import random
 from itertools import combinations, product
 from math import comb
-from config.parameters import symbols, slow_range, fast_range, leverage
+from config.parameters import symbols, slow_range, fast_range, leverage, spread_multiplier
 mt.initialize()
 # Ignoruj wszystkie ostrzeżenia
 warnings.filterwarnings('ignore')
@@ -35,7 +35,7 @@ def returns_bt(df):
     df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
                                     ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
     df['mkt_move'] = np.log(df.close/df.close.shift(1))
-    df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *3*(spread_mean)/df.open))*leverage
+    df['return'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *spread_multiplier*(spread_mean)/df.open))*leverage
     df['return'] = np.where(df['time'].dt.date != df['time'].dt.date.shift(), 0, df['return'])
     return df
 
@@ -94,7 +94,7 @@ def returns_(df, symbol):
     df["cross"] = np.where( ((df.stance == 1) & (df.stance.shift(1) != 1)) | \
                                     ((df.stance == -1) & (df.stance.shift(1) != -1)), 1, 0 )
     df['mkt_move'] = np.log(df.close/df.close.shift(1))
-    df[f'return_{symbol}'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *3*(spread_mean)/df.open))*leverage
+    df[f'return_{symbol}'] = (df.mkt_move * df.stance.shift(1) - (df["cross"] *spread_multiplier*(spread_mean)/df.open))*leverage
     df[f'return_{symbol}'] = np.where(df['time'].dt.date != df['time'].dt.date.shift(), 0, df[f'return_{symbol}'])
     df = df.rename(columns={'close':f'close_{symbol}'})
     return df[['time', f'return_{symbol}']]#, 'cross', 'stance', 'open', 'close']]
@@ -171,7 +171,7 @@ class SymbolsByProfile:
         self.interval = interval
         self.backtest = Backtest(interval)
         self.backtest.backtest_strategies()
-        self.min_number_of_symbols = len(symbols) - 3
+        self.min_number_of_symbols = round(len(symbols)/2+1)
         self.bars = bars
 
     def all_returns_please(self):
