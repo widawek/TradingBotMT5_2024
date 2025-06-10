@@ -53,7 +53,7 @@ class Bot:
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
-        self.number_of_bars_for_backtest = 17000
+        self.number_of_bars_for_backtest = bot_backtest_bars
         printer(dt.now(), symbol)
         self.symbol = symbol
         #self.active_session()
@@ -1309,7 +1309,7 @@ class Bot:
                     if pos_.type == 0:
                         if capacity_condition == 'loss':
                             #new_sl = round((1-self.avg_vol/10)*info.ask, digits_) # strategy[11]
-                            new_sl = round((1-strategy[11]/4)*info.ask, digits_)
+                            new_sl = round((1-strategy[11]/5)*info.ask, digits_)
                         elif capacity_condition == 'profit':
                             #new_sl = round((1-self.avg_vol/20)*pos_.price_open, digits_)
                             new_sl = round((1-strategy[11]/3)*pos_.price_open, digits_)
@@ -1317,7 +1317,7 @@ class Bot:
                     elif pos_.type == 1:
                         if capacity_condition == 'loss':
                             #new_sl = round((1+self.avg_vol/10)*info.bid, digits_)
-                            new_sl = round((1+strategy[11]/4)*info.bid, digits_)
+                            new_sl = round((1+strategy[11]/5)*info.bid, digits_)
                         elif capacity_condition == 'profit':
                             #new_sl = round((1+self.avg_vol/20)*pos_.price_open, digits_)
                             new_sl = round((1+strategy[11]/3)*pos_.price_open, digits_)

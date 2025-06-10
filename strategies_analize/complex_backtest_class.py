@@ -283,8 +283,12 @@ class Backtest_complex:
                     # Sprawdzamy, czy indeks fallback istnieje i jest poprawny
                     if symbol in idx_fallback.index:
                         index = idx_fallback.loc[symbol]
-                        if pd.notna(index) and index in dfs.index:
-                            best_metrics[symbol] = dfs.loc[[index], ['symbol', 'metric', 'mon', 'tue', 'wed', 'thu', 'fri']]
+                        try:
+                            if pd.notna(index) and index in dfs.index:
+                                best_metrics[symbol] = dfs.loc[[index], ['symbol', 'metric', 'mon', 'tue', 'wed', 'thu', 'fri']]
+                        except Exception as e:
+                            print(e)
+                            pass
 
             # Łączenie wyników w jeden DataFrame
             if best_metrics:
