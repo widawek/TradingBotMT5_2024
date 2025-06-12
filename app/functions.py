@@ -9,6 +9,7 @@ import os
 from collections import Counter
 from time import sleep
 import sys
+import json
 import psutil
 from typing import Union, Tuple
 sys.path.append("..")
@@ -481,6 +482,42 @@ def check_internet_connection():
             print("❌ Brak połączenia z siecią.")
 
         time.sleep(60)  # Sprawdza co minutę
+
+
+def cast_value(value_str, type_str):
+    """Konwertuje string na podany typ."""
+    if type_str == 'int':
+        return int(value_str)
+    elif type_str == 'float':
+        return float(value_str)
+    elif type_str == 'bool':
+        return value_str.lower() == 'true'
+    elif type_str == 'str':
+        return value_str
+    else:
+        raise ValueError(f"Nieznany typ: {type_str}")
+
+
+def generate_parameters_py(json_file, output_py, symbols_list):
+    header = '''import sys
+sys.path.append("..")\n\n'''
+
+    header += "symbols: list = [\n"
+    for symbol in symbols_list:
+        header += f"    {repr(symbol)},\n"
+    header += "]\n\n"
+
+    with open(json_file, 'r', encoding='utf-8') as f:
+        dane = json.load(f)
+
+    with open(output_py, 'w', encoding='utf-8') as f:
+        f.write(header)
+        for k, y in dane.items():
+            value = cast_value(y['value'], y['type'])
+            desc = y.get('description', '')
+            if desc:
+                f.write(f"# {desc}\n")
+            f.write(f"{k} = {repr(value)}\n\n")
 
 
 if __name__ == '__main__':
