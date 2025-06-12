@@ -5,6 +5,7 @@ import time
 import string
 import sys
 import os
+from extensions.investing_scrapper import Scraper
 from datetime import timedelta, timezone
 from datetime import datetime as dt
 from time import sleep
@@ -33,14 +34,32 @@ time_diff = get_timezone_difference()
 alphabet = list(string.ascii_lowercase)
 
 
+def divider():
+    import MetaTrader5 as mt
+    mt.initialize()
+    curr = mt.account_info().currency
+    df_ = get_data("USDPLN", "D1", 0, 1)
+    last_o = float(df_['open'].iloc[-1])
+    divider = 1 if curr == 'USD' else last_o
+    return divider
+
+
+if dt.now().weekday() not in [5, 6]:
+    scraper = Scraper()
+    hardcore_hours: list = [] if dt.now().weekday() in [5, 6] else scraper.give_me_hardcore_hours()
+
+
+position_size: float = round((100/len(symbols))*(position_size_float/divider()), 3)
+tz_diff: int = get_timezone_difference()
+
+
 class Bot:
-    montecarlo_for_all = False
     print('montecarlo_for_all', montecarlo_for_all)
     target_class = Target()
     weekday = dt.now().weekday()
     def __init__(self, symbol):
         self.actual_mirror = 0
-        self.montecarlo_for_all = Bot.montecarlo_for_all
+        self.montecarlo_for_all = montecarlo_for_all
         self.checkout_stoploss = True
         self.position_capacity = []
         self.backtest_time = dt.now()
@@ -49,7 +68,6 @@ class Bot:
         self.fresh_daily_target = False
         self.currency = mt.account_info().currency
         self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider = play_with_trend_bt(symbol)
-        self.after_change_hour = False if dt.now().hour < change_hour else True
         self.actual_today_best = 'x'
         self.use_tracker = True if symbol == symbols[0] else False
         self.positionTracker = GlobalProfitTracker(symbols, global_tracker_multiplier) if self.use_tracker else None
@@ -232,11 +250,9 @@ class Bot:
                 self.profit_min = min(self.profits)
 
                 kind_ = self.strategies[self.strategy_number][7]
-                sl = self.sl_money #min([self.profit_needed, ])
-                tp = sl #min([round(self.profit_needed*profit_increase_barrier*2, 2), self.tp_money])
+                sl = self.sl_money
+                tp = round(sl*1.2, 2)
                 self.self_decline_factor(tp)
-                # if kind_ == 'counter':
-                #     sl = round(sl/1.1, 2)
 
                 if self.print_condition():
                     printer("Kind:", kind_)
@@ -406,9 +422,6 @@ class Bot:
         if profit < -self.kill_position_profit:
             print('Loss is to high. I have to kill it!')
             self.clean_orders()
-        elif profit > self.tp_miner:
-            print('The profit is nice. I want it on our accout.')
-            self.clean_orders()
 
     @class_errors
     def info(self, profit, account, profit_to_margin, profit_to_balance):
@@ -529,13 +542,11 @@ class Bot:
             self.volume = symbol_info["volume_min"]
         _, self.kill_position_profit, _ = symbol_stats(self.symbol, self.volume, kill_multiplier)
         self.kill_position_profit = round(self.kill_position_profit, 2)# * (1+self.multi_voltage('M5', 33)), 2)
-        self.tp_miner = round(self.kill_position_profit * tp_miner / kill_multiplier, 2)
         self.profit_needed = round(self.kill_position_profit/self.trigger_model_divider, 2)
         self.profit_needed_min = round(self.profit_needed / (self.volume/symbol_info["volume_min"]), 2)
         self.fresh_daily_target = False
         printer('Min volume:', min_volume)
         printer('Calculated volume:', volume)
-        printer("Target:", f"{self.tp_miner:.2f} {self.currency}")
         printer("Killer:", f"{-self.kill_position_profit:.2f} {self.currency}")
 
         try:
@@ -659,7 +670,10 @@ class Bot:
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
 
-        position = self.position_reverse(position)
+        if just_reverse_position:
+            position = 0 if position == 1 else 1
+        elif reverse_position_because_of_correlaton:
+            position = self.position_reverse(position)
 
         printer("Daily return", daily_return)
         printer("POZYCJA", "LONG" if position == 0 else "SHORT" if position != 0 else "None" + f"w trybie {mode__}")
@@ -909,7 +923,7 @@ class Bot:
                 comment=self.positions[0].comment,
                 trigger_divider=self.trigger_model_divider,
                 decline_factor=self.profit_decline_factor,
-                profit_factor=profit_factor,
+                profit_factor=1,
                 calculated_profit=self.profit_needed,
                 minutes=self.pos_time,
                 weekday=Bot.weekday,
@@ -1037,12 +1051,8 @@ class Bot:
             sloww = self.strategies[i][4]
             self.strategies[i][8] = self.calc_pos_condition(strategyy(get_data(self.symbol, intervall, 1, 5000), sloww, fastt, self.symbol)[0])[-1]
 
-        if dt.now().hour >= change_hour or (not self.virgin_test):# all([i[6] == -2 for i in self.strategies]) :
-            self.strategies = [i for i in self.strategies if i[5] > 0 and i[8] > 0 and i[13] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True) #x[8]*
-        else:
-            self.strategies = [i for i in self.strategies if i[5] > 0 and i[8] > 0 and i[13] > 0]
-            sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
+        self.strategies = [i for i in self.strategies if i[5] > 0 and i[8] > 0 and i[13] > 0]
+        sorted_data = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)
         first_ = sorted(self.strategies, key=lambda x: x[8]*x[5]*x[13]*(x[10]/x[11]), reverse=True)[0][7]
         printer("Daily starter", first_)
         self.actual_today_best = first_
@@ -1272,33 +1282,34 @@ class Bot:
                 order_result = mt.order_send(request)
                 print(order_result)
 
+
             if rsi_condition_for_tpsl(self.symbol, type_to_rsi, self.interval):
                 if pos_.tp == 0.0:
                     if pos_.type == 0:
-                        if pos_.profit > tp_profit/10:
+                        if pos_.profit > tp_profit/tp_profit_to_pos_divider:
                             if pos_.sl != 0.0 and pos_.sl > pos_.price_open:
-                                tp_divider = 3
+                                tp_divider = tp_divider_normal
                             else:
-                                tp_divider = 5
+                                tp_divider = tp_divider_max
 
                             new_tp = round(((1+self.avg_vol/tp_divider)*info.ask), digits_)
                             new_sl = round((pos_.price_open*2 + info.ask)/3, digits_)
                         else:
-                            new_tp = round(((1+self.avg_vol/8)*info.ask), digits_)
-                            new_sl = round((1-self.avg_vol/20)*info.ask, digits_)
+                            new_tp = round(((1+self.avg_vol/tp_divider_for_loser)*info.ask), digits_)
+                            new_sl = round((1-self.avg_vol/(tp_divider_for_loser*tp_sl_loser_ratio))*info.ask, digits_)
 
                     elif pos_.type == 1:
-                        if pos_.profit > tp_profit/10:
+                        if pos_.profit > tp_profit/tp_profit_to_pos_divider:
                             if pos_.sl != 0.0 and pos_.sl < pos_.price_open:
-                                tp_divider = 3
+                                tp_divider = tp_divider_normal
                             else:
-                                tp_divider = 5
+                                tp_divider = tp_divider_max
 
                             new_tp = round(((1-self.avg_vol/tp_divider)*info.bid), digits_)
                             new_sl = round((pos_.price_open*2 + info.bid)/3, digits_)
                         else:
-                            new_tp = round(((1-self.avg_vol/8)*info.bid), digits_)
-                            new_sl = round((1+self.avg_vol/20)*info.bid, digits_)
+                            new_tp = round(((1-self.avg_vol/tp_divider_for_loser)*info.bid), digits_)
+                            new_sl = round((1+self.avg_vol/(tp_divider_for_loser*tp_sl_loser_ratio))*info.bid, digits_)
 
             elif capacity_condition and pos_.sl == 0.0:
                 if pos_.sl == 0.0 or (capacity_condition == 'super loss'):
@@ -1309,28 +1320,28 @@ class Bot:
                     if pos_.type == 0:
                         if capacity_condition == 'loss':
                             #new_sl = round((1-self.avg_vol/10)*info.ask, digits_) # strategy[11]
-                            new_sl = round((1-strategy[11]/5)*info.ask, digits_)
+                            new_sl = round((1-strategy[11]/tp_divider_max)*info.ask, digits_)
                         elif capacity_condition == 'profit':
                             #new_sl = round((1-self.avg_vol/20)*pos_.price_open, digits_)
-                            new_sl = round((1-strategy[11]/3)*pos_.price_open, digits_)
+                            new_sl = round((1-strategy[11]/tp_divider_normal)*pos_.price_open, digits_)
 
                     elif pos_.type == 1:
                         if capacity_condition == 'loss':
                             #new_sl = round((1+self.avg_vol/10)*info.bid, digits_)
-                            new_sl = round((1+strategy[11]/5)*info.bid, digits_)
+                            new_sl = round((1+strategy[11]/tp_divider_max)*info.bid, digits_)
                         elif capacity_condition == 'profit':
                             #new_sl = round((1+self.avg_vol/20)*pos_.price_open, digits_)
-                            new_sl = round((1+strategy[11]/3)*pos_.price_open, digits_)
+                            new_sl = round((1+strategy[11]/tp_divider_normal)*pos_.price_open, digits_)
 
             elif pos_.tp != 0.0:
                 try:
                     if self.tp_time < dt.now() - timedelta(minutes=round(int(self.interval[1:]))):
                         if pos_.type == 0:
-                            new_tp = round((pos_.tp*6 + info.ask)/7, digits_)
+                            new_tp = round((pos_.tp*tp_weight + info.ask)/(tp_weight+1), digits_)
                             if new_tp > pos_.tp:
                                 new_tp = pos_.tp
                         elif pos_.type == 1:
-                            new_tp = round((pos_.tp*6 + info.bid)/7, digits_)
+                            new_tp = round((pos_.tp*tp_weight + info.bid)/(tp_weight+1), digits_)
                             if new_tp < pos_.tp:
                                 new_tp = pos_.tp
                 except Exception as e:
@@ -1344,25 +1355,25 @@ class Bot:
                 try:
                     if pos_.type == 0:
                         if pos_.sl < pos_.price_open and info.ask > pos_.price_open:
-                            if pos_.profit > tp_profit/8:
-                                new_sl = round((pos_.price_open*6 + info.ask)/7, digits_)
+                            if pos_.profit > tp_profit/tp_profit_to_pos_divider:
+                                new_sl = round((pos_.price_open*tp_weight + info.ask)/(tp_weight+1), digits_)
                                 if pos_.tp != 0.0:
                                     new_tp = round(pos_.tp + abs(pos_.tp-info.ask)/2, digits_)
 
                         elif pos_.sl > pos_.price_open:
-                            new_slx = round((pos_.price_open*6 + info.ask)/7, digits_)
+                            new_slx = round((pos_.price_open*tp_weight + info.ask)/(tp_weight+1), digits_)
                             if new_slx > pos_.sl:
                                 new_sl == new_slx
 
                     elif pos_.type == 1:
                         if pos_.sl > pos_.price_open and info.ask < pos_.price_open:
-                            if pos_.profit > tp_profit/8:
-                                new_sl = round((pos_.price_open*6 + info.bid)/7, digits_)
+                            if pos_.profit > tp_profit/tp_profit_to_pos_divider:
+                                new_sl = round((pos_.price_open*tp_weight + info.bid)/(tp_weight+1), digits_)
                                 if pos_.tp != 0.0:
                                     new_tp = round(pos_.tp - abs(pos_.tp-info.bid)/2, digits_)
 
                         elif pos_.sl < pos_.price_open:
-                            new_slx = round((pos_.price_open*6 + info.bid)/7, digits_)
+                            new_slx = round((pos_.price_open*tp_weight + info.bid)/(tp_weight+1), digits_)
                             if new_slx < pos_.sl:
                                 new_sl == new_slx
 

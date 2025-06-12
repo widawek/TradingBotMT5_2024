@@ -202,13 +202,13 @@ def vwap_std(symbol, factor=1.4):
 
 
 def avg_daily_vol_for_divider(symbol: str, base: int) -> int:
-    df1 = get_data(symbol, 'D1', 2, 30)
-    df2 = get_data(symbol, 'D1', 1, 1)
+    df1 = get_data(symbol, 'D1', 4, 30)
+    df2 = get_data(symbol, 'D1', 1, 3)
     df1['avg_daily'] = (df1.high - df1.low) / df1.open
     df2['avg_daily'] = (df2.high - df2.low) / df2.open
-    factor = df1['avg_daily'].mean()/df2['avg_daily'].mean()
+    factor = df2['avg_daily'].mean()/df1['avg_daily'].mean()
     factor = 1+(factor-1)/2
-    return int(round(base*factor))
+    return round(base*factor)
 
 
 def trend_or_not(symbol):
