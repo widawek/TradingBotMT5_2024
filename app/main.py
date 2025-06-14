@@ -836,20 +836,20 @@ class Bot:
             print("Position capacity:  ", round(capacity, 5))
             print("Position efficiency:", round(efficiency, 3))
             print("Position efficiency_sum:", round(efficiency_sum, 5))
-            if capacity < 0 and efficiency < 0.1 and efficiency_sum < -10 and self.duration():
+            if capacity < 0 and efficiency < 0.1 and efficiency_sum < -5 and self.duration():
                 return 'super loss'
-            if capacity < 0 and efficiency < 0.33 and efficiency_sum < -4 and self.duration():
+            if capacity < 0 and efficiency < 0.33 and efficiency_sum < -2 and self.duration(1):
                 return 'loss'
-            elif capacity > 0 and efficiency > 0.75 and efficiency_sum > 2 and self.duration():
+            elif capacity > 0 and efficiency > 0.66 and efficiency_sum > 2 and self.duration():
                 return 'profit'
             return False
         except Exception:
             return False
 
     @class_errors
-    def duration(self):
+    def duration(self, adder):
         intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1', 'H2']
-        duration_time = int(intervals[intervals.index(self.interval)+6][1:])
+        duration_time = int(intervals[intervals.index(self.interval)+4+adder][1:])
         duration = self.position_time_minutes()
         print(f"Duration: {duration}")
         return duration > duration_time
