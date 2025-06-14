@@ -63,7 +63,9 @@ class Bot:
         self.checkout_stoploss = True
         self.position_capacity = []
         self.backtest_time = dt.now()
-        self.reverse = Reverse(symbol)
+        self.total_reverse = False
+        self.posid = False
+        #self.reverse = Reverse(symbol)
         self.if_position_with_trend = 'n'
         self.fresh_daily_target = False
         self.currency = mt.account_info().currency
@@ -154,7 +156,7 @@ class Bot:
             zamkniete_transakcje = [i for i in zamkniete_transakcje if i.position_id != tt]
             if len(zamkniete_transakcje) != 0:
                 comment = zamkniete_transakcje[-1].comment
-                profit = zamkniete_transakcje[-1].profit
+                profit = zamkniete_transakcje[-1].profit + zamkniete_transakcje[-1].commission*2
                 print(comment, profit)
                 self.checkout_stoploss = False
                 return ('sl' in comment) or ('tp' in comment), profit
@@ -670,8 +672,15 @@ class Bot:
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
 
+        new_id = self.if_last_pos_is_bad_and_end_by_sl()
+        if new_id and self.posid != new_id:
+            self.posid = new_id
+            self.total_reverse = True if self.total_reverse is False else False
+
         if just_reverse_position:
-            position = 0 if position == 1 else 1
+            if self.total_reverse:
+                position = 0 if position == 1 else 1
+
         elif reverse_position_because_of_correlaton:
             position = self.position_reverse(position)
 
@@ -695,10 +704,10 @@ class Bot:
             zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia, group=self.symbol)
             zamkniete_transakcje = [i for i in zamkniete_transakcje if i.position_id != tt]
             intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-            rsi_interval = int(intervals[intervals.index(self.interval)+4][1:])
+            sleep_time_after_al = int(intervals[intervals.index(self.interval)+4][1:]*time_after_sl_mul)
             comment = zamkniete_transakcje[-1].comment
             condition = ('tp' in comment) or ('sl' in comment)
-            return condition, rsi_interval
+            return condition, sleep_time_after_al
         except Exception as e:
             print("last_pos_sltp", e)
             return False, 30
@@ -764,8 +773,6 @@ class Bot:
         metric_numb = str(metric_numb_dict[self.bt_metric.__name__])
         self.comment = f'{name_}{self.interval[-1:][0]}_{fast}_{slow}_{reverseornot}{metric_numb}{self.if_position_with_trend}'
 
-        # if self.reverse.condition:
-        #     self.comment = '8'+self.comment[1:]
 
         request = {
             "action": action,
@@ -1323,7 +1330,7 @@ class Bot:
                             new_sl = round((1-strategy[11]/tp_divider_max)*info.ask, digits_)
                         elif capacity_condition == 'profit':
                             #new_sl = round((1-self.avg_vol/20)*pos_.price_open, digits_)
-                            new_sl = round((1-strategy[11]/tp_divider_normal)*pos_.price_open, digits_)
+                            new_sl = round((1-strategy[11]/tp_divider_normal)*info.ask, digits_)
 
                     elif pos_.type == 1:
                         if capacity_condition == 'loss':
@@ -1331,7 +1338,7 @@ class Bot:
                             new_sl = round((1+strategy[11]/tp_divider_max)*info.bid, digits_)
                         elif capacity_condition == 'profit':
                             #new_sl = round((1+self.avg_vol/20)*pos_.price_open, digits_)
-                            new_sl = round((1+strategy[11]/tp_divider_normal)*pos_.price_open, digits_)
+                            new_sl = round((1+strategy[11]/tp_divider_normal)*info.bid, digits_)
 
             elif pos_.tp != 0.0:
                 try:
@@ -1421,6 +1428,36 @@ class Bot:
             print(e)
             return position
 
+
+    @class_errors
+    def if_last_pos_is_bad_and_end_by_sl(self):
+
+        def groupby_profie_with_comment(symbol):
+            dzisiaj = dt.now().date()
+            poczatek_dnia = dt.combine(dzisiaj, dt.min.time())
+            koniec_dnia = dt.now() + timedelta(days=2)
+            zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia, group=symbol)
+            if zamkniete_transakcje == ():
+                return None
+            zamkniete_transakcje = [i._asdict() for i in zamkniete_transakcje]
+            df = pd.DataFrame(zamkniete_transakcje)
+            df = df[['symbol', 'time', 'position_id', 'price', 'commission', 'profit', 'comment']]
+            df = df[df.groupby('position_id')['position_id'].transform('count') > 1]
+            df['time'] = pd.to_datetime(df['time'], unit='s')
+            df['comment'] = df['comment'] + " "
+            x=df.groupby('position_id').agg({'commission':'sum', 'profit':'sum', 'comment':'sum'})
+            x['profit'] = x['commission'] + x['profit']
+            x = x[~x['comment'].str.contains("mirror", na=False)]
+            x = x[['profit', 'comment']]
+            return x.reset_index()
+
+        df = groupby_profie_with_comment(self.symbol)
+        if df is None:
+            return False
+        if 'sl ' in df['comment'].iloc[-1]:
+            if df['profit'].iloc[-1] < 0:
+                return df['position_id'].iloc[-1]
+        return False
 
 if __name__ == '__main__':
     print('Yo, wtf?')

@@ -10,8 +10,6 @@ symbols: list = [
     'US30',
     'AUDUSD',
     'CADJPY',
-    'AMD',
-    'AAPL',
 ]
 
 # dzwignia do backtestów
@@ -30,10 +28,10 @@ position_size_float = 0.6
 kill_multiplier = 1.6
 
 # dzielnik do funkcji wyliczania dzielnika średniej dziennej zmienności który będzie docelowym zyskiem (uniwersalnym dla każdej strategii)
-trigger_model_divider_factor = 11
+trigger_model_divider_factor = 25
 
 # stosunek zysku z otwartych pozycji do ich margin powyżej którego pozycje będą śledzone w celu zainkasowania zysku # klasa GlobalProfitTracker
-global_tracker_multiplier = 0.05
+global_tracker_multiplier = 0.07
 
 # jeżeli pozycje w klasie GlobalProfitTracker będą śledzone po przekoczeniu bariery po spadku zysku poniżej tego ratio od max zostaną zamknięte żeby zainkasować zysk
 profit_decrease_barrier = 0.85
@@ -48,7 +46,7 @@ fast_range = 21
 slow_range = 63
 
 # backtest - mnożnik kosztu otwarcia pozycji który historycznie podaje broker
-spread_multiplier = 4
+spread_multiplier = 3
 
 # liczba swieczek dla kazdego backtestu
 bot_backtest_bars = 17000
@@ -79,4 +77,7 @@ tp_profit_to_pos_divider = 8.0
 
 # okresla wagę tp do aktualnej ceny podczas zblizania takeprofit do ceny (im mniejsza wartość tym szybsze zbliżenie)
 tp_weight = 6.0
+
+# Wartość przez który zostanie przemnożony czas w funkcji generującej czas przerwy jeżeli był stoploss lub takeprofit
+time_after_sl_mul = 1.5
 
