@@ -66,7 +66,7 @@ class Bot:
         self.total_reverse = False
         self.posid = False
         #self.reverse = Reverse(symbol)
-        self.if_position_with_trend = 'n'
+        self.if_position_with_trend = 'y'
         self.fresh_daily_target = False
         self.currency = mt.account_info().currency
         self.pwt_short, self.pwt_long, self.pwt_dev, self.pwt_divider = play_with_trend_bt(symbol)
@@ -482,19 +482,19 @@ class Bot:
             print('volume_calc anti trend no strategy', e)
 
         trend_bonus = bonus if posType == 0 else -bonus
-        volume_m15 = self.volume_reducer(posType, 'M15')
-        volume_m20 = self.volume_reducer(posType, 'M20')
-        if volume_m15 == 1 and volume_m20 == 1:
-            self.if_position_with_trend = 'y'
-        elif volume_m15 != 1 and volume_m20 != 1:
-            self.if_position_with_trend = 'n'
-        elif volume_m15 == 1 and volume_m20 != 1:
-            self.if_position_with_trend = 's'
-        elif volume_m15 != 1 and volume_m20 == 1:
-            self.if_position_with_trend = 'l'
+        # volume_m15 = self.volume_reducer(posType, 'M15')
+        # volume_m20 = self.volume_reducer(posType, 'M20')
+        # if volume_m15 == 1 and volume_m20 == 1:
+        #     self.if_position_with_trend = 'y'
+        # elif volume_m15 != 1 and volume_m20 != 1:
+        #     self.if_position_with_trend = 'n'
+        # elif volume_m15 == 1 and volume_m20 != 1:
+        #     self.if_position_with_trend = 's'
+        # elif volume_m15 != 1 and volume_m20 == 1:
+        #     self.if_position_with_trend = 'l'
 
         max_pos_margin2 = max_pos_margin * atr() * another_new_volume_multiplier_from_win_rate_condition
-        max_pos_margin2 = (max_pos_margin2 + max_pos_margin2*trend_bonus)*volume_m15*volume_m20
+        max_pos_margin2 = (max_pos_margin2 + max_pos_margin2*trend_bonus)#*volume_m15*volume_m20
         try:
             max_pos_margin2 = max_pos_margin2 / vol_cond_result(strategy[14], posType)
         except Exception as e:
@@ -676,6 +676,7 @@ class Bot:
         if new_id and self.posid != new_id:
             self.posid = new_id
             self.total_reverse = True if self.total_reverse is False else False
+            self.if_position_with_trend = 'y' if self.if_position_with_trend == 'n' else 'n'
 
         if just_reverse_position:
             if self.total_reverse:
