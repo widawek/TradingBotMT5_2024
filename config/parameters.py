@@ -81,3 +81,6 @@ tp_weight = 6.0
 # Wartość przez który zostanie przemnożony czas w funkcji generującej czas przerwy jeżeli był stoploss lub takeprofit
 time_after_sl_mul = 1.5
 
+# Interwał dobrany wyżej w hierarchii o podaną ilość stopni np dla M5 będzie to interwał M10
+interval_steps_for_capacity = 1
+

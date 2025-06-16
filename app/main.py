@@ -705,7 +705,7 @@ class Bot:
             zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia, group=self.symbol)
             zamkniete_transakcje = [i for i in zamkniete_transakcje if i.position_id != tt]
             intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1']
-            sleep_time_after_al = int(intervals[intervals.index(self.interval)+4][1:]*time_after_sl_mul)
+            sleep_time_after_al = round(int(intervals[intervals.index(self.interval)+interval_steps_for_capacity][1:])*time_after_sl_mul)
             comment = zamkniete_transakcje[-1].comment
             condition = ('tp' in comment) or ('sl' in comment)
             return condition, sleep_time_after_al
@@ -848,7 +848,7 @@ class Bot:
             return False
 
     @class_errors
-    def duration(self, adder):
+    def duration(self, adder=0):
         intervals = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1', 'H2']
         duration_time = int(intervals[intervals.index(self.interval)+4+adder][1:])
         duration = self.position_time_minutes()
@@ -1433,7 +1433,7 @@ class Bot:
     @class_errors
     def if_last_pos_is_bad_and_end_by_sl(self):
 
-        def groupby_profie_with_comment(symbol):
+        def groupby_profit_with_comment(symbol):
             dzisiaj = dt.now().date()
             poczatek_dnia = dt.combine(dzisiaj, dt.min.time())
             koniec_dnia = dt.now() + timedelta(days=2)
@@ -1450,14 +1450,19 @@ class Bot:
             x['profit'] = x['commission'] + x['profit']
             x = x[~x['comment'].str.contains("mirror", na=False)]
             x = x[['profit', 'comment']]
-            return x.reset_index()
+            x = x.reset_index()
+            print(f"Today deals: \n", x.tail(10))
+            return x
 
-        df = groupby_profie_with_comment(self.symbol)
-        if df is None:
+        dfx = groupby_profit_with_comment(self.symbol)
+        if dfx is None:
             return False
-        if 'sl ' in df['comment'].iloc[-1]:
-            if df['profit'].iloc[-1] < 0:
-                return df['position_id'].iloc[-1]
+        try:
+            if 'sl ' in dfx['comment'].iloc[-1]:
+                if dfx['profit'].iloc[-1] < 0:
+                    return dfx['position_id'].iloc[-1]
+        except IndexError as e:
+            print(e)
         return False
 
 if __name__ == '__main__':
