@@ -181,7 +181,7 @@ class Bot:
             if len(self.close_profits) >= 2:
                 self.drift_giver()
                 try:
-                    last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment[:-1]]
+                    last_to_by_comment = [i[0] for i in profit_ if i[1] == self.comment[:-3]]
                     if len(last_to_by_comment) >= 2:
                         last_two = sum(last_to_by_comment[-2:])
                         printer("Last two positions profit", f"{last_two:.2f} {self.currency}")

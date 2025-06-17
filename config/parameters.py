@@ -10,10 +10,13 @@ symbols: list = [
     'US30',
     'AUDUSD',
     'CADJPY',
+    'XTIUSD',
+    'USDCAD',
+    'AUDCAD',
 ]
 
 # dzwignia do backtestów
-leverage = 8
+leverage = 6
 
 # godzina startu backtestów dla każdego dnia
 morning_hour = 7
@@ -22,7 +25,7 @@ morning_hour = 7
 evening_hour = 21
 
 # ustala wielkosć pozycji wg wzoru (100/ilość symboli)*(position_size_float/divider) gdzie divider dla konta w usd wynosi 1 a dla złotówki kurs USDPLN
-position_size_float = 0.6
+position_size_float = 0.8
 
 # mnożnik średniej dziennej zmienności powyżej której (po osiągnięciu takiej straty) stratna pozycja będzie bezwzględnie zamknięta
 kill_multiplier = 1.6
@@ -82,5 +85,5 @@ tp_weight = 6.0
 time_after_sl_mul = 1.5
 
 # Interwał dobrany wyżej w hierarchii o podaną ilość stopni np dla M5 będzie to interwał M10
-interval_steps_for_capacity = 1
+interval_steps_for_capacity = 4
 
