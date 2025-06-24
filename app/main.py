@@ -21,6 +21,7 @@ import json
 from app.montecarlo import Montecarlo, PermutatedDataFrames
 from tqdm import trange
 from app.minor_classes import Reverse, Target, GlobalProfitTracker
+import gc
 sys.path.append("..")
 mt.initialize()
 
@@ -253,7 +254,7 @@ class Bot:
 
                 kind_ = self.strategies[self.strategy_number][7]
                 sl = self.sl_money
-                tp = round(sl*1.2, 2)
+                tp = round(self.tp_money*2, 2)
                 self.self_decline_factor(tp)
 
                 if self.print_condition():
@@ -269,6 +270,7 @@ class Bot:
 
                 # Jeżeli strata mniejsza od straty granicznej
                 if profit < -sl/self.too_much_risk():# and profit > 0.91 * self.profit_min:
+                    #self.if_position_with_trend = 'y' if self.if_position_with_trend == 'n' else 'n'
                     self.clean_orders(backtest)
 
                 # Jeżeli strata mniejsza od straty granicznej
@@ -323,7 +325,7 @@ class Bot:
     @class_errors
     def self_decline_factor(self, tp, multiplier: float=1.22):
         min_val = 0.65
-        max_val = 0.9
+        max_val = 0.84
         min_value = 0
         max_value = tp*multiplier
         # only variable is self.profit_max
@@ -358,7 +360,7 @@ class Bot:
     @class_errors
     def is_this_the_end(self):
         now_ = dt.now()
-        if (now_.hour == evening_hour-1 and now_.minute >= 55) or (now_.hour >= evening_hour):
+        if (now_.hour == evening_hour-1 and now_.minute >= 55) or (now_.hour >= evening_hour) or self.non_profit_counter() > 4:
             self.close_request()
             print("Na dzisiaj koniec.")
             sys.exit()
@@ -451,6 +453,7 @@ class Bot:
         self.profit_max = 0
         self.fresh_daily_target = False
         self.position_capacity = []
+        gc.collect()
 
     @class_errors
     def avg_daily_vol(self):
@@ -641,10 +644,10 @@ class Bot:
                     diff = round((price - self.strategy_pos_open_price) * 100 / self.strategy_pos_open_price, 2)
 
                     match position:
-                        case 0: self.good_price_to_open_pos = True if \
-                            rsi_condition(self.symbol, 0, self.interval, self.results_for_rsi_condition, kind) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
-                        case 1: self.good_price_to_open_pos = True if \
-                            rsi_condition(self.symbol, 1, self.interval, self.results_for_rsi_condition, kind) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 0: self.good_price_to_open_pos = True if price <= self.strategy_pos_open_price*1.001 else False
+                            #rsi_condition(self.symbol, 0, self.interval, self.results_for_rsi_condition, kind) else False #(price <= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
+                        case 1: self.good_price_to_open_pos = True if price >= self.strategy_pos_open_price*0.999 else False
+                            #rsi_condition(self.symbol, 1, self.interval, self.results_for_rsi_condition, kind) else False #(price >= self.strategy_pos_open_price) and rsi_condition(self.symbol, 0) else False
 
                     if self.good_price_to_open_pos:
                         break
@@ -672,18 +675,18 @@ class Bot:
                 return self.pos_type
         self.pos_time = interval_time(self.interval)
 
-        new_id = self.if_last_pos_is_bad_and_end_by_sl()
-        if new_id and self.posid != new_id:
-            self.posid = new_id
-            self.total_reverse = True if self.total_reverse is False else False
-            self.if_position_with_trend = 'y' if self.if_position_with_trend == 'n' else 'n'
+        # new_id = self.if_last_pos_is_bad_and_end_by_sl()
+        # if new_id and self.posid != new_id:
+        #     self.posid = new_id
+        #     self.total_reverse = True if self.total_reverse is False else False
+        #     self.if_position_with_trend = 'y' if self.if_position_with_trend == 'n' else 'n'
 
-        if just_reverse_position:
-            if self.total_reverse:
-                position = 0 if position == 1 else 1
+        # if reverse_position_because_of_correlaton:
+        #     position = self.position_reverse(position)
 
-        elif reverse_position_because_of_correlaton:
-            position = self.position_reverse(position)
+        # if just_reverse_position:
+        #     if self.total_reverse:
+        #         position = 0 if position == 1 else 1
 
         printer("Daily return", daily_return)
         printer("POZYCJA", "LONG" if position == 0 else "SHORT" if position != 0 else "None" + f"w trybie {mode__}")
@@ -837,11 +840,11 @@ class Bot:
             print("Position capacity:  ", round(capacity, 5))
             print("Position efficiency:", round(efficiency, 3))
             print("Position efficiency_sum:", round(efficiency_sum, 5))
-            if capacity < 0 and efficiency < 0.1 and efficiency_sum < -5 and self.duration():
-                return 'super loss'
-            if capacity < 0 and efficiency < 0.33 and efficiency_sum < -2 and self.duration(1):
-                return 'loss'
-            elif capacity > 0 and efficiency > 0.66 and efficiency_sum > 2 and self.duration():
+            # if capacity < 0 and efficiency < 0.1 and efficiency_sum < -5 and self.duration():
+            #     return 'super loss'
+            # if capacity < 0 and efficiency < 0.33 and efficiency_sum < -2 and self.duration(1):
+            #     return 'loss'
+            if capacity > 0 and efficiency > 0.66 and efficiency_sum > 2 and self.duration():
                 return 'profit'
             return False
         except Exception:
@@ -1130,6 +1133,14 @@ class Bot:
             self.strategies_raw.append([name_, strategy_, interval, fast, slow, round(result, 8), actual_condition,
                                         kind, daily_return, end_result, tp_std, sl_std, drift, p_value, volume_contition, today_direction])
 
+
+        del dfperms, permutated_dataframes
+        try:
+            del monte
+        except Exception:
+            pass
+        gc.collect()
+
         print("\nv NICE STRATEGIES v")
         for strat in self.strategies_raw:
             if strat[13] > 0:
@@ -1244,6 +1255,12 @@ class Bot:
                     print("\ntrend_backtest", e)
                     continue
 
+        try:
+            del dfperms_mini, permutated_dataframes_mini, monte_mini
+        except Exception:
+            pass
+        gc.collect()
+
         if len(results) < 2:
             return None
 
@@ -1302,9 +1319,9 @@ class Bot:
 
                             new_tp = round(((1+self.avg_vol/tp_divider)*info.ask), digits_)
                             new_sl = round((pos_.price_open*2 + info.ask)/3, digits_)
-                        else:
-                            new_tp = round(((1+self.avg_vol/tp_divider_for_loser)*info.ask), digits_)
-                            new_sl = round((1-self.avg_vol/(tp_divider_for_loser*tp_sl_loser_ratio))*info.ask, digits_)
+                        # else:
+                        #     new_tp = round(((1+self.avg_vol/tp_divider_for_loser)*info.ask), digits_)
+                        #     new_sl = round((1-self.avg_vol/(tp_divider_for_loser*tp_sl_loser_ratio))*info.ask, digits_)
 
                     elif pos_.type == 1:
                         if pos_.profit > tp_profit/tp_profit_to_pos_divider:
@@ -1315,9 +1332,9 @@ class Bot:
 
                             new_tp = round(((1-self.avg_vol/tp_divider)*info.bid), digits_)
                             new_sl = round((pos_.price_open*2 + info.bid)/3, digits_)
-                        else:
-                            new_tp = round(((1-self.avg_vol/tp_divider_for_loser)*info.bid), digits_)
-                            new_sl = round((1+self.avg_vol/(tp_divider_for_loser*tp_sl_loser_ratio))*info.bid, digits_)
+                        # else:
+                        #     new_tp = round(((1-self.avg_vol/tp_divider_for_loser)*info.bid), digits_)
+                        #     new_sl = round((1+self.avg_vol/(tp_divider_for_loser*tp_sl_loser_ratio))*info.bid, digits_)
 
             elif capacity_condition and pos_.sl == 0.0:
                 if pos_.sl == 0.0 or (capacity_condition == 'super loss'):
@@ -1464,6 +1481,27 @@ class Bot:
         except IndexError as e:
             print(e)
         return False
+
+
+    def non_profit_counter(self):
+        dzisiaj = dt.now().date()
+        poczatek_dnia = dt.combine(dzisiaj, dt.min.time())
+        koniec_dnia = dt.now() + timedelta(days=2)
+        zamkniete_transakcje = mt.history_deals_get(poczatek_dnia, koniec_dnia, group=self.symbol)
+        if zamkniete_transakcje == ():
+            return 0
+        zamkniete_transakcje = [i._asdict() for i in zamkniete_transakcje]
+        df = pd.DataFrame(zamkniete_transakcje)
+        df = df[['symbol', 'time', 'position_id', 'price', 'commission', 'profit', 'comment']]
+        df = df[df.groupby('position_id')['position_id'].transform('count') > 1]
+        x=df.groupby('position_id').agg({'commission':'sum', 'profit':'sum', 'comment':'sum'})
+        unwanted_words = ['mirror', 'ntrex']
+        pattern = '|'.join(unwanted_words)
+        x = x[~x['comment'].str.contains(pattern, na=False, case=False)]
+        x['profit'] = x['commission'] + x['profit']
+        x = x[x['profit'] < 0]
+        print(f"Liczba zamkniętych transakcji stratnych dla danego symbolu: {len(x)}")
+        return len(x)
 
 if __name__ == '__main__':
     print('Yo, wtf?')

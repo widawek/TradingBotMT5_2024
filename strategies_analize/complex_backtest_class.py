@@ -241,7 +241,7 @@ class Backtest_complex:
     def output(self):
 
         def group_to_get_metric(df):
-            dfs = df.copy().dropna()
+            dfs = df.copy().fillna(-0.01)
             dfs['meansum'] = dfs[['mon', 'tue', 'wed', 'thu', 'fri']].sum(axis=1)
             dfs = dfs[(dfs['sharpe'] > 0) & (dfs['density'] > 0.55) & (dfs['meansum'] > 0)]
             #dfs = dfs.rename(columns={'mon': '0', 'tue': '1', 'wed': '2', 'thu': '3', 'fri': '4'})

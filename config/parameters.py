@@ -2,21 +2,21 @@ import sys
 sys.path.append("..")
 
 symbols: list = [
+    'AUDCAD',
+    'AUDUSD',
+    'CADJPY',
     'EURJPY',
     'EURUSD',
     'GBPUSD',
+    'US30',
+    'USDCAD',
     'USDCHF',
     'USDJPY',
-    'US30',
-    'AUDUSD',
-    'CADJPY',
     'XTIUSD',
-    'USDCAD',
-    'AUDCAD',
 ]
 
 # dzwignia do backtestów
-leverage = 6
+leverage = 8
 
 # godzina startu backtestów dla każdego dnia
 morning_hour = 7
@@ -25,7 +25,7 @@ morning_hour = 7
 evening_hour = 21
 
 # ustala wielkosć pozycji wg wzoru (100/ilość symboli)*(position_size_float/divider) gdzie divider dla konta w usd wynosi 1 a dla złotówki kurs USDPLN
-position_size_float = 0.8
+position_size_float = 0.3
 
 # mnożnik średniej dziennej zmienności powyżej której (po osiągnięciu takiej straty) stratna pozycja będzie bezwzględnie zamknięta
 kill_multiplier = 1.6
@@ -52,13 +52,13 @@ slow_range = 63
 spread_multiplier = 3
 
 # liczba swieczek dla kazdego backtestu
-bot_backtest_bars = 17000
+bot_backtest_bars = 49999
 
 # włącza testy montecarlo na małej próbie (80-120) dla każdej kombinacji w backtest (znaczne wydłużenie czasu trwania testów)
 montecarlo_for_all = False
 
 # włącza odwrócenie pozycji zależenie od aktualnej korelacji cen wszystkich handlowancyh symboli
-reverse_position_because_of_correlaton = False
+reverse_position_because_of_correlaton = True
 
 # włacza bezwzględne odwrócenie pozycji (odrwaca pozycję ponad reverse_position_because_of_correlaton)
 just_reverse_position = True
@@ -82,7 +82,7 @@ tp_profit_to_pos_divider = 8.0
 tp_weight = 6.0
 
 # Wartość przez który zostanie przemnożony czas w funkcji generującej czas przerwy jeżeli był stoploss lub takeprofit
-time_after_sl_mul = 1.5
+time_after_sl_mul = 5.0
 
 # Interwał dobrany wyżej w hierarchii o podaną ilość stopni np dla M5 będzie to interwał M10
 interval_steps_for_capacity = 4

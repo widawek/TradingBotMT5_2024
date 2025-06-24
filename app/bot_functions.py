@@ -873,7 +873,7 @@ def strategy_rsi(df, factor, leverage, backtest=False):
         df, _ = calculate_strategy_returns(df, leverage)
         df['strategy'] = (1+df['return']).cumprod() - 1
         osm = only_strategy_metric(df, False)
-        rpf = real_profit_factor_metric(df, penalty=False)
+        rpf = 1 #real_profit_factor_metric(df, penalty=False)
         combo = combo_metric(df, False)
         #print("Metric result:", round(rpf*osm, 5))
         #miniplot(df, ['realrsi2', 'real_boll_up', 'real_boll_down'], ['strategy'])

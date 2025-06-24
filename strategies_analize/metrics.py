@@ -168,34 +168,78 @@ def profit_factor_metric(dfx, penalty=True):
 #     return round(profit_factor*ep, 6)
 
 
+# def real_profit_factor_metric(dfx, penalty=True):
+#     df = dfx.dropna().copy()
+#     ep = exponential_penalty(df) if penalty else 1
+#     df = df[df['cross']==1]
+#     df['result'] = (df['close'].shift(-1) - df['close'])*df['stance'] # wrong data for purpose should use close instead of open
+
+#     df['metric_profit'] = np.where(df['result']>0, df['result'], 0)
+#     # najdluzsza_sekwencja_zyskow = max(
+#     #     (sum(1 for _ in group) for key, group in
+#     #      groupby(df['metric_profit'].tolist()) if key == 1), default=0)
+
+#     df['metric_loss'] = np.where(df['result']<0, df['result'], 0)
+#     # najdluzsza_sekwencja_strat = max(
+#     #     (sum(1 for _ in group) for key, group in
+#     #      groupby(df['metric_loss'].tolist()) if key == 1), default=0)
+
+#     # try:
+#     #     sequence_meter = round(najdluzsza_sekwencja_zyskow/najdluzsza_sekwencja_strat, 3)
+#     # except Exception:
+#     #     sequence_meter = 1
+
+#     df = df.dropna()
+
+#     try:
+#         profit_factor = (df['metric_profit'].sum()/df['metric_loss'].sum())#*sequence_meter
+#     except ZeroDivisionError:
+#         return 0
+#     return round(profit_factor*ep, 6)
+
+
 def real_profit_factor_metric(dfx, penalty=True):
     df = dfx.dropna().copy()
     ep = exponential_penalty(df) if penalty else 1
     df = df[df['cross']==1]
     df['result'] = (df['close'].shift(-1) - df['close'])*df['stance'] # wrong data for purpose should use close instead of open
+    if len(df['result']) < 10:
+        return 0
+    df['metric_profit'] = np.where(df['result']>0, df['result'], 0)
+    df['metric_loss'] = np.where(df['result']<0, df['result'], 0)
 
-    df['metric_profit'] = np.where(df['result']>0, 1, 0)
-    # najdluzsza_sekwencja_zyskow = max(
-    #     (sum(1 for _ in group) for key, group in
-    #      groupby(df['metric_profit'].tolist()) if key == 1), default=0)
+    mean_std_profits = df['metric_profit'].mean()+df['metric_profit'].std()
+    mean_std_losses = df['metric_loss'].mean()-df['metric_loss'].std()
 
-    df['metric_loss'] = np.where(df['result']<0, 1, 0)
-    # najdluzsza_sekwencja_strat = max(
-    #     (sum(1 for _ in group) for key, group in
-    #      groupby(df['metric_loss'].tolist()) if key == 1), default=0)
+    super_profits = df[df['metric_profit'] > mean_std_profits]
+    super_losses = df[df['metric_loss'] < mean_std_losses]
+    super_profits = float(super_profits['metric_profit'].sum())
+    super_losses = float(super_losses['metric_loss'].sum())
 
-    # try:
-    #     sequence_meter = round(najdluzsza_sekwencja_zyskow/najdluzsza_sekwencja_strat, 3)
-    # except Exception:
-    #     sequence_meter = 1
+    bonus = round(super_profits/abs(super_losses), 3)
+    # print("Bonus result: ", bonus)
 
+    mean_profit = round(df['metric_profit'].mean(), 3)
+    mean_loss =  round(df['metric_loss'].mean(), 3)
+    win_rate = round(len(df[df['result']>0])/len(df[df['result']<0]), 5)
+    score = round(win_rate*(mean_profit/abs(mean_loss)), 5)
+    sharpe = round(df['result'].mean()/df['result'].std(), 3)
+    # print("Mean profit: ", mean_profit)
+    # print("Mean loss: ", mean_loss)
+    # print("Win rate: ", win_rate)
+    # print("Sharpe ratio: ", )
+    # print("Score: ", score)
+
+    # fig = plt.figure(figsize=(8, 8))
+    # plt.plot(df['result'].cumsum())
     df = df.dropna()
-
     try:
         profit_factor = (df['metric_profit'].sum()/df['metric_loss'].sum())#*sequence_meter
     except ZeroDivisionError:
-        return 0
-    return round(profit_factor*ep, 6)
+        return 1.5
+    final_result = round(profit_factor*score*sharpe*bonus*ep, 6)
+    # print("Wynik: ", final_result)
+    return final_result
 
 
 def combo_metric(dfx, penalty=True):
